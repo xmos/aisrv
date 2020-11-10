@@ -81,8 +81,9 @@ set(LIB_XUD_SOURCES
     "${LIB_XUD_SRC_DIR}/core/XUD_DeviceAttach.xc"
     "${LIB_XUD_SRC_DIR}/core/XUD_USBTIle_Support.S"
     "${LIB_XUD_SRC_DIR}/core/XUD_CRC5_Table.S"
-    "${LIB_XUD_SRC_DIR}/user/client/XUD_SetDevAddr.xc"
     "${LIB_XUD_SRC_DIR}/core/XUD_SetCrcTableAddr.c"
+    "${LIB_XUD_SRC_DIR}/user/client/XUD_SetDevAddr.xc"
+    "${LIB_XUD_SRC_DIR}/user/client/XUD_EpFunctions.xc"
 )
 
 set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_Main.xc" PROPERTIES LANGUAGE C)
@@ -94,6 +95,7 @@ set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_HAL.xc" PROPERTIES LANG
 set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_TestMode.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_DeviceAttach.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${LIB_XUD_SRC_DIR}/user/client/XUD_SetDevAddr.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/user/client/XUD_EpFunctions.xc" PROPERTIES LANGUAGE C)
 
 #**********************
 # LIB sources
