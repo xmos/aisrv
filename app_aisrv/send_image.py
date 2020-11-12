@@ -14,8 +14,20 @@ from matplotlib import pyplot
 import usb.core
 import usb.util
 
-CHUCK_SIZE = 128 # TODO read from device
+DRAW = False
 
+# Commands - TODO properly share with app code
+CMD_LENGTH_BYTES = 1
+
+CMD_NONE = 0
+CMD_GET_OUTPUT_LENGTH = 1
+CMD_SET_INPUT = 2
+CMD_START_INFER = 3
+CMD_GET_RESULT = 4
+###
+
+
+MAX_PACKET_SIZE = 512 # TODO read from device
 INPUT_SHAPE = (128, 128, 3)
 INPUT_SCALE = 0.007843137718737125
 INPUT_ZERO_POINT = -1
@@ -65,10 +77,10 @@ dev.set_configuration()
 # get an endpoint instance
 cfg = dev.get_active_configuration()
 
-print("found device: \n" + str(cfg))
+#print("found device: \n" + str(cfg))
 intf = cfg[(0,0)]
 
-ep = usb.util.find_descriptor(
+out_ep = usb.util.find_descriptor(
     intf,
     # match the first OUT endpoint
     custom_match = \
@@ -76,9 +88,25 @@ ep = usb.util.find_descriptor(
         usb.util.endpoint_direction(e.bEndpointAddress) == \
         usb.util.ENDPOINT_OUT)
 
-assert ep is not None
+in_ep = usb.util.find_descriptor(
+    intf,
+    # match the first OUT endpoint
+    custom_match = \
+    lambda e: \
+        usb.util.endpoint_direction(e.bEndpointAddress) == \
+        usb.util.ENDPOINT_IN)
+
+assert out_ep is not None
+assert in_ep is not None
 
 print("Connected")
+
+# Get output size from device
+out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
+output_length = int.from_bytes(dev.read(in_ep, 4, 10000), byteorder = "little", signed=True)
+
+print("RESULT_LENGTH: " + str(output_length))
+
 
 raw_img = None
 
@@ -96,10 +124,12 @@ try:
 
     raw_img = bytes(img)
 
+    out_ep.write(bytes([CMD_SET_INPUT]))
+
     sentcount = 0
-    for i in range(0, len(raw_img), CHUCK_SIZE):
-        ep.write(raw_img[i : i + CHUCK_SIZE])
-        sentcount = sentcount + CHUCK_SIZE
+    for i in range(0, len(raw_img), MAX_PACKET_SIZE):
+        out_ep.write(raw_img[i : i + MAX_PACKET_SIZE])
+        sentcount = sentcount + MAX_PACKET_SIZE
         size_str = "sent: " + str(sentcount)
         sys.stdout.write('%s\r' % size_str)
         sys.stdout.flush()
@@ -110,27 +140,39 @@ try:
 except KeyboardInterrupt:
     pass
 
-# Retrieve result from device
+out_ep.write(bytes([CMD_START_INFER]), 1000)
 
-#if raw_img is not None:
-#    max_value = -128
-#    max_value_index = 0
-#    for line in ep.lines:
-#        if line.startswith("Output index"):
-#            fields = line.split(",")
-##            index = int(fields[0].split("=")[1])
-#            value = int(fields[1].split("=")[1])
-#            if value >= max_value:
-#                max_value = value
-#                max_value_index = index
-#    print()
-#    prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
-#    print(OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
-#
-#    np_img = np.frombuffer(raw_img, dtype=np.int8).reshape(INPUT_SHAPE)
-#    np_img = np.round(
-#        (dequantize(np_img, INPUT_SCALE, INPUT_ZERO_POINT) + NORM_SHIFT) * NORM_SCALE
-#    ).astype(np.uint8)
-#
-#    pyplot.imshow(np_img)
-#    pyplot.show()
+out_ep.write(bytes([CMD_GET_RESULT]), 5000)
+
+# Retrieve result from device
+# TODO deal with len(output_data > MAX_PACKET_SIZE)
+#output_data = dev.read(in_ep, output_length, 1000)
+output_data = dev.read(in_ep, output_length, 10000)
+
+output_data_int = []
+
+# TODO better way of doing this?
+for i in output_data:
+    x =  int.from_bytes([i], byteorder = "little", signed=True)
+    output_data_int.append(x)
+
+print("RESULT: " + str(output_data_int))
+
+
+
+
+max_value = max(output_data_int)
+max_value_index = output_data_int.index(max_value)
+
+prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
+print(OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
+
+if DRAW: 
+
+    np_img = np.frombuffer(raw_img, dtype=np.int8).reshape(INPUT_SHAPE)
+    np_img = np.round(
+        (dequantize(np_img, INPUT_SCALE, INPUT_ZERO_POINT) + NORM_SHIFT) * NORM_SCALE
+    ).astype(np.uint8)
+
+    pyplot.imshow(np_img)
+    pyplot.show()
