@@ -54,6 +54,7 @@ set(BUILD_FLAGS
   "-DTF_LITE_STATIC_MEMORY"
   "-DXCORE"
   "-DUSE_EXTMEM"
+  "-DUSB_TILE=tile[0]"
   "-Os"
 )
 
@@ -84,6 +85,9 @@ set(LIB_XUD_SOURCES
     "${LIB_XUD_SRC_DIR}/core/XUD_SetCrcTableAddr.c"
     "${LIB_XUD_SRC_DIR}/user/client/XUD_SetDevAddr.xc"
     "${LIB_XUD_SRC_DIR}/user/client/XUD_EpFunctions.xc"
+    "${LIB_XUD_SRC_DIR}/user/client/XUD_EpFuncs.S"
+    "${LIB_XUD_SRC_DIR}/user/control/xud_device.xc"
+    "${LIB_XUD_SRC_DIR}/user/control/xud_std_requests.xc"
 )
 
 set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_Main.xc" PROPERTIES LANGUAGE C)
@@ -96,6 +100,8 @@ set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_TestMode.xc" PROPERTIES
 set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_DeviceAttach.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${LIB_XUD_SRC_DIR}/user/client/XUD_SetDevAddr.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${LIB_XUD_SRC_DIR}/user/client/XUD_EpFunctions.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_device.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_std_requests.xc" PROPERTIES LANGUAGE C)
 
 #**********************
 # LIB sources
