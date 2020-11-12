@@ -62,71 +62,61 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in)
 
     aisrv_cmd_t cmd = CMD_NONE;
     aisrv_state_t state = STATE_IDLE;
-    aisrv_state_t nextState = STATE_IDLE;
-    
+    //aisrv_state_t nextState = STATE_IDLE;
+
+
     while(1)
     {
-
-        printstate(state);
-
-        switch(state)
-        {
-            case STATE_IDLE:
-
-                XUD_GetBuffer(ep_out, data, length);
+        /* Get command */
+        XUD_GetBuffer(ep_out, data, length);
                 
-                cmd = data[0];
+        cmd = data[0];
 
-                if(length != CMD_LENGTH_BYTES)
+        if(length != CMD_LENGTH_BYTES)
+        {
+            printf("Bad cmd length: %d\n", length);
+            continue;
+        }
+        if(cmd > CMD_END_MARKER)
+        {
+            printf("Bad cmd: %d\n", cmd);
+        }
+                       
+        switch(cmd)
+        {
+            case CMD_NONE: 
+                break;
+
+            case CMD_SET_INPUT:
+                
+                while(1)
                 {
-                    printf("Bad cmd length: %d\n", length);
-                    continue;
-                }
-                if(cmd > CMD_END_MARKER)
-                {
-                    printf("Bad cmd: %d\n", cmd);
-                }
-            
-                switch(cmd)
-                {
-                    case CMD_NONE: 
-                        break;
+                    XUD_GetBuffer(ep_out, data, length);
+                    printf("Got %d bytes\n", length);
+           
+                    /* TODO currently this doesnt return until infer done */ 
+                    int full = buffer_input_data(data, length);
 
-                    case CMD_SET_INPUT:
-                        nextState = STATE_SET_INPUT;
-                        break;
-
-                    case CMD_GET_OUTPUT_LENGTH:
-
-                        printf("OUTPUT_SIZE: %d\n", output_size);
-                        XUD_SetBuffer(ep_in, (output_size, unsigned char[]), 4);
-
+                    if(full)
                         break;
                 }
 
                 break;
 
-            case STATE_SET_INPUT:
-        
-                XUD_GetBuffer(ep_out, data, length);
-                printf("Got %d bytes\n", length);
-               
-                /* TODO currently this doesnt return until infer done */ 
-                int full = buffer_input_data(data, length);
+            case CMD_GET_OUTPUT_LENGTH:
 
-                if(full)
-                    nextState = STATE_INFER;
-    
+                printf("OUTPUT_SIZE: %d\n", output_size);
+                XUD_SetBuffer(ep_in, (output_size, unsigned char[]), 4);
                 break;
 
-            case STATE_INFER:
+            case CMD_START_INFER:
 
                 interp_invoke();
                 print_output();
-                nextState = STATE_INFER_DONE;
+        
                 break;
 
-            case STATE_INFER_DONE:
+            case CMD_GET_RESULT:
 
                 /* TODO handle len(output_buffer) > MAX_PACKET_SIZE */
                 /* TODO rm copy */
@@ -137,12 +127,8 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in)
 
                 XUD_SetBuffer(ep_in, buffer, output_size);
 
-                nextState = STATE_IDLE;
-                break;
         }
-
-        state = nextState;
-    }
+    } // while(1)
 }
 } // unsafe
 

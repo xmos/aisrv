@@ -10,10 +10,12 @@ typedef enum aisrv_cmd
     CMD_NONE = 0,
     CMD_GET_OUTPUT_LENGTH = 1,
     CMD_SET_INPUT = 2,
-    CMD_END_MARKER = 3,
+    CMD_START_INFER = 3,
+    CMD_GET_RESULT = 4,
+    CMD_END_MARKER = 5,
 } aisrv_cmd_t;
 
-
+#if 0
 typedef enum aisrv_state
 {
     STATE_IDLE,
@@ -23,3 +25,4 @@ typedef enum aisrv_state
     STATE_END_MARKER
 
 } aisrv_state_t;
+#endif
