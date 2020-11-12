@@ -11,7 +11,10 @@ import cv2
 import numpy as np
 from matplotlib import pyplot
 
-CHUCK_SIZE = 128
+import usb.core
+import usb.util
+
+CHUCK_SIZE = 128 # TODO read from device
 
 INPUT_SHAPE = (128, 128, 3)
 INPUT_SCALE = 0.007843137718737125
@@ -48,98 +51,86 @@ def quantize(arr, scale, zero_point, dtype=np.int8):
 def dequantize(arr, scale, zero_point):
     return np.float32((arr.astype(np.int32) - np.int32(zero_point)) * scale)
 
+# find our device
+dev = usb.core.find(idVendor=0x20b1) #, idProduct=0xa15e)
 
-class Endpoint(object):
-    def __init__(self):
-        tool_path = os.environ.get("XMOS_TOOL_PATH")
-        lib_path = os.path.join(tool_path, "lib", "xscope_endpoint.so")
-        self.lib_xscope = ctypes.CDLL(lib_path)
+# was it found?
+if dev is None:
+    raise ValueError('Device not found')
 
-        self.ready = True
-        self.lines = []
+# set the active configuration. With no arguments, the first
+# configuration will be the active one
+dev.set_configuration()
 
-        self._print_cb = self._print_callback_func()
-        self.lib_xscope.xscope_ep_set_print_cb(self._print_cb)
+# get an endpoint instance
+cfg = dev.get_active_configuration()
 
-    def _print_callback_func(self):
-        def func(timestamp, length, data):
-            self.on_print(timestamp, data[0:length])
+print("found device: \n" + str(cfg))
+intf = cfg[(0,0)]
 
-        return PRINT_CALLBACK(func)
+ep = usb.util.find_descriptor(
+    intf,
+    # match the first OUT endpoint
+    custom_match = \
+    lambda e: \
+        usb.util.endpoint_direction(e.bEndpointAddress) == \
+        usb.util.ENDPOINT_OUT)
 
-    def on_print(self, timestamp, data):
-        msg = data.decode().rstrip()
+assert ep is not None
 
-        if msg == "DONE!":
-            self.ready = True
-        else:
-            self.lines.append(msg)
+print("Connected")
 
-    def connect(self, hostname="localhost", port="10234"):
-        return self.lib_xscope.xscope_ep_connect(hostname.encode(), port.encode())
-
-    def disconnect(self):
-        self.lib_xscope.xscope_ep_disconnect()
-
-    def publish(self, data):
-        self.ready = False
-
-        return self.lib_xscope.xscope_ep_request_upload(
-            ctypes.c_uint(len(data) + 1), ctypes.c_char_p(data)
-        )
-
-
-ep = Endpoint()
 raw_img = None
 
+# Send image to device
+
 try:
-    if ep.connect():
-        print("Failed to connect")
-    else:
-        print("Connected")
+    img = cv2.imread(sys.argv[1])
+    img = cv2.resize(img, (INPUT_SHAPE[0], INPUT_SHAPE[1]))
+    
+    # Channel swapping due to mismatch between open CV and XMOS
+    img = img[:, :, ::-1]  # or image = image[:, :, (2, 1, 0)]
 
-        img = cv2.imread(sys.argv[1])
-        img = cv2.resize(img, (INPUT_SHAPE[0], INPUT_SHAPE[1]))
+    img = (img / NORM_SCALE) - NORM_SHIFT
+    img = np.round(quantize(img, INPUT_SCALE, INPUT_ZERO_POINT))
 
-        # Channel swapping due to mismatch between open CV and XMOS
-        img = img[:, :, ::-1]  # or image = image[:, :, (2, 1, 0)]
+    raw_img = bytes(img)
 
-        img = (img / NORM_SCALE) - NORM_SHIFT
-        img = np.round(quantize(img, INPUT_SCALE, INPUT_ZERO_POINT))
-
-        raw_img = bytes(img)
-
-        for i in range(0, len(raw_img), CHUCK_SIZE):
-            retval = ep.publish(raw_img[i : i + CHUCK_SIZE])
-
-        while not ep.ready:
-            pass
-
+    sentcount = 0
+    for i in range(0, len(raw_img), CHUCK_SIZE):
+        ep.write(raw_img[i : i + CHUCK_SIZE])
+        sentcount = sentcount + CHUCK_SIZE
+        size_str = "sent: " + str(sentcount)
+        sys.stdout.write('%s\r' % size_str)
+        sys.stdout.flush()
+   
+    
+    sys.stdout.write('%s.. Done\n'  % size_str)
+        
 except KeyboardInterrupt:
     pass
 
-ep.disconnect()
-print("\n".join(ep.lines))
+# Retrieve result from device
 
-if raw_img is not None:
-    max_value = -128
-    max_value_index = 0
-    for line in ep.lines:
-        if line.startswith("Output index"):
-            fields = line.split(",")
-            index = int(fields[0].split("=")[1])
-            value = int(fields[1].split("=")[1])
-            if value >= max_value:
-                max_value = value
-                max_value_index = index
-    print()
-    prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
-    print(OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
-
-    np_img = np.frombuffer(raw_img, dtype=np.int8).reshape(INPUT_SHAPE)
-    np_img = np.round(
-        (dequantize(np_img, INPUT_SCALE, INPUT_ZERO_POINT) + NORM_SHIFT) * NORM_SCALE
-    ).astype(np.uint8)
-
-    pyplot.imshow(np_img)
-    pyplot.show()
+#if raw_img is not None:
+#    max_value = -128
+#    max_value_index = 0
+#    for line in ep.lines:
+#        if line.startswith("Output index"):
+#            fields = line.split(",")
+##            index = int(fields[0].split("=")[1])
+#            value = int(fields[1].split("=")[1])
+#            if value >= max_value:
+#                max_value = value
+#                max_value_index = index
+#    print()
+#    prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
+#    print(OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
+#
+#    np_img = np.frombuffer(raw_img, dtype=np.int8).reshape(INPUT_SHAPE)
+#    np_img = np.round(
+#        (dequantize(np_img, INPUT_SCALE, INPUT_ZERO_POINT) + NORM_SHIFT) * NORM_SCALE
+#    ).astype(np.uint8)
+#
+#    pyplot.imshow(np_img)
+#    pyplot.show()

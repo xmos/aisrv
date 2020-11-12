@@ -1,6 +1,7 @@
-// Copyright (c) 2019, XMOS Ltd, All rights reserved
+// Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "inference_engine.h"
 
@@ -19,14 +20,20 @@ void print_output() {
 
 void app_main() {
   initialize(&input_buffer, &input_size, &output_buffer, &output_size);
+
+  printf("input size: %d\n", input_size);
 }
 
-void app_data(void *data, size_t size) {
-  memcpy(input_buffer + input_bytes, data, size - 1);
-  input_bytes += size - 1;
-  if (input_bytes == input_size) {
-    invoke();
-    print_output();
-    input_bytes = 0;
-  }
+void app_data(void *data, size_t size) 
+{
+    memcpy(input_buffer + input_bytes, data, size /*- 1*/);
+    input_bytes += size;// - 1;
+    
+    printf("input bytes: %d of %d\n", input_bytes, input_size);
+    if (input_bytes == input_size) 
+    {
+        invoke();
+        print_output();
+        input_bytes = 0;
+    }
 }
