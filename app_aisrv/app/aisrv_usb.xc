@@ -69,7 +69,7 @@ static unsigned char cfgDesc[] =
 /* Standard Endpoint Descriptor (OUTPUT): */
     0x07, 			                    /* 0  bLength: 7 */
     0x05, 			                    /* 1  bDescriptorType: ENDPOINT */
-    0x82,                               /* 2  bEndpointAddress (D7: 0:out, 1:in) */
+    0x81,                               /* 2  bEndpointAddress (D7: 0:out, 1:in) */
     0x02,
     0x00, 0x02,                         /* 4  wMaxPacketSize */
     0x01,                               /* 6  bInterval */

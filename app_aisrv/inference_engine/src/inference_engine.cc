@@ -24,17 +24,19 @@ tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 constexpr int kTensorArenaSize = 286000;
 uint8_t tensor_arena[kTensorArenaSize];
 
-void invoke() {
-  // Run inference, and report any error
-  printf("Running inference...\n");
-  TfLiteStatus invoke_status = interpreter->Invoke();
+void interp_invoke() 
+{
+    // Run inference, and report any error
+    printf("Running inference...\n");
+    TfLiteStatus invoke_status = interpreter->Invoke();
 
-  if (invoke_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
-  }
+    if (invoke_status != kTfLiteOk) 
+    {
+        TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
+    }
 }
 
-void initialize(unsigned char **input, int *input_size, unsigned char **output,
+void interp_initialize(unsigned char **input, int *input_size, unsigned char **output,
                 int *output_size) {
   // Set up logging
   static tflite::MicroErrorReporter error_reporter;

@@ -6,9 +6,9 @@
 extern "C" {
 #endif
 
-void initialize(unsigned char **input, int *input_size, unsigned char **output,
+void interp_initialize(unsigned char **input, int *input_size, unsigned char **output,
                 int *output_size);
-void invoke();
+void interp_invoke();
 
 #ifdef __cplusplus
 };
