@@ -8,8 +8,8 @@
 static int input_bytes = 0;
 static int input_size;
 static unsigned char *input_buffer;
-static int output_size;
-static unsigned char *output_buffer;
+int output_size;
+unsigned char *output_buffer;
 
 // TODO rm me
 void print_output() {
@@ -33,12 +33,9 @@ int buffer_input_data(void *data, size_t size)
     
     memcpy(input_buffer + input_bytes, data, size /*- 1*/);
     input_bytes += size;// - 1;
-    
 
-    printf("input bytes: %d of %d\n", input_bytes, input_size);
     if (input_bytes == input_size) 
     {
-        
         input_bytes = 0;
         full = 1;
     }

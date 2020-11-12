@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "xud_device.h"
+#include "aisrv.h"
 
 #define BCD_DEVICE   0x1000
 #define VENDOR_ID    0x20B1
@@ -63,7 +64,7 @@ static unsigned char cfgDesc[] =
     0x05, 			                    /* 1  bDescriptorType: ENDPOINT */
     0x01,                               /* 2  bEndpointAddress (D7: 0:out, 1:in) */
     0x02,
-    0x00, 0x02,                         /* 4  wMaxPacketSize */
+    MAX_PACKET_SIZE & 0xff, (MAX_PACKET_SIZE >> 8) & 0xff, /* 4  wMaxPacketSize */
     0x01,                               /* 6  bInterval */
 
 /* Standard Endpoint Descriptor (OUTPUT): */
@@ -71,7 +72,7 @@ static unsigned char cfgDesc[] =
     0x05, 			                    /* 1  bDescriptorType: ENDPOINT */
     0x81,                               /* 2  bEndpointAddress (D7: 0:out, 1:in) */
     0x02,
-    0x00, 0x02,                         /* 4  wMaxPacketSize */
+    MAX_PACKET_SIZE & 0xff, (MAX_PACKET_SIZE >> 8) & 0xff, /* 4  wMaxPacketSize */
     0x01,                               /* 6  bInterval */
 };
 

@@ -1,3 +1,6 @@
+
+#define MAX_PACKET_SIZE (512)
+
 void aisrv_usb(chanend c_ep_out[], chanend c_ep_in[]);
 
 #define CMD_LENGTH_BYTES (1)

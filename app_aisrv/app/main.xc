@@ -13,6 +13,8 @@
 
 #include "inference_engine.h"
 
+extern int output_size;
+
 #define EP_COUNT_OUT 2
 #define EP_COUNT_IN 2
 
@@ -20,6 +22,7 @@ extern "C" {
 void interp_init();
 int buffer_input_data(void *data, size_t size);
 void print_output(); 
+extern unsigned char * unsafe output_buffer;
 }
 
 XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
@@ -92,6 +95,13 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in)
                     case CMD_SET_INPUT:
                         nextState = STATE_SET_INPUT;
                         break;
+
+                    case CMD_GET_OUTPUT_LENGTH:
+
+                        printf("OUTPUT_SIZE: %d\n", output_size);
+                        XUD_SetBuffer(ep_in, (output_size, unsigned char[]), 4);
+
+                        break;
                 }
 
                 break;
@@ -118,8 +128,14 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in)
 
             case STATE_INFER_DONE:
 
-                data[0] = 0xff;
-                XUD_SetBuffer(ep_in, data, 1);
+                /* TODO handle len(output_buffer) > MAX_PACKET_SIZE */
+                /* TODO rm copy */
+                unsigned char buffer[MAX_PACKET_SIZE];
+        
+                for(int i = 0; i < output_size; i++)
+                    buffer[i] = output_buffer[i];
+
+                XUD_SetBuffer(ep_in, buffer, output_size);
 
                 nextState = STATE_IDLE;
                 break;
