@@ -10,6 +10,7 @@
 #define INFERENCE_ENGINE_ACQUIRE      0x0A
 #define INFERENCE_ENGINE_EXIT         0xFF
 
+#define STATUS_BUSY            0x01
 #define STATUS_ERROR           0x10
 
 #define INFERENCE_ENGINE_ID          0x12345678//0x633

@@ -1,5 +1,17 @@
+#include <stdio.h>
+#include <stdint.h>
+#include "aiengine.h"
+#include "inference_engine.h"
+
+uint32_t tensor_arena[100];
+uint32_t model[100];
+
+static void call_engine(void) {
+}
+
 void aiegine(chanend x) {
-    while(1) {
+    int running = 1;
+    while(running) {
         int cmd;
         x :> cmd;
         x :> N;
