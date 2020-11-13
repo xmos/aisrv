@@ -1,23 +1,24 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "spibuffer.h"
 #include "inference_engine.h"
 #include "shared_memory.h"
+#include "spibuffer.h"
 
-void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, unsafe struct memory shared) {
+void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct memory * unsafe mem) {
     int running = 1;
+    unsafe {
     while(running) {
         int cmd;
         from_spi :> cmd;
-        shared.status |= STATUS_BUSY;
-        switch(x) {
+        mem->status |= STATUS_BUSY;
+        switch(cmd) {
         case INFERENCE_ENGINE_READ_TENSOR:
             to_engine <: cmd;
             master {
-                to_engine <: shared.output_tensor_length;
-                for(int i = 0; i < shared.output_tensor_length; i++) {
+                to_engine <: mem->output_tensor_length;
+                for(int i = 0; i < mem->output_tensor_length; i++) {
                     unsafe {
-                    to_engine :> shared->memory[shared.output_tensor_index + i];
+                    to_engine :> mem->memory[mem->output_tensor_index + i];
                     }
                 }
             }
@@ -25,22 +26,19 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, unsafe s
         case INFERENCE_ENGINE_WRITE_MODEL:
             to_engine <: cmd;
             master {
-                to_engine <: N;
+                int N;
+                to_engine :> N;
                 for(int i = 0; i < N; i++) {
-                    unsafe {
-                    to_engine <: shared->memory[i];
-                    }
+                    to_engine <: mem->memory[i];
                 }
             }
             break;
         case INFERENCE_ENGINE_WRITE_TENSOR:
             to_engine <: cmd;
             master {
-                to_engine <: shared.input_tensor_length;
-                for(int i = 0; i < shared.output_tensor_length; i++) {
-                    unsafe {
-                    to_engine <: shared->memory[shared.input_tensor_index + i];
-                    }
+                to_engine <: mem->input_tensor_length;
+                for(int i = 0; i < mem->output_tensor_length; i++) {
+                    to_engine <: mem->memory[mem->input_tensor_index + i];
                 }
             }
             break;
@@ -48,19 +46,17 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, unsafe s
             to_engine <: INFERENCE_ENGINE_INFERENCE;
             to_engine <: INFERENCE_ENGINE_READ_TENSOR;
             master {
-                to_engine <: shared.output_tensor_length;
-                for(int i = 0; i < shared.output_tensor_length; i++) {
-                    unsafe {
-                    to_engine :> shared->memory[shared.output_tensor_index + i];
-                    }
+                to_engine <: mem->output_tensor_length;
+                for(int i = 0; i < mem->output_tensor_length; i++) {
+                    to_engine :> mem->memory[mem->output_tensor_index + i];
                 }
             }
             to_engine <: INFERENCE_ENGINE_READ_TIMINGS;
             master {
-                to_engine <: shared.timings_length;
-                for(int i = 0; i < shared.timings_length; i++) {
+                to_engine <: mem->timings_length;
+                for(int i = 0; i < mem->timings_length; i++) {
                     unsafe {
-                    to_engine :> shared->memory[shared.timings_index + i];
+                    to_engine :> mem->memory[mem->timings_index + i];
                     }
                 }
             }
@@ -72,13 +68,15 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, unsafe s
             to_sensor <: cmd;
             to_engine <: INFERENCE_ENGINE_WRITE_TENSOR;
             master {
-                to_sensor <: N;
-                to_engine <: N;
-                for(int i = 0; i < N; i++) {
-                    unsafe {
-                    to_sensor :> shared->memory[i];
-                    to_engine <: shared->memory[i];
-                    }
+                to_sensor <: mem->input_tensor_length;
+                for(int i = 0; i < mem->input_tensor_length; i++) {
+                    to_sensor :> mem->memory[i];
+                }
+            }
+            master {
+                to_engine <: mem->input_tensor_length;
+                for(int i = 0; i < mem->input_tensor_length; i++) {
+                    to_engine <: mem->memory[i];
                 }
             }
             break;
@@ -86,6 +84,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, unsafe s
             running = 0;
             break;
         }
-        shared->status &= ~STATUS_BUSY;
+            mem->status &= ~STATUS_BUSY;
     }
+}
 }

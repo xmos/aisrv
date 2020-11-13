@@ -8,16 +8,17 @@ static void acquire_data(uint32_t buffer[]) {
 
 void acquire(chanend from_buffer) {
     int running = 1;
-    uint32_t frame[];
+    uint32_t frame[100];
     while(running) {
         int cmd;
-        from_spi :> cmd;
-        switch(x) {
+        from_buffer :> cmd;
+        switch(cmd) {
         case INFERENCE_ENGINE_ACQUIRE:
             acquire_data(frame);
             from_buffer <: cmd;
             from_buffer <: INFERENCE_ENGINE_WRITE_TENSOR;
             slave {
+                int N;
                 from_buffer :> N;
                 for(int i = 0; i < N; i++) {
                     from_buffer <: frame[i];

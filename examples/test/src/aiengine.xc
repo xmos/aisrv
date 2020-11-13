@@ -12,12 +12,12 @@ static void call_engine(void) {
 void aiegine(chanend x) {
     int running = 1;
     while(running) {
-        int cmd;
+        int cmd, N;
         x :> cmd;
-        x :> N;
-        switch(x) {
+        switch(cmd) {
         case INFERENCE_ENGINE_READ_TENSOR:
             slave {
+                x :> N;
                 for(int i = 0; i < N; i++) {
                     x <: tensor_arena[i];
                 }
@@ -25,6 +25,7 @@ void aiegine(chanend x) {
             break;
         case INFERENCE_ENGINE_WRITE_MODEL:
             slave {
+                x :> N;
                 for(int i = 0; i < N; i++) {
                     x :> model[i];
                 }
@@ -32,6 +33,7 @@ void aiegine(chanend x) {
             break;
         case INFERENCE_ENGINE_WRITE_TENSOR:
             slave {
+                x :> N;
                 for(int i = 0; i < N; i++) {
                     x :> tensor_arena[i];
                 }
@@ -43,7 +45,6 @@ void aiegine(chanend x) {
         case INFERENCE_ENGINE_EXIT:
             running = 0;
             break;
-            case
         }
     }
 }

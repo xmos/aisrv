@@ -5,8 +5,7 @@
 
 struct memory {
     uint32_t status;
-    uint32_t timings[100];
-    uint32_t ai_server_spec[1] = { INFERENCE_ENGINE_SPEC };
+    uint32_t ai_server_spec[1];
     uint32_t memory[9000];
 
     uint32_t timings_index;
