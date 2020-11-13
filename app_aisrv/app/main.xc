@@ -28,7 +28,7 @@ extern unsigned char * unsafe output_buffer;
 XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 
-
+#if 0
 void printstate(int state)
 {
     printf("STATE: ");
@@ -49,10 +49,36 @@ void printstate(int state)
             break;
     }
 }
+#endif
 
+void interp_runner(chanend c)
+{
+    aisrv_cmd_t cmd = CMD_NONE;
+
+    while(1)
+    {
+    
+        c :> cmd;
+
+        switch(cmd)
+        {
+            case CMD_START_INFER:
+
+                interp_invoke();
+                print_output();
+                
+                c <: 1;
+                break;
+
+            default:
+
+                break;
+        }
+    }
+}
 
 unsafe{
-void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in)
+void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 {
     unsigned char data[256];
     unsigned length = 0;
@@ -61,9 +87,8 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in)
     XUD_ep ep_in  = XUD_InitEp(c_ep_in);
 
     aisrv_cmd_t cmd = CMD_NONE;
-    aisrv_state_t state = STATE_IDLE;
-    //aisrv_state_t nextState = STATE_IDLE;
 
+    int infer_in_progress = 0;
 
     while(1)
     {
@@ -111,8 +136,9 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in)
 
             case CMD_START_INFER:
 
-                interp_invoke();
-                print_output();
+                c <: CMD_START_INFER;
+
+                infer_in_progess = 1;
         
                 break;
 
@@ -138,8 +164,8 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in);
 int main(void)
 {
     chan xscope_data_in;
-  
     chan c_ep_out[EP_COUNT_OUT], c_ep_in[EP_COUNT_IN];
+    chan c;
 
     par 
     {
@@ -149,9 +175,10 @@ int main(void)
           
             par
             {
-                aisrv_usb_data(c_ep_out[1], c_ep_in[1]);
-                aisrv_usb_ep0(c_ep_out[0], c_ep_in[0]);
+                interp_runner(c);
+                aisrv_usb_data(c_ep_out[1], c_ep_in[1], c);
                 XUD_Main(c_ep_out, EP_COUNT_OUT, c_ep_in, EP_COUNT_IN, null, epTypeTableOut, epTypeTableIn, XUD_SPEED_HS, XUD_PWR_BUS);
+                aisrv_usb_ep0(c_ep_out[0], c_ep_in[0]);
             
             }
         }
