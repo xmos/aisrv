@@ -4,32 +4,33 @@ An XCORE.AI server
 Introduction
 ------------
 
-We will develop software that runs on an xcore.ai (and quake)
+The xcore.ai-inference-engine is a program that runs on an xcore.ai (and quake)
 that turns xcore.ai into black-box server that runs inference
-tasks independently of a host processor or even host PC. The idea is that
+tasks. The tasks are provided through a host interfacae from a host
+microcontroller (using SPI) or a host laptop (using USB).
 ML customers can evaluate xcore.ai from their laptop without needing tools,
 and partners such as IFX can build xcore.ai into their flow without needing
 tools.
 
 The bare xcore.ai inference engine has just three commands:
 
-  * **INFERENCE INPUT,OUTPUT** runs an input tensor through the model,
+  * **WRITE TENSOR** writes the input tensor to the device (to be used for
+    inferencing)
+
+  * **READ TENSOR** reads the output tensor from the device, reading the
+    inferenced value(s).
+    
+  * **INFERENCE** runs an input tensor through the model,
     producing an output tensor
 
   * **UPGRADE MODEL** stores a new model in the flash's data partition
 
   * **UPGRADE SERVER** stores a new server in the flash's boot partition
 
-An extended server includes a sensor acquisition pipeline that supports two
-more commands:
-
   * **ACQUIRE DATA** obtains a frame of data from a sensor
 
-  * **ACQUIRE AND INFERENCE** obtains a frame of data and runs it through
-    the model.
-
 The commands are implemented in two different forms: as a Python API that
-uses USB to communicate with the hardware, as a C API that uses SPI to
+uses USB to communicate with the hardware, and as a C API that uses SPI to
 communicate with the hardware. This implies that at least two
 implementations of the server exists, one that accepts commands over USB,
 and one that accepts commands over slave SPI (or some variant). The USB
@@ -40,9 +41,6 @@ separates training/executing models from building the actual embedded software.
 
 The users we are targeting
 --------------------------
-
-High level
-++++++++++
 
 At the highest level, we target an ML engineer who is hired to run ML
 algorithms on embedded systems but who knows little about embedded
@@ -61,9 +59,6 @@ can use for three purposes. Using a Python API on the host:
 The only tool required is a python tool that optimises a TensorFlow Lite
 model to xcore.ai and the Python API to communicate with the device.
 
-Mid level
-+++++++++
-
 On the middle level, we target an Embedded Engineer who may not have a lot
 of ML experience. They can connect xcore.ai-inference-engine to any PSOC
 using trivial wiring (4-6 wires), and then perform the following actions
@@ -78,9 +73,6 @@ through a C API on the PSOC:
 In addition to the python transformer tool, the Embedded Engineer need
 ModusToolboxTM, but they can choose to have a separation of responsibility
 with the ML engineer, the latter just living in a TensorFlow world
-
-Low level
-+++++++++
 
 On the lowest level, the power user can choose to customise the
 xcore.ai-inference-engine, specifically they can:
@@ -100,7 +92,7 @@ high or middle levels.
 The APIs
 --------
 
-There are two APIs available in Python and C. There is also a low level
+There are two APIs available: Python and C. There is also a low level
 protocol specification that runs over USB or SPI.
 
 Python
@@ -123,20 +115,20 @@ with an xcore.ai inference engine. It will look something like::
        ...
        
     # grabs a frame of data over the attached sensor
-    def acquire(self, ):
+    def acquire(self):
        ...
        
     # grabs a frame of data and then run an inference returning the output sensor
-    def acquire_and_inference(self, ):
+    def acquire_and_inference(self):
        ...
 
 
 C interface
 +++++++++++
 
-The mid level C interface is exactly the same, but will use a SPI/QPI
-interface to communicate with the xcore.ai inference engine. It will look
-something like::
+The C interface is exactly the same, but will use a SPI interface to
+communicate with the xcore.ai inference engine. It will look something
+like::
 
   /* ================= HIGH LEVEL USERS =================== */
   // Function that initialises the xcore.ai inference engine
@@ -154,12 +146,12 @@ something like::
                                   uint8_t input[],
                                   uint32_t M);
 
-  // Function that runs an inference on a piece of data
-  cy_rslt_t xcore_ai_ie_acquire_and_infer(cyhal_spi_t *mSPI,
+  // Function that acquires a frame of data from the sensor
+  cy_rslt_t xcore_ai_ie_acquire(cyhal_spi_t *mSPI,
                                           uint8_t output[],
                                           uint32_t N);
 
-  // Function that runs an inference on a piece of data
+  // Function that runs the network over a freshly acquired sensor frame.
   cy_rslt_t xcore_ai_ie_acquire_and_infer(cyhal_spi_t *mSPI,
                                           uint8_t output[],
                                           uint32_t N);
@@ -168,9 +160,20 @@ something like::
 The communications interfaces
 -----------------------------
 
-Usb interface
+USB interface
 +++++++++++++
 
+The USB Interface uses a class specific interface. The USB VID/PID are
+0x20B1/0xA15E, and the protocol uses two bulk endpoints for data.
+
+Communications are always initiated by the host using the OUT endpoint,
+sending a command and optional databytes to the target. If the command
+warrants a response, the host will subsequently perform an IN operation and
+acquire data from the device.
+
+In situations where the device is working, we could add an interrupt
+endpoint to indicate that something interesting is happening in order not
+to saturate the USB bus with status requests.
 
 Embedded interface: QSPI, SPI, or QPI
 +++++++++++++++++++++++++++++++++++++
@@ -197,37 +200,8 @@ we note that QPI/QSPI are four times faster than SPI and are therefore
 preferable. QSPI may be more generally available on micros, because almost all
 flash devices are QSPI rather than QPI.
 
-On top of the physical layer we run a protocol layer that implements a set
-of transactions. Each transaction comprises a command (eight bits),
-sometimes followed by data. Flash chips support one set of commands, RAM
-chips a completely different set. There doesn't appear to be any logic or
-standard, other than that all flash chips have one command to read data
-from flash.
-
-Anyhow, we don't care that much because we don't really want to read data
-from specific addresses (like flash) - we want to sent files of data along.
-We suggest the following set of commands:
-
-  * 0x01  Read status word from xcore.ai server
-  * 0x03  Read ID from xcore.ai server
-  * 0x05  Read system spec from xcore.ai server
-  * 0x07  Read output tensor(s) from xcore.ai server
-  * 0x09  Read timings of last inference
-  * 0x02  Write model to xcore.ai server
-  * 0x04  Write server to xcore.ai server
-  * 0x06  Write input tensor(s) to xcore.ai server
-  * 0x08  Start an inference cycle
-  * 0x0A  Acquire sensor data
-
-
-Write commands send data to the xcore.ai server. The first byte
-transmitted is the command byte, after that the data follows.
-Read commands read data from the xcore.ai server. First a command byte
-is written to the server, then the data is driven on the bus by the
-xcore.ai server. For read data there is a need for dummy bytes - we
-probably need 60-100 ns or so to respond to the command. That would
-translate to 2-5 dummy bytes for speeds of 50-100 Mhz
-
+On top of the physical layer we run a protocol layer that implements the
+transactions.
 
 
 Software variants
@@ -258,12 +232,12 @@ devices.
 ================== ================= ================== =========
 Number of tiles    Number of flash   Physical interface Priority
 ================== ================= ================== =========
-1                  1                 SPI                1
+1                  1                 SPI/QPI            1
 1                  1                 USB                1
-1                  0                 SPI                2
-N                  N                 SPI                3
-N                  0                 SPI                4
-N                  1                 SPI                5
+1                  0                 SPI/QPI            2
+N                  N                 SPI/QPI            3
+N                  0                 SPI/QPI            4
+N                  1                 SPI/QPI            5
 N                  N                 USB                6
 N                  1                 USB                7
 ================== ================= ================== =========
@@ -348,12 +322,10 @@ mm).
 Electrical integration
 ----------------------
 
-
-Please see the XU316-1024 datasheet for a full description on how to
+Please see the XU316-1024 datasheets for a full description on how to
 integrate the device on your board. There are several package variants
 avaible, from a very small QFN package to a large BGA. The former only
 supports 1.8V, the latter supports both 1.8 and 3.3V IO.
-
 
 Device Timings
 --------------
@@ -447,7 +419,7 @@ data are transferred LSB (least-significant-bit, SPI) or LSN
 (least-significant-nibble, QPI) first.
 
 ========= ==== ====== ==================================================
-Name      Cmd  Bytes  Meaning
+Name      Cmd  Count  Meaning
 ========= ==== ====== ==================================================
 RStatus   0x01 0,16,4 Read status word from xcore.ai server
 RID       0x03 0,16,4 Read ID from xcore.ai server
@@ -461,11 +433,12 @@ Inference 0x08 0,0,0  Start an inference cycle
 Acquire   0x0A 0,0,0  Acquire sensor data
 ========= ==== ====== ==================================================
 
-The three numbers in the Bytes column refer to the number of bytes sent to
-the device, the number of dummy clock cycles, and then the number of bytes
-received from the device. Apart from the command, the number of bytes
-should always be a multiple of 4. A number of bytes of *N* stands for an
-application dependent number of bytes; the correct value should be used.
+The three numbers in the Count column refer to the number of bytes sent to
+the device, the number of dummy *clock cycles*, and then the number of bytes
+received from the device. Apart from the single-byte command, the number of
+bytes written to the device and read from the device
+should always be a multiple of four. A number of bytes of *N* stands for an
+application dependent number of bytes.
 
 The sequence for a SPI/QPI transaction is always as follows:
 
@@ -646,6 +619,63 @@ Where ``F`` is the size of the frame. The second typical use case is::
   0x07 then dummy bytes then read M bytes of data
 
 Where ``M`` is the size of the inference data
+
+
+Bringing the device out of reset
+--------------------------------
+
+There are two variants available of the software: use with a flash chip,
+and use without a flash chip
+
+* Witout a flash chip, it is the task of the host controller to boot the
+  device with appropriate software, then load a model, and then the device
+  can be used for inferencing. This is the cheapest way to use it, but
+  increases the boot time of the device (a few milliseconds, depending on
+  the size of the model), and it limits the size of the model. All
+  parameters and tensor arena must fit in memory simultaneously.
+  
+* With a flash chip, both the code and a model can be stored in flash. This
+  means that the device will boot autonomously using code stored in flash,
+  and models can be larger because coefficients can be loaded on demand
+  from flash.
+
+If the device is equipped without a flash chip, then the portmap to be used
+is:
+
+===========  ======== ======================== ==============
+Name         SIGNAL   Function                 Connected?
+===========  ======== ======================== ==============
+X0D00        CS_N     Chip select active low   Boot, SPI, QPI
+X0D01        MISO     SPI Master In Slave Out  SPI only
+X0D10        CLK      Clock                    Boot, SPI, QPI
+X0D11        MOSI     SPI Master Out Slave In  SPI & Boot
+X0D04        Q0       QPI Data-pin 0           QPI only
+X0D05        Q1       QPI Data-pin 1           QPI only
+X0D06        Q2       QPI Data-pin 2           QPI only
+X0D07        Q3       QPI Data-pin 3           QPI only
+VDD          VDD      Core voltage (0.9V)      Always
+VDDIO        VDDIO    IO voltage (1.8V)        Always
+VSS          VSS      Ground (Core and IO)     Always
+XIN/XOUT     XIN/XOUT Crystal oscillator       At least XIN
+===========  ======== ======================== ==============
+
+
+If the device is equipped without a flash chip then the portmap to be used
+is:
+
+===========  ======== ======================== ============
+Name         SIGNAL   Function                 Connected?
+===========  ======== ======================== ============
+X0D00        CS_N     Chip select active low   Always
+X0D11        CLK      Clock                    Always
+X0D35        MISO     SPI Master In Slave Out  SPI only
+X0D36        MOSI     SPI Master Out Slave In  SPI only
+VDD          VDD      Core voltage (0.9V)      Always
+VDDIO        VDDIO    IO voltage (1.8V)        Always
+VSS          VSS      Ground (Core and IO)     Always
+XIN/XOUT     XIN/XOUT Crystal oscillator       At least XIN
+===========  ======== ======================== ============
+
 
 
 Programming
