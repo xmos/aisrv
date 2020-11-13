@@ -1,0 +1,6 @@
+#tmp files
+*.swp
+*.swo
+*.*~
+
+*/build/*
