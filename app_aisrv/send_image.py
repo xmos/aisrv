@@ -15,6 +15,8 @@ import usb.core
 import usb.util
 
 DRAW = False
+SEND_MODEL = True
+MODEL_PATH = "./model/model_quant_xcore.tflite"
 
 # Commands - TODO properly share with app code
 CMD_LENGTH_BYTES = 1
@@ -24,6 +26,7 @@ CMD_GET_OUTPUT_LENGTH = 1
 CMD_SET_INPUT = 2
 CMD_START_INFER = 3
 CMD_GET_RESULT = 4
+CMD_SET_MODEL = 5
 ###
 
 
@@ -101,6 +104,27 @@ assert in_ep is not None
 
 print("Connected")
 
+if SEND_MODEL:
+
+    with open(MODEL_PATH, "rb") as input_fd:
+        input_model = input_fd.read()
+
+    model_bytes = bytearray(input_model)
+
+    print("Model length (bytes): " + str(len(model_bytes)))
+
+    #Send model to device 
+    out_ep.write(bytes([CMD_SET_MODEL]))
+
+    # Send model size
+    len_bytes = int.to_bytes(len(model_bytes), byteorder = "little", signed=True, length=4)
+    out_ep.write(len_bytes, 1000)
+    
+    out_ep.write(model_bytes, 1000)
+
+print("FINISHED WRITING MODEL")
+
+
 # Get output size from device
 out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
 output_length = int.from_bytes(dev.read(in_ep, 4, 10000), byteorder = "little", signed=True)
@@ -140,9 +164,11 @@ try:
 except KeyboardInterrupt:
     pass
 
+print("STARTING INFERENCE\n")
 out_ep.write(bytes([CMD_START_INFER]), 1000)
 
-out_ep.write(bytes([CMD_GET_RESULT]), 5000)
+print("WAITING FOR RESULT\n")
+out_ep.write(bytes([CMD_GET_RESULT]), 50000)
 
 # Retrieve result from device
 # TODO deal with len(output_data > MAX_PACKET_SIZE)
@@ -157,9 +183,6 @@ for i in output_data:
     output_data_int.append(x)
 
 print("RESULT: " + str(output_data_int))
-
-
-
 
 max_value = max(output_data_int)
 max_value_index = output_data_int.index(max_value)

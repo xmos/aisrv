@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <iostream>
 
-#include "mobilenet_v1.h"
+//#include "mobilenet_v1.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
@@ -23,6 +23,18 @@ const tflite::Model *model = nullptr;
 tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 constexpr int kTensorArenaSize = 286000;
 uint8_t tensor_arena[kTensorArenaSize];
+
+#ifdef USE_SWMEM
+__attribute__((section(".SwMem_data")))
+#elif USE_EXTMEM
+__attribute__((section(".ExtMem_data")))
+#endif
+unsigned char model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
+
+void write_model_data(int i, unsigned char x)
+{
+    model_data[i] = x;
+}
 
 void interp_invoke() 
 {
@@ -47,7 +59,8 @@ void interp_initialize(unsigned char **input, int *input_size, unsigned char **o
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(mobilenet_v1_model);
+  model = tflite::GetModel(model_data);
+
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(reporter,
                          "Model provided is schema version %d not equal "

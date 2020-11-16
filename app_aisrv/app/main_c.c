@@ -42,3 +42,10 @@ int buffer_input_data(void *data, size_t size)
 
     return full;
 }
+
+//void write_model_data(int i, unsigned char x);
+
+//void write_model_data(int i, unsigned char x)
+//{
+//    write_model_data_cc(i, x);
+//}
