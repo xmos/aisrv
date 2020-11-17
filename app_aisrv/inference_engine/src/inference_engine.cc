@@ -36,7 +36,7 @@ void write_model_data(int i, unsigned char x)
     model_data[i] = x;
 }
 
-void interp_invoke() 
+aisrv_status_t interp_invoke() 
 {
     // Run inference, and report any error
     printf("Running inference...\n");
@@ -45,61 +45,69 @@ void interp_invoke()
     if (invoke_status != kTfLiteOk) 
     {
         TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
+        return STATUS_ERROR_INFER;
     }
+
+    return STATUS_OKAY;
 }
 
-void interp_initialize(unsigned char **input, int *input_size, unsigned char **output,
-                int *output_size) {
-  // Set up logging
-  static tflite::MicroErrorReporter error_reporter;
-  reporter = &error_reporter;
-  // Set up profiling.
-  static tflite::micro::xcore::XCoreProfiler xcore_profiler(reporter);
-  profiler = &xcore_profiler;
+int interp_initialize(unsigned char **input, int *input_size, unsigned char **output, int *output_size) 
+{
+    // Set up logging
+    static tflite::MicroErrorReporter error_reporter;
+    reporter = &error_reporter;
 
-  // Map the model into a usable data structure. This doesn't involve any
-  // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(model_data);
+    // Set up profiling.
+    static tflite::micro::xcore::XCoreProfiler xcore_profiler(reporter);
+    profiler = &xcore_profiler;
 
-  if (model->version() != TFLITE_SCHEMA_VERSION) {
-    TF_LITE_REPORT_ERROR(reporter,
+    // Map the model into a usable data structure. This doesn't involve any
+    // copying or parsing, it's a very lightweight operation.
+    model = tflite::GetModel(model_data);
+
+    if (model->version() != TFLITE_SCHEMA_VERSION)
+    {
+        TF_LITE_REPORT_ERROR(reporter,
                          "Model provided is schema version %d not equal "
                          "to supported version %d.",
                          model->version(), TFLITE_SCHEMA_VERSION);
-    return;
-  }
+        return 1;
+    }
 
-  // This pulls in all the operation implementations we need.
-  static tflite::MicroMutableOpResolver<7> resolver;
-  resolver.AddSoftmax();
-  resolver.AddPad();
-  resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
+    // This pulls in all the operation implementations we need.
+    static tflite::MicroMutableOpResolver<7> resolver;
+    resolver.AddSoftmax();
+    resolver.AddPad();
+    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Shallow());
-  resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
+    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
-  resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
+    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_1x1());
-  resolver.AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
+    resolver.AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
                      tflite::ops::micro::xcore::Register_AvgPool2D_Global());
-  resolver.AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
+    resolver.AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
                      tflite::ops::micro::xcore::Register_FullyConnected_8());
 
-  // Build an interpreter to run the model with
-  static tflite::micro::xcore::XCoreInterpreter static_interpreter(
+    // Build an interpreter to run the model with
+    static tflite::micro::xcore::XCoreInterpreter static_interpreter(
       model, resolver, tensor_arena, kTensorArenaSize, reporter, true,
       profiler);
-  interpreter = &static_interpreter;
+    interpreter = &static_interpreter;
 
-  // Allocate memory from the tensor_arena for the model's tensors.
-  TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
-  if (allocate_tensors_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(reporter, "AllocateTensors() failed");
-    return;
-  }
+    // Allocate memory from the tensor_arena for the model's tensors.
+    TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
+    if (allocate_tensors_status != kTfLiteOk)
+    {
+        TF_LITE_REPORT_ERROR(reporter, "AllocateTensors() failed");
+        return 2;
+    }
 
-  // Obtain pointers to the model's input and output tensors.
-  *input = (unsigned char *)(interpreter->input(0)->data.raw);
-  *input_size = interpreter->input(0)->bytes;
-  *output = (unsigned char *)(interpreter->output(0)->data.raw);
-  *output_size = interpreter->output(0)->bytes;
+    // Obtain pointers to the model's input and output tensors.
+    *input = (unsigned char *)(interpreter->input(0)->data.raw);
+    *input_size = interpreter->input(0)->bytes;
+    *output = (unsigned char *)(interpreter->output(0)->data.raw);
+    *output_size = interpreter->output(0)->bytes;
+
+    return 0;
 }

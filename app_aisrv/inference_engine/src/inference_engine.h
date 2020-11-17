@@ -2,6 +2,8 @@
 #ifndef INFERENCE_ENGINE_H_
 #define INFERENCE_ENGINE_H_
 
+#include "../../app/aisrv.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -9,10 +11,9 @@ extern "C" {
 
 #define MAX_MODEL_SIZE_BYTES (906000)
 
+int interp_initialize(unsigned char **input, int *input_size, unsigned char **output, int *output_size);
 
-void interp_initialize(unsigned char **input, int *input_size, unsigned char **output,
-                int *output_size);
-void interp_invoke();
+aisrv_status_t interp_invoke();
 
 void write_model_data(int i, unsigned char x);
 

@@ -23,9 +23,9 @@ CMD_LENGTH_BYTES = 1
 
 CMD_NONE = 0
 CMD_GET_OUTPUT_LENGTH = 1
-CMD_SET_INPUT = 2
+CMD_SET_INPUT_TENSOR = 2
 CMD_START_INFER = 3
-CMD_GET_RESULT = 4
+CMD_GET_OUTPUT_TENSOR = 4
 CMD_SET_MODEL = 5
 ###
 
@@ -67,7 +67,10 @@ def dequantize(arr, scale, zero_point):
     return np.float32((arr.astype(np.int32) - np.int32(zero_point)) * scale)
 
 # find our device
-dev = usb.core.find(idVendor=0x20b1) #, idProduct=0xa15e)
+dev = None
+while dev is None:
+    
+    dev = usb.core.find(idVendor=0x20b1) #, idProduct=0xa15e)
 
 # was it found?
 if dev is None:
@@ -122,14 +125,21 @@ if SEND_MODEL:
     
     out_ep.write(model_bytes, 1000)
 
-print("FINISHED WRITING MODEL")
+    print("FINISHED WRITING MODEL")
 
 
 # Get output size from device
 out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
-output_length = int.from_bytes(dev.read(in_ep, 4, 10000), byteorder = "little", signed=True)
 
-print("RESULT_LENGTH: " + str(output_length))
+try:
+    output_length = int.from_bytes(dev.read(in_ep, 4, 10000), byteorder = "little", signed=True)
+    print("OUTPUT TENSOR LENGTH: " + str(output_length))
+except usb.core.USBError as e:
+
+    if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
+        print("Device error, IN pipe halted (no model uploaded?)")
+        
+    sys.exit(1)
 
 
 raw_img = None
@@ -148,7 +158,7 @@ try:
 
     raw_img = bytes(img)
 
-    out_ep.write(bytes([CMD_SET_INPUT]))
+    out_ep.write(bytes([CMD_SET_INPUT_TENSOR]))
 
     sentcount = 0
     for i in range(0, len(raw_img), MAX_PACKET_SIZE):
@@ -167,8 +177,8 @@ except KeyboardInterrupt:
 print("STARTING INFERENCE\n")
 out_ep.write(bytes([CMD_START_INFER]), 1000)
 
-print("WAITING FOR RESULT\n")
-out_ep.write(bytes([CMD_GET_RESULT]), 50000)
+print("WAITING FOR INFERENCE\n")
+out_ep.write(bytes([CMD_GET_OUTPUT_TENSOR]), 50000)
 
 # Retrieve result from device
 # TODO deal with len(output_data > MAX_PACKET_SIZE)
@@ -182,7 +192,7 @@ for i in output_data:
     x =  int.from_bytes([i], byteorder = "little", signed=True)
     output_data_int.append(x)
 
-print("RESULT: " + str(output_data_int))
+print("OUTPUT_TENSOR: " + str(output_data_int))
 
 max_value = max(output_data_int)
 max_value_index = output_data_int.index(max_value)
