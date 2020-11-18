@@ -30,21 +30,10 @@ int interp_init()
     return error;
 }
 
-
-int buffer_input_data(void *data, size_t size, int doCopy) 
+// TODO rm this wrapper
+int buffer_input_data(void *data, int offset, size_t size) 
 {
-    int full = STATUS_OKAY;
-
-    if(doCopy)    
-        memcpy(input_buffer + input_bytes, data, size /*- 1*/);
-    input_bytes += size;// - 1;
-
-    if (input_bytes == input_size) 
-    {
-        input_bytes = 0;
-        full = STATUS_BUFFER_FULL;
-    }
-
-    return full;
+    memcpy(input_buffer + offset, data, size);
+    return 0;
 }
 

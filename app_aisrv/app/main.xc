@@ -21,7 +21,7 @@ extern int output_size;
 extern "C" 
 {
     int interp_init();
-    int buffer_input_data(void *data, size_t size, int doCopy);
+    int buffer_input_data(void *data, int offset, size_t size);
     void print_output(); 
     extern unsigned char * unsafe output_buffer;
     void write_model_data(int i, unsigned char x);
@@ -64,7 +64,7 @@ void interp_runner(chanend c)
                         unsigned char x;
                         c :> x;
 
-                        /* TODO why is this required? */
+                        /* TODO remove this wrapper*/
                         write_model_data(i,x); 
                     }
                 }
@@ -88,18 +88,16 @@ void interp_runner(chanend c)
                     slave
                     {
                         /* TODO improve efficiency of comms */
-                        /* TODO use input_size for loop term not status */
-                        while(status == STATUS_OKAY)
+                        int offset = 0;
+                        while(offset < input_size)
                         {
                             c :> length;
 
                             for(int i = 0; i < length; i++)
                                 c :> data[i];
                         
-                            /* Note, if we dont have a model we accept it but throw it away */ 
-                            status = buffer_input_data(data, length, haveModel);
-
-                            c <: status;
+                            buffer_input_data(data, offset, length);
+                            offset += length; 
                         }
                     }
                 }
@@ -236,27 +234,23 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 
                 if(status == STATUS_OKAY)
                 {
-                    unsigned pktLength, tensorLength, full = 0;
+                    unsigned pktLength, tensorLength;
                     
-                    /* TODO USE LENGTH */
                     c :> tensorLength;
 
                     master
                     {
-                        while(!full)
+                        while(tensorLength > 0)
                         {
                             XUD_GetBuffer(ep_out, data, pktLength);
                             
                             printf("Got %d bytes\n", pktLength);
                    
-                            /* TODO improve comms, tranactions, words etc */
                             c <: pktLength;
                             for(int i = 0; i < pktLength; i++)
-                            {
                                 c <: data[i];
-                            }
 
-                            c :> full;
+                            tensorLength = tensorLength - pktLength;
                         }
                     }
                 }
@@ -301,7 +295,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 
             case CMD_GET_OUTPUT_TENSOR:
                
-                /* TODO Stall EP if not enough data in input? */ 
                 /* TODO handle len(output_buffer) > MAX_PACKET_SIZE */
                 unsigned char buffer[MAX_PACKET_SIZE];
    

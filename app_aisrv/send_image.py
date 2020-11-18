@@ -69,7 +69,6 @@ def dequantize(arr, scale, zero_point):
 # find our device
 dev = None
 while dev is None:
-    
     dev = usb.core.find(idVendor=0x20b1) #, idProduct=0xa15e)
 
 # was it found?
@@ -109,6 +108,8 @@ print("Connected")
 
 if SEND_MODEL:
 
+    print("WRITING MODEL VIA USB..\n")
+
     with open(MODEL_PATH, "rb") as input_fd:
         input_model = input_fd.read()
 
@@ -133,7 +134,7 @@ out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
 
 try:
     output_length = int.from_bytes(dev.read(in_ep, 4, 10000), byteorder = "little", signed=True)
-    print("OUTPUT TENSOR LENGTH: " + str(output_length))
+    print("READING OUTPUT TENSOR LENGTH FROM DEVICE: " + str(output_length))
 except usb.core.USBError as e:
 
     if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
@@ -146,6 +147,7 @@ raw_img = None
 
 # Send image to device
 
+print("SETTING INPUT TENSOR VIA USB\n")
 try:
     img = cv2.imread(sys.argv[1])
     img = cv2.resize(img, (INPUT_SHAPE[0], INPUT_SHAPE[1]))
@@ -174,7 +176,7 @@ try:
 except KeyboardInterrupt:
     pass
 
-print("STARTING INFERENCE\n")
+print("SENDING START INFERENCE COMMAND VIA USB\n")
 out_ep.write(bytes([CMD_START_INFER]), 1000)
 
 print("WAITING FOR INFERENCE\n")
@@ -192,13 +194,13 @@ for i in output_data:
     x =  int.from_bytes([i], byteorder = "little", signed=True)
     output_data_int.append(x)
 
-print("OUTPUT_TENSOR: " + str(output_data_int))
+print("READING OUTPUT TENSOR VIA USB: " + str(output_data_int))
 
 max_value = max(output_data_int)
 max_value_index = output_data_int.index(max_value)
 
 prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
-print(OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
+print("Interpretted result: " + OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
 
 if DRAW: 
 
