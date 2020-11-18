@@ -28,7 +28,7 @@ set(AI_TOOLS_DIR "$ENV{XMOS_AIOT_SDK_PATH}/tools/ai_tools")
 
 set(RTOS_SUPPORT_DIR "$ENV{XMOS_AIOT_SDK_PATH}/modules")
 
-set(LIB_XUD_DIR "${RTOS_SUPPORT_DIR}/lib_xud/lib_xud")
+set(LIB_XUD_DIR "$ENV{XMOS_LIB_XUD_PATH}")
 
 set(LIB_XUD_SRC_DIR "${LIB_XUD_DIR}/lib_xud/src/")
 
