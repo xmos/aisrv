@@ -14,7 +14,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message(FATAL_ERROR "In-source build is not allowed! Please specify a build folder.\n\tex:cmake -B build")
 endif()
 
-project(mobilenet_v1 VERSION 1.0.0)
+project(aisrv_usb VERSION 1.0.0)
 
 enable_language(CXX C ASM)
 
@@ -36,7 +36,7 @@ set(LIB_XUD_SRC_DIR "${LIB_XUD_DIR}/lib_xud/src/")
 # Build flags
 #**********************
 
-add_executable(mobilenet_v1)
+add_executable(aisrv_usb)
 add_library(inference_engine STATIC)
 
 # Optimization
@@ -59,12 +59,12 @@ set(BUILD_FLAGS
 )
 
 target_compile_options(inference_engine PRIVATE ${BUILD_FLAGS})
-target_compile_options(mobilenet_v1 PRIVATE ${BUILD_FLAGS})
+target_compile_options(aisrv_usb PRIVATE ${BUILD_FLAGS})
 
-target_link_options(mobilenet_v1 PRIVATE ${BUILD_FLAGS} -lquadspi -w)
-set_target_properties(mobilenet_v1 PROPERTIES OUTPUT_NAME mobilenet_v1.xe)
+target_link_options(aisrv_usb PRIVATE ${BUILD_FLAGS} -lquadspi -w)
+set_target_properties(aisrv_usb PROPERTIES OUTPUT_NAME aisrv_usb.xe)
 
-target_link_libraries(mobilenet_v1 PUBLIC inference_engine)
+target_link_libraries(aisrv_usb PUBLIC inference_engine)
 
 #***
 #lib_xud sources
@@ -151,12 +151,12 @@ set_source_files_properties("${PROJECT_SOURCE_DIR}/app/aisrv_usb.xc" PROPERTIES 
 #**********************
 # targets
 #**********************
-target_sources(mobilenet_v1
+target_sources(aisrv_usb
   PRIVATE ${APP_SOURCES}
   PRIVATE ${LIB_XUD_SOURCES}
 )
 
-target_include_directories(mobilenet_v1
+target_include_directories(aisrv_usb
   PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app/src"
   PRIVATE ${LIB_XUD_INCLUDE_DIRS}
@@ -169,5 +169,5 @@ target_include_directories(mobilenet_v1
 #**********************
 set(INSTALL_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
 set(INSTALL_BIN_DIR "${PROJECT_SOURCE_DIR}/bin")
-install(TARGETS mobilenet_v1 DESTINATION ${INSTALL_BIN_DIR})
+install(TARGETS aisrv_usb DESTINATION ${INSTALL_BIN_DIR})
 install(TARGETS inference_engine DESTINATION ${INSTALL_LIB_DIR})

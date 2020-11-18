@@ -69,7 +69,7 @@ void interp_runner(chanend c)
                     }
                 }
 
-                haveModel  = !interp_init();
+                haveModel = !interp_init();
                 c <: haveModel;
 
                 printf("Wrote model %d\n", haveModel);
@@ -105,8 +105,6 @@ void interp_runner(chanend c)
                 {
                     c <: STATUS_ERROR_NO_MODEL;
                 }
-           
-              
 
                 break;
 
