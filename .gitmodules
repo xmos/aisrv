@@ -1,0 +1,3 @@
+[submodule "submodules/lib_xud"]
+	path = submodules/lib_xud
+	url = git@github.com:xmos/lib_xud.git
