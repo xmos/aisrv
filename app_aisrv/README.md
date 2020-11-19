@@ -22,6 +22,7 @@ other:
    - This should also clone lib_xud and aiot_sdk (and its submodules, including ai_tools)
 - set XMOS_AIOT_SDK_PATH to point to aiot_sdk
 - set XMOS_LIB_XUD_PATH to point to lib_xud (should have be cloned into aisrv/submodules)
+- cd aisrv/app_aisrv
 - mkdir build
 - cd build
 - cmake ../
