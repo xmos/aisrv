@@ -1,3 +1,6 @@
 [submodule "submodules/lib_xud"]
 	path = submodules/lib_xud
 	url = git@github.com:xmos/lib_xud.git
+[submodule "submodules/aiot_sdk"]
+	path = submodules/aiot_sdk
+	url = git@github.com:xmos/aiot_sdk.git
