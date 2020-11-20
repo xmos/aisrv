@@ -1,6 +1,3 @@
 [submodule "submodules/lib_xud"]
 	path = submodules/lib_xud
 	url = git@github.com:xmos/lib_xud.git
-[submodule "submodules/ai_tools"]
-	path = submodules/ai_tools
-	url = git@github.com:xmos/ai_tools.git
