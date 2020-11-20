@@ -3,7 +3,9 @@ cmake_minimum_required(VERSION 3.14)
 #**********************
 # Setup XMOS toolchain
 #**********************
-include("$ENV{XMOS_AIOT_SDK_PATH}/tools/cmake_utils/xmos_toolchain.cmake")
+
+set(XMOS_TOOLS_PATH "$ENV{XMOS_TOOL_PATH}/bin")
+include("$ENV{XMOS_AISRV_PATH}/tools/cmake_utils/xmos_toolchain.cmake")
 
 #**********************
 # Project
@@ -22,11 +24,7 @@ enable_language(CXX C ASM)
 # Paths
 #**********************
 
-set(RTOS_SUPPORT_DIR "$ENV{XMOS_AIOT_SDK_PATH}/modules")
-
-set(AI_TOOLS_DIR "$ENV{XMOS_AIOT_SDK_PATH}/tools/ai_tools")
-
-set(RTOS_SUPPORT_DIR "$ENV{XMOS_AIOT_SDK_PATH}/modules")
+set(AI_TOOLS_DIR "$ENV{XMOS_AISRV_PATH}/submodules/ai_tools")
 
 set(LIB_XUD_DIR "$ENV{XMOS_LIB_XUD_PATH}")
 
@@ -115,14 +113,14 @@ set(INFERENCE_ENGINE_SOURCE_DIR
 
 set(INFERENCE_ENGINE_SOURCES
   ${XCORE_INTERPRETER_SOURCES}
-  "$ENV{XMOS_AIOT_SDK_PATH}/modules/tensorflow_support/qspi_flash/xcore_device_memory.c"
+  "$ENV{XMOS_AISRV_PATH}/submodules/tensorflow_support/qspi_flash/xcore_device_memory.c"
   "${INFERENCE_ENGINE_SOURCE_DIR}/inference_engine.cc"
   "${INFERENCE_ENGINE_SOURCE_DIR}/mobilenet_v1.c"
 )
 
 set(INFERENCE_ENGINE_INCLUDE_DIRS
   ${XCORE_INTERPRETER_INCLUDE_DIRS}
-  "$ENV{XMOS_AIOT_SDK_PATH}/modules/tensorflow_support/qspi_flash"
+  "$ENV{XMOS_AISRV_PATH}/submodules/tensorflow_support/qspi_flash"
   ${INFERENCE_ENGINE_SOURCE_DIR}
 )
 set(LIB_XUD_INCLUDE_DIRS
