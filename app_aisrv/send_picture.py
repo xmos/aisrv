@@ -15,7 +15,7 @@ import usb.core
 import usb.util
 
 DRAW = False
-SEND_MODEL = True
+SEND_MODEL = False
 MODEL_PATH = "./model/model_quant_xcore.tflite"
 
 # Commands - TODO properly share with app code
@@ -147,67 +147,66 @@ raw_img = None
 
 # Send image to device
 
-print("SETTING INPUT TENSOR VIA USB\n")
-try:
-    img = cv2.imread(sys.argv[1])
-    img = cv2.resize(img, (INPUT_SHAPE[0], INPUT_SHAPE[1]))
-    
-    # Channel swapping due to mismatch between open CV and XMOS
-    img = img[:, :, ::-1]  # or image = image[:, :, (2, 1, 0)]
+for arg in sys.argv[1:]:
+        print("SETTING INPUT TENSOR VIA USB\n")
+        try:
+            img = cv2.imread(arg)
+            img = cv2.resize(img, (INPUT_SHAPE[0], INPUT_SHAPE[1]))
+            
+            # Channel swapping due to mismatch between open CV and XMOS
+            img = img[:, :, ::-1]  # or image = image[:, :, (2, 1, 0)]
 
-    img = (img / NORM_SCALE) - NORM_SHIFT
-    img = np.round(quantize(img, INPUT_SCALE, INPUT_ZERO_POINT))
+            img = (img / NORM_SCALE) - NORM_SHIFT
+            img = np.round(quantize(img, INPUT_SCALE, INPUT_ZERO_POINT))
 
-    raw_img = bytes(img)
+            raw_img = bytes(img)
 
-    out_ep.write(bytes([CMD_SET_INPUT_TENSOR]))
+            out_ep.write(bytes([CMD_SET_INPUT_TENSOR]))
 
-    sentcount = 0
-    for i in range(0, len(raw_img), MAX_PACKET_SIZE):
-        out_ep.write(raw_img[i : i + MAX_PACKET_SIZE])
-        sentcount = sentcount + MAX_PACKET_SIZE
-        size_str = "sent: " + str(sentcount)
-        sys.stdout.write('%s\r' % size_str)
-        sys.stdout.flush()
-   
-    
-    sys.stdout.write('%s.. Done\n'  % size_str)
-        
-except KeyboardInterrupt:
-    pass
+            sentcount = 0
+            for i in range(0, len(raw_img), MAX_PACKET_SIZE):
+                out_ep.write(raw_img[i : i + MAX_PACKET_SIZE])
+                sentcount = sentcount + MAX_PACKET_SIZE
+                size_str = "sent: " + str(sentcount)
+                sys.stdout.write('%s\r' % size_str)
+                sys.stdout.flush()
+           
+            
+            sys.stdout.write('%s.. Done\n'  % size_str)
+                
+        except KeyboardInterrupt:
+            pass
 
-print("SENDING START INFERENCE COMMAND VIA USB\n")
-out_ep.write(bytes([CMD_START_INFER]), 1000)
+        print("Sending start inference command")
+        out_ep.write(bytes([CMD_START_INFER]), 1000)
 
-print("WAITING FOR INFERENCE\n")
-out_ep.write(bytes([CMD_GET_OUTPUT_TENSOR]), 50000)
+        print("Waiting for inference")
+        out_ep.write(bytes([CMD_GET_OUTPUT_TENSOR]), 50000)
 
-# Retrieve result from device
-# TODO deal with len(output_data > MAX_PACKET_SIZE)
-#output_data = dev.read(in_ep, output_length, 1000)
-output_data = dev.read(in_ep, output_length, 10000)
+        # Retrieve result from device
+        # TODO deal with len(output_data > MAX_PACKET_SIZE)
+        #output_data = dev.read(in_ep, output_length, 1000)
+        output_data = dev.read(in_ep, output_length, 10000)
 
-output_data_int = []
+        output_data_int = []
 
-# TODO better way of doing this?
-for i in output_data:
-    x =  int.from_bytes([i], byteorder = "little", signed=True)
-    output_data_int.append(x)
+        # TODO better way of doing this?
+        for i in output_data:
+            x =  int.from_bytes([i], byteorder = "little", signed=True)
+            output_data_int.append(x)
 
-print("READING OUTPUT TENSOR VIA USB: " + str(output_data_int))
+        max_value = max(output_data_int)
+        max_value_index = output_data_int.index(max_value)
 
-max_value = max(output_data_int)
-max_value_index = output_data_int.index(max_value)
+        prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
+        print("Output tensor read as ", str(output_data_int), ", this is a " + OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
 
-prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
-print("Interpretted result: " + OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
+        if DRAW: 
 
-if DRAW: 
+            np_img = np.frombuffer(raw_img, dtype=np.int8).reshape(INPUT_SHAPE)
+            np_img = np.round(
+                (dequantize(np_img, INPUT_SCALE, INPUT_ZERO_POINT) + NORM_SHIFT) * NORM_SCALE
+            ).astype(np.uint8)
 
-    np_img = np.frombuffer(raw_img, dtype=np.int8).reshape(INPUT_SHAPE)
-    np_img = np.round(
-        (dequantize(np_img, INPUT_SCALE, INPUT_ZERO_POINT) + NORM_SHIFT) * NORM_SCALE
-    ).astype(np.uint8)
-
-    pyplot.imshow(np_img)
-    pyplot.show()
+            pyplot.imshow(np_img)
+            pyplot.show()
