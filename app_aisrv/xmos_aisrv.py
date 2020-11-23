@@ -145,7 +145,7 @@ class aisrv_usb(airsv):
             return int.from_bytes(self.dev.read(self.in_ep, 4, 10000), byteorder = "little", signed=True)
         except usb.core.USBError as e:
             if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
-                print("Device error, IN pipe halted (no model uploaded?)")
+                print("Device error, IN pipe halted (issue with model?)")
                 sys.exit(1)
 
 
