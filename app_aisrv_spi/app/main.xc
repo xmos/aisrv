@@ -155,13 +155,11 @@ void interp_runner(chanend c)
     }
 }
 
-void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
+void aisrv_usb_data( chanend c)
 {
     unsigned char data[512];
     unsigned length = 0;
 
-    XUD_ep ep_out = XUD_InitEp(c_ep_out);
-    XUD_ep ep_in  = XUD_InitEp(c_ep_in);
 
     aisrv_cmd_t cmd = CMD_NONE;
 
@@ -173,7 +171,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
     while(1)
     {
         /* Get command */
-        XUD_GetBuffer(ep_out, data, length);
+//        XUD_GetBuffer(ep_out, data, length);
                 
         cmd = data[0];
 
@@ -194,7 +192,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                 c <: cmd;
 
                 /* First packet contains size only */
-                XUD_GetBuffer(ep_out, data, length);
+//                XUD_GetBuffer(ep_out, data, length);
     
                 int model_size = (data, unsigned[])[0];
 
@@ -206,7 +204,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 
                     while(model_size > 0)
                     {
-                        XUD_GetBuffer(ep_out, data, length);
+//                        XUD_GetBuffer(ep_out, data, length);
         
                         for(int i = 0; i < length; i++)
                         {
@@ -240,7 +238,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                     {
                         while(tensorLength > 0)
                         {
-                            XUD_GetBuffer(ep_out, data, pktLength);
+//                            XUD_GetBuffer(ep_out, data, pktLength);
                             
                             printf("Got %d bytes\n", pktLength);
                    
@@ -265,12 +263,12 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                 if(status == STATUS_OKAY)
                 {
                     c :> output_size;
-                    XUD_SetBuffer(ep_in, (output_size, unsigned char[]), 4);
+//                    XUD_SetBuffer(ep_in, (output_size, unsigned char[]), 4);
                 }
                 else
                 {
-                    XUD_SetStall(ep_in);
-                    XUD_SetStall(ep_out);
+//                    XUD_SetStall(ep_in);
+//                    XUD_SetStall(ep_out);
                 }
 
                 break;
@@ -285,8 +283,8 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 
                 if(status != STATUS_OKAY)
                 {
-                    XUD_SetStall(ep_in);
-                    XUD_SetStall(ep_out);
+//                    XUD_SetStall(ep_in);
+//                    XUD_SetStall(ep_out);
                 }
 
                 break;
@@ -303,7 +301,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                     for(int i = 0; i < output_size; i++)
                         c :> buffer[i] ;
                 }
-                XUD_SetBuffer(ep_in, buffer, output_size);
+//                XUD_SetBuffer(ep_in, buffer, output_size);
 
              default:
                 break;
@@ -314,13 +312,8 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 }
 } // unsafe
 
-void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in);
-
-
 int main(void)
 {
-    chan xscope_data_in;
-    chan c_ep_out[EP_COUNT_OUT], c_ep_in[EP_COUNT_IN];
     chan c;
 
     par 
@@ -335,10 +328,7 @@ int main(void)
           
             par
             {
-                aisrv_usb_data(c_ep_out[1], c_ep_in[1], c);
-                aisrv_usb_ep0(c_ep_out[0], c_ep_in[0]);
-                XUD_Main(c_ep_out, EP_COUNT_OUT, c_ep_in, EP_COUNT_IN, null, epTypeTableOut, epTypeTableIn, XUD_SPEED_HS, XUD_PWR_BUS);
-            
+                aisrv_usb_data(c);            
             }
         }
     } 

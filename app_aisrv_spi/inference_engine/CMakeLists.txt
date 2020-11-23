@@ -45,10 +45,6 @@ set(LIB_CXX_SRCS
         ${XCORE_INTERPRETER_SOURCES_CXX}
         "src/inference_engine.cc"
     )
-set(LIB_C_SRCS
-        ${XCORE_INTERPRETER_SOURCES_C}
-        "src/mobilenet_v1.c"
-    )
 set(LIB_ASM_SRCS
         ${XCORE_INTERPRETER_SOURCES_ASM}
     )
