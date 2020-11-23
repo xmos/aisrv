@@ -1,5 +1,4 @@
-
-// Copyright (c) 2019, XMOS Ltd, All rights reserved
+// Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 #include "inference_engine.h"
 
@@ -8,7 +7,6 @@
 #include <cstdio>
 #include <iostream>
 
-//#include "mobilenet_v1.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"

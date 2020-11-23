@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 
-#define MAX_MODEL_SIZE_BYTES (906000)
+#define MAX_MODEL_SIZE_BYTES (1060000)
 
 int interp_initialize(unsigned char **input, int *input_size, unsigned char **output, int *output_size);
 
