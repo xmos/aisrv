@@ -72,7 +72,7 @@ void interp_runner(chanend c)
                 haveModel = !interp_init();
                 c <: haveModel;
 
-                printf("Nodel written\n");
+                printf("Model written\n");
 
                 break;
 
