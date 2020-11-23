@@ -1,22 +1,20 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+
+
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <xscope.h>
-#include <stdio.h>
-
-#include "aisrv.h"
-
-#include "xud_device.h"
+#include <xclib.h>
+#include <stdint.h>
+#include "qpitest.h"
+#include "spitest.h"
 
 #include "inference_engine.h"
 
 extern int output_size;
-
-#define EP_COUNT_OUT 2
-#define EP_COUNT_IN 2
 
 extern "C" 
 {
@@ -27,9 +25,6 @@ extern "C"
     void write_model_data(int i, unsigned char x);
     extern int input_size;
 }
-
-XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
-XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 
 unsafe{
 void interp_runner(chanend c)
@@ -312,26 +307,44 @@ void aisrv_usb_data( chanend c)
 }
 } // unsafe
 
-int main(void)
-{
-    chan c;
+on tile[0]: port p_led = XS1_PORT_4C;
 
-    par 
-    {
-        on tile[1]: 
-        {
-            interp_runner(c);
+void leds(chanend led) {
+    while(1) {
+        int x;
+        led :> x;
+        if (x == -1) {
+            break;
         }
+        p_led <: x;
+    }
+}
 
-        on tile[0] : 
+#define PSOC_INTEGRATION
+
+int main(void) {
+    chan c_led, c_spi_to_buffer, c_buffer_to_engine, c_sensor_to_buffer;
+    par {
+#if defined(PSOC_INTEGRATION)
+        on tile[0]: leds(c_led);
+//                aisrv_usb_data(c);            
+        on tile[1]: spi_remote_test(c_led);
+        on tile[1]: interp_runner(buffer_to_engine);
+        on tile[0]: spi_xcore_ai_slave(p_cs_s, p_clk_s,
+                                       p_miso_s, p_mosi_s,
+                                       clkblk_s, c_led, c_spi_to_buffer,
+                                       memory);
+        on tile[0]: spi_buffer(c_spi_to_buffer, c_buffer_to_engine,
+                               sensor_to_c_buffer, memory);
+        on tile[0]: sensor(sensor_to_buffer, memory);
+#else
         {
-          
-            par
-            {
-                aisrv_usb_data(c);            
-            }
+            spi_main(c_led);
+            qpi_main(c_led);
+            c_led <: -1;
         }
-    } 
-
+        leds(c_led);
+#endif
+    }
     return 0;
 }
