@@ -3,7 +3,8 @@
 #include <xclib.h>
 #include <stdint.h>
 #include "spi.h"
-#include "inference_engine.h"
+#include "inference_commands.h"
+#include "shared_memory.h"
 
 static void reset_port(buffered port:32 p_data, clock clkblk) {
     asm volatile ("setc res[%0], 0" :: "r" (p_data));
@@ -40,27 +41,13 @@ static uint32_t data_word_in(in buffered port:32 p_data, in port p_cs,
     return index - oindex;
 }
 
-static uint32_t ai_server_id[1] = { INFERENCE_ENGINE_ID };
-static uint32_t ai_server_spec[1] = { INFERENCE_ENGINE_SPEC };
-static uint32_t memory[9000];
-
-static uint32_t timings_index = 0;
-static uint32_t input_tensor_index = 0;
-static uint32_t output_tensor_index = 0;
-static uint32_t timings_length = 0;
-static uint32_t input_tensor_length = 13;
-static uint32_t output_tensor_length = 13;
-static uint32_t model_index = 0;
-static uint32_t model_length = 0;
-
-extern void count_led();
-
 void spi_xcore_ai_slave(in port p_cs, in port p_clk,
                         buffered port:32 ?p_miso,
                         buffered port:32 p_data,
                         clock clkblk,
-                        chanend led) {
-    uint32_t status[1] = {0};
+                        chanend led,
+                        chanend to_buffer,
+                        struct memory * unsafe mem) {
     uint32_t running = 1;
     int cycle;
     p_cs when pinseq(1) :> void;
@@ -71,6 +58,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
     set_port_clock(p_data, clkblk);
     start_clock(clkblk);
     clearbuf(p_data);
+    unsafe {
     while (running) {
         uint32_t cmd;
         int data, bytes;
@@ -82,40 +70,39 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
         case INFERENCE_ENGINE_READ_STATUS:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
-                           status, 0, 1);
-            status[0] &= ~STATUS_ERROR;
+                           mem->status, 0, 1);
+            mem->status[0] &= ~STATUS_ERROR;
             break;
         case INFERENCE_ENGINE_READ_ID:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
-                           ai_server_id, 0, 1);
+                           mem->ai_server_id, 0, 1);
             break;
         case INFERENCE_ENGINE_READ_SPEC:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
-                           ai_server_spec, 0, 1);
+                           mem->ai_server_spec, 0, 1);
             break;
         case INFERENCE_ENGINE_READ_TIMINGS:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
-                           memory, timings_index, timings_length);
+                           mem->memory, mem->timings_index, mem->timings_length);
             break;
         case INFERENCE_ENGINE_READ_TENSOR:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
-                           memory, output_tensor_index, output_tensor_length);
+                           mem->memory, mem->output_tensor_index, mem->output_tensor_length);
             break;
         case INFERENCE_ENGINE_WRITE_MODEL:
-            bytes = data_word_in(p_data, p_cs, memory, model_index);
-            model_length = bytes;
+            bytes = data_word_in(p_data, p_cs, mem->memory, mem->model_index);
             break;
         case INFERENCE_ENGINE_WRITE_SERVER:
-            bytes = data_word_in(p_data, p_cs, memory, 0);
+            bytes = data_word_in(p_data, p_cs, mem->memory, 0);
             break;
         case INFERENCE_ENGINE_WRITE_TENSOR:
-            bytes = data_word_in(p_data, p_cs, memory, input_tensor_index);
-            if (bytes != input_tensor_length) {
-                status[0] |= STATUS_ERROR;
+            bytes = data_word_in(p_data, p_cs, mem->memory, mem->input_tensor_index);
+            if (bytes != mem->input_tensor_length) {
+                mem->status[0] |= STATUS_ERROR;
             }
             break;
         case INFERENCE_ENGINE_INFERENCE:
@@ -126,7 +113,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
             running = 0;
             break;
         default:
-            status[0] |= STATUS_ERROR;
+            mem->status[0] |= STATUS_ERROR;
             printf("ERR %08x\n", cmd);
             break;
         }
@@ -135,5 +122,6 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
         if (isnull(p_miso)) {
             reset_port(p_data, clkblk);
         }
+    }
     }
 }

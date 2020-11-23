@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 struct memory {
-    uint32_t status;
+    uint32_t status[1];
+    uint32_t ai_server_id[1];
     uint32_t ai_server_spec[1];
     uint32_t memory[9000];
 

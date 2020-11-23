@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "inference_engine.h"
+#include "inference_commands.h"
 #include "shared_memory.h"
 #include "spibuffer.h"
 
@@ -10,7 +10,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
     while(running) {
         int cmd;
         from_spi :> cmd;
-        mem->status |= STATUS_BUSY;
+        mem->status[0] |= STATUS_BUSY;
         switch(cmd) {
         case INFERENCE_ENGINE_READ_TENSOR:
             to_engine <: cmd;
@@ -47,8 +47,8 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
             to_engine <: INFERENCE_ENGINE_READ_TENSOR;
             master {
                 to_engine <: mem->output_tensor_length;
-                for(int i = 0; i < mem->output_tensor_length; i++) {
-                    to_engine :> mem->memory[mem->output_tensor_index + i];
+                for(int i = 0; i < 4*mem->output_tensor_length; i++) {
+                to_engine :> (mem->memory, uint8_t[])[mem->output_tensor_index + i];
                 }
             }
             to_engine <: INFERENCE_ENGINE_READ_TIMINGS;
@@ -84,7 +84,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
             running = 0;
             break;
         }
-            mem->status &= ~STATUS_BUSY;
+            mem->status[0] &= ~STATUS_BUSY;
     }
 }
 }
