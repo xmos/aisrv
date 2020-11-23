@@ -14,21 +14,11 @@ from matplotlib import pyplot
 import usb.core
 import usb.util
 
+from xmos_aisrv import aisrv_usb
+
 DRAW = False
 SEND_MODEL = False
 MODEL_PATH = "./model/model_quant_xcore.tflite"
-
-# Commands - TODO properly share with app code
-CMD_LENGTH_BYTES = 1
-
-CMD_NONE = 0
-CMD_GET_OUTPUT_LENGTH = 1
-CMD_SET_INPUT_TENSOR = 2
-CMD_START_INFER = 3
-CMD_GET_OUTPUT_TENSOR = 4
-CMD_SET_MODEL = 5
-###
-
 
 MAX_PACKET_SIZE = 512 # TODO read from device
 INPUT_SHAPE = (128, 128, 3)
@@ -57,7 +47,7 @@ PRINT_CALLBACK = ctypes.CFUNCTYPE(
     None, ctypes.c_ulonglong, ctypes.c_uint, ctypes.c_char_p
 )
 
-
+# TODO use quantize/dequantize from ai_tools
 def quantize(arr, scale, zero_point, dtype=np.int8):
     t = np.round(arr / scale + zero_point)
     return dtype(np.round(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max)))
@@ -66,87 +56,18 @@ def quantize(arr, scale, zero_point, dtype=np.int8):
 def dequantize(arr, scale, zero_point):
     return np.float32((arr.astype(np.int32) - np.int32(zero_point)) * scale)
 
-# find our device
-dev = None
-while dev is None:
-    dev = usb.core.find(idVendor=0x20b1) #, idProduct=0xa15e)
 
-# was it found?
-if dev is None:
-    raise ValueError('Device not found')
+aisrv = aisrv_usb()
 
-# set the active configuration. With no arguments, the first
-# configuration will be the active one
-dev.set_configuration()
+aisrv.connect()
 
-# get an endpoint instance
-cfg = dev.get_active_configuration()
+output_length = aisrv.output_length
 
-#print("found device: \n" + str(cfg))
-intf = cfg[(0,0)]
-
-out_ep = usb.util.find_descriptor(
-    intf,
-    # match the first OUT endpoint
-    custom_match = \
-    lambda e: \
-        usb.util.endpoint_direction(e.bEndpointAddress) == \
-        usb.util.ENDPOINT_OUT)
-
-in_ep = usb.util.find_descriptor(
-    intf,
-    # match the first OUT endpoint
-    custom_match = \
-    lambda e: \
-        usb.util.endpoint_direction(e.bEndpointAddress) == \
-        usb.util.ENDPOINT_IN)
-
-assert out_ep is not None
-assert in_ep is not None
-
-print("Connected")
-
-if SEND_MODEL:
-
-    print("WRITING MODEL VIA USB..\n")
-
-    with open(MODEL_PATH, "rb") as input_fd:
-        input_model = input_fd.read()
-
-    model_bytes = bytearray(input_model)
-
-    print("Model length (bytes): " + str(len(model_bytes)))
-
-    #Send model to device 
-    out_ep.write(bytes([CMD_SET_MODEL]))
-
-    # Send model size
-    len_bytes = int.to_bytes(len(model_bytes), byteorder = "little", signed=True, length=4)
-    out_ep.write(len_bytes, 1000)
-    
-    out_ep.write(model_bytes, 1000)
-
-    print("FINISHED WRITING MODEL")
-
-
-# Get output size from device
-out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
-
-try:
-    output_length = int.from_bytes(dev.read(in_ep, 4, 10000), byteorder = "little", signed=True)
-    print("READING OUTPUT TENSOR LENGTH FROM DEVICE: " + str(output_length))
-except usb.core.USBError as e:
-
-    if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
-        print("Device error, IN pipe halted (no model uploaded?)")
-        
-    sys.exit(1)
-
+print("READING OUTPUT TENSOR LENGTH FROM DEVICE: " + str(output_length))
 
 raw_img = None
 
 # Send image to device
-
 for arg in sys.argv[1:]:
         print("SETTING INPUT TENSOR VIA USB\n")
         try:
@@ -161,39 +82,17 @@ for arg in sys.argv[1:]:
 
             raw_img = bytes(img)
 
-            out_ep.write(bytes([CMD_SET_INPUT_TENSOR]))
-
-            sentcount = 0
-            for i in range(0, len(raw_img), MAX_PACKET_SIZE):
-                out_ep.write(raw_img[i : i + MAX_PACKET_SIZE])
-                sentcount = sentcount + MAX_PACKET_SIZE
-                size_str = "sent: " + str(sentcount)
-                sys.stdout.write('%s\r' % size_str)
-                sys.stdout.flush()
-           
+            aisrv.set_input_tensor(raw_img)
             
-            sys.stdout.write('%s.. Done\n'  % size_str)
                 
         except KeyboardInterrupt:
             pass
 
         print("Sending start inference command")
-        out_ep.write(bytes([CMD_START_INFER]), 1000)
+        aisrv.start_inference()
 
         print("Waiting for inference")
-        out_ep.write(bytes([CMD_GET_OUTPUT_TENSOR]), 50000)
-
-        # Retrieve result from device
-        # TODO deal with len(output_data > MAX_PACKET_SIZE)
-        #output_data = dev.read(in_ep, output_length, 1000)
-        output_data = dev.read(in_ep, output_length, 10000)
-
-        output_data_int = []
-
-        # TODO better way of doing this?
-        for i in output_data:
-            x =  int.from_bytes([i], byteorder = "little", signed=True)
-            output_data_int.append(x)
+        output_data_int = aisrv.get_output_tensor()
 
         max_value = max(output_data_int)
         max_value_index = output_data_int.index(max_value)

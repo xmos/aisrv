@@ -72,7 +72,7 @@ void interp_runner(chanend c)
                 haveModel = !interp_init();
                 c <: haveModel;
 
-                printf("Wrote model %d\n", haveModel);
+                printf("Nodel written\n");
 
                 break;
 
@@ -198,8 +198,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
     
                 int model_size = (data, unsigned[])[0];
 
-                printf("model size: %d\n", model_size);
-
                 master
                 {
                     c <: model_size;
@@ -219,7 +217,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
     
                 /* TODO handle any error */
                 c :> int status;
-                printf("model written commed\n");
                 break; 
 
             case CMD_SET_INPUT_TENSOR:
