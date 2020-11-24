@@ -1,4 +1,4 @@
-// Copyright (c) 2019, XMOS Ltd, All rights reserved
+// Copyright (c) 2020, XMOS Ltd, All rights reserved
 #ifndef INFERENCE_ENGINE_H_
 #define INFERENCE_ENGINE_H_
 
