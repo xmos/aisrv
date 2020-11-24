@@ -101,17 +101,37 @@ Python
 The highest level interface is a Python interface that over USB interfaces
 with an xcore.ai inference engine. It will look something like::
 
-  class Xcore_ai_ie:
-    # setup the USB connection
-    def __init__(self):
+  class xcore_ai_ie:
+    # setup the USB connection to the device
+    def connect(self):
        ...
        
-    # stores model on the inference engine
+    # stores model (byte array) on the inference engine
+    def download_model(self, model):
+       ...
+       
+    # read model model from the inference engine
     def upload_model(self, model):
        ...
-  
+     
+    # getter for input tensor length (read from device). Note, valid model must be on device
+    def input_length(self):
+        ...
+        
+    # write input tensor to device
+    def write_input_tensor(self, input_tensor)
+        ...
+
+    # getter for output tensor length (read from device)
+    def output_length(self):
+        ...
+        
+    # read output tensor from device
+    def read_output_tensor(self):
+        ...
+        
     # runs an inference, and returns an output tensor
-    def inference(self, input_tensor):
+    def start_inference(self, input_tensor):
        ...
        
     # grabs a frame of data over the attached sensor

@@ -14,7 +14,7 @@ from matplotlib import pyplot
 import usb.core
 import usb.util
 
-from xmos_aisrv import aisrv_usb
+from xcore_ai_ie import xcore_ai_ie_usb
 
 DRAW = False
 SEND_MODEL = False
@@ -57,11 +57,11 @@ def dequantize(arr, scale, zero_point):
     return np.float32((arr.astype(np.int32) - np.int32(zero_point)) * scale)
 
 
-aisrv = aisrv_usb()
+ie = xcore_ai_ie_usb()
 
-aisrv.connect()
+ie.connect()
 
-output_length = aisrv.output_length
+output_length = ie.output_length
 
 print("READING OUTPUT TENSOR LENGTH FROM DEVICE: " + str(output_length))
 
@@ -82,17 +82,17 @@ for arg in sys.argv[1:]:
 
             raw_img = bytes(img)
 
-            aisrv.set_input_tensor(raw_img)
+            ie.write_input_tensor(raw_img)
             
                 
         except KeyboardInterrupt:
             pass
 
         print("Sending start inference command")
-        aisrv.start_inference()
+        ie.start_inference()
 
         print("Waiting for inference")
-        output_data_int = aisrv.get_output_tensor()
+        output_data_int = ie.read_output_tensor()
 
         max_value = max(output_data_int)
         max_value_index = output_data_int.index(max_value)

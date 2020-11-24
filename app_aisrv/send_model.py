@@ -2,13 +2,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import sys
-from xmos_aisrv import aisrv_usb
+from xcore_ai_ie import xcore_ai_ie_usb
 
-aisrv = aisrv_usb()
+ie = xcore_ai_ie_usb()
 
-aisrv.connect()
+ie.connect()
 
-aisrv.send_model_file(sys.argv[1])
+ie.download_model_file(sys.argv[1])
 
 
 

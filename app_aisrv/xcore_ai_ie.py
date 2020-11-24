@@ -18,44 +18,55 @@ CMD_SET_MODEL = 5
 ###
 
 
-class airsv(ABC):
+class xcore_ai_ie(ABC):
     
     def __init__(self):
         self._output_length = None
+        self._input_length = None
         super().__init__()
    
-    @property
-    def output_length(self):
-        return self._output_length
-
+   
     @abstractmethod
     def connect(self):
         pass
 
     @abstractmethod
-    def send_model(self, model):
+    def download_model(self, model):
         pass
 
     @abstractmethod
-    def set_input_tensor(self):
+    def upload_model(self, model):
+        pass
+
+    @property
+    def input_length(self):
+        return self._input_length
+
+    @abstractmethod
+    def write_input_tensor(self, input_tensor):
         pass
     
+    @property
+    def output_length(self):
+        return self._output_length
+
+    @abstractmethod
+    def read_output_tensor(self):
+        pass
+
+    # Internal method to read output tensor length
+    @abstractmethod
+    def _read_output_length(self):
+        pass
+
     @abstractmethod
     def start_inference(self):
         pass
-    
-    @abstractmethod
-    def get_output_tensor(self):
-        pass
 
-    @abstractmethod
-    def request_output_length(self):
-        pass
-
-    def send_model_file(self, model_file):
+    def download_model_file(self, model_file):
         with open(model_file, "rb") as input_fd:
             model_data = input_fd.read()
-            self.send_model(bytearray(model_data))
+            self.download_model(bytearray(model_data))
 
     def bytes_to_int(self, data_bytes):
 
@@ -70,7 +81,7 @@ class airsv(ABC):
 
     
 
-class aisrv_usb(airsv):
+class xcore_ai_ie_usb(xcore_ai_ie):
 
     def __init__(self):
         self.out_ep = None
@@ -118,9 +129,11 @@ class aisrv_usb(airsv):
             print("Connected")
 
     
-    def send_model(self, model_bytes):
+    def download_model(self, model_bytes):
 
         print("WRITING MODEL VIA USB..\n")
+
+        #TODO assert type(model_bytes) == bytes
         
         # Send model to device 
         self.out_ep.write(bytes([CMD_SET_MODEL]))
@@ -134,9 +147,9 @@ class aisrv_usb(airsv):
         self.out_ep.write(model_bytes, 1000)
         print("FINISHED WRITING MODEL")
 
-        self._output_length = self.request_output_length() 
+        self._output_length = self._read_output_length() 
 
-    def request_output_length(self):
+    def _read_output_length(self):
 
         # Get output size from device
         self.out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
@@ -149,7 +162,7 @@ class aisrv_usb(airsv):
                 sys.exit(1)
 
 
-    def set_input_tensor(self, raw_img):
+    def write_input_tensor(self, raw_img):
 
         self.out_ep.write(bytes([CMD_SET_INPUT_TENSOR]))
 
@@ -172,12 +185,16 @@ class aisrv_usb(airsv):
         self.out_ep.write(bytes([CMD_START_INFER]), 1000)
 
 
-    def get_output_tensor(self, timeout = 50000):
+    def read_output_tensor(self, timeout = 50000):
 
         if self._output_length == None:
-            self._output_length = self.request_output_length()
+            self._output_length = self._read_output_length()
             
         # Retrieve result from device
         self.out_ep.write(bytes([CMD_GET_OUTPUT_TENSOR]), timeout)
         output_data = self.dev.read(self.in_ep, self.output_length, 10000)
         return self.bytes_to_int(output_data)
+
+    # TODO
+    def upload_model(self, model):
+        pass
