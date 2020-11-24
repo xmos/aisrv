@@ -12,12 +12,14 @@ void aisrv_usb(chanend c_ep_out[], chanend c_ep_in[]);
 typedef enum aisrv_cmd
 {
     CMD_NONE = 0,
-    CMD_GET_OUTPUT_TENSOR_LENGTH = 1,
-    CMD_SET_INPUT_TENSOR = 2,
-    CMD_START_INFER = 3,
-    CMD_GET_OUTPUT_TENSOR = 4,
-    CMD_SET_MODEL = 5, 
-    CMD_END_MARKER = 6,
+    CMD_GET_INPUT_TENSOR_LENGTH =1,
+    CMD_GET_OUTPUT_TENSOR_LENGTH =2,
+    CMD_SET_INPUT_TENSOR=3 ,
+    CMD_START_INFER=4,
+    CMD_GET_OUTPUT_TENSOR=5,
+    CMD_SET_MODEL=6, 
+    CMD_GET_MODEL=7, 
+    CMD_END_MARKER=8,
 } aisrv_cmd_t;
 
 typedef enum aisrv_status

@@ -13,7 +13,6 @@
 
 #include "inference_engine.h"
 
-extern int output_size;
 
 #define EP_COUNT_OUT 2
 #define EP_COUNT_IN 2
@@ -25,7 +24,9 @@ extern "C"
     void print_output(); 
     extern unsigned char * unsafe output_buffer;
     void write_model_data(int i, unsigned char x);
+    unsigned char read_model_data(int i);
     extern int input_size;
+    extern int output_size;
 }
 
 XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
@@ -39,6 +40,7 @@ void interp_runner(chanend c)
     unsigned char data[512];
 
     unsigned haveModel = 0;
+    unsigned model_size;
 
     while(1)
     {
@@ -48,7 +50,6 @@ void interp_runner(chanend c)
         {
             case CMD_SET_MODEL:
                 
-                unsigned model_size;
                 
                 slave 
                 {
@@ -74,6 +75,21 @@ void interp_runner(chanend c)
 
                 printf("Model written\n");
 
+                break;
+
+            case CMD_GET_MODEL:
+                
+                slave
+                {
+                    c <: model_size;
+
+                     for(int i = 0; i < model_size; i++)
+                    {
+                        unsigned char x;
+                        x = read_model_data(i); 
+                        c <: x;
+                    }
+                }
                 break;
 
             case CMD_SET_INPUT_TENSOR:
@@ -139,6 +155,20 @@ void interp_runner(chanend c)
 
                 break;
 
+             case CMD_GET_INPUT_TENSOR_LENGTH:
+
+                if(haveModel)
+                {
+                    c <: STATUS_OKAY;
+                    c <: input_size; 
+                }
+                else
+                {
+                    c <: STATUS_ERROR_NO_MODEL;
+                }
+
+                break;
+
             case CMD_GET_OUTPUT_TENSOR:
                 slave
                 {
@@ -158,20 +188,21 @@ void interp_runner(chanend c)
 void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 {
     unsigned char data[512];
-    unsigned length = 0;
 
     XUD_ep ep_out = XUD_InitEp(c_ep_out);
     XUD_ep ep_in  = XUD_InitEp(c_ep_in);
 
     aisrv_cmd_t cmd = CMD_NONE;
 
-    int infer_in_progress = 0;
     int result_requested = 0;
 
     int output_size = 0;
+    int input_size = 0;
 
     while(1)
     {
+        unsigned length = 0;
+        
         /* Get command */
         XUD_GetBuffer(ep_out, data, length);
                 
@@ -219,6 +250,46 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                 c :> int status;
                 break; 
 
+            case CMD_GET_MODEL: 
+
+                unsigned model_size;
+
+                c <: cmd;
+
+                /* First packet contains size only */
+                master
+                {
+                    c :> model_size;
+                    
+                    printf("model_size: %d\n", model_size);
+                
+                    XUD_SetBuffer(ep_in, (model_size, unsigned char[]), 4);
+
+                    while(model_size >= MAX_PACKET_SIZE)
+                    {
+                        for(int i = 0; i < MAX_PACKET_SIZE; i++)
+                        {
+                            c :> data[i];
+                        }
+                       
+                        XUD_SetBuffer(ep_in, data, MAX_PACKET_SIZE);
+
+                        model_size = model_size - MAX_PACKET_SIZE;
+                    }
+
+                    // Send tail packet 
+                    if(model_size)
+                    {
+                        for(int i = 0; i < model_size; i++)
+                        {
+                            c :> data[i];
+                        }
+                        XUD_SetBuffer(ep_in, data, model_size);
+                    }
+                }
+    
+                break; 
+
             case CMD_SET_INPUT_TENSOR:
                 
                 aisrv_status_t status;
@@ -239,15 +310,34 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                         {
                             XUD_GetBuffer(ep_out, data, pktLength);
                             
-                            printf("Got %d bytes\n", pktLength);
-                   
                             c <: pktLength;
+                            
                             for(int i = 0; i < pktLength; i++)
                                 c <: data[i];
 
                             tensorLength = tensorLength - pktLength;
                         }
                     }
+                }
+
+                break;
+
+             case CMD_GET_INPUT_TENSOR_LENGTH:
+
+                aisrv_status_t status = STATUS_OKAY;
+            
+                c <: cmd;
+                c :> status;
+
+                if(status == STATUS_OKAY)
+                {
+                    c :> input_size;
+                    XUD_SetBuffer(ep_in, (input_size, unsigned char[]), 4);
+                }
+                else
+                {
+                    XUD_SetStall(ep_in);
+                    XUD_SetStall(ep_out);
                 }
 
                 break;
@@ -289,7 +379,8 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                 break;
 
             case CMD_GET_OUTPUT_TENSOR:
-               
+              
+                /* TODO this will break if output_size is not set */ 
                 /* TODO handle len(output_buffer) > MAX_PACKET_SIZE */
                 unsigned char buffer[MAX_PACKET_SIZE];
    

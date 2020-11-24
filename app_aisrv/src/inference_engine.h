@@ -16,6 +16,7 @@ int interp_initialize(unsigned char **input, int *input_size, unsigned char **ou
 aisrv_status_t interp_invoke();
 
 void write_model_data(int i, unsigned char x);
+unsigned char read_model_data(int i);
 
 #ifdef __cplusplus
 };

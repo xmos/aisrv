@@ -62,8 +62,10 @@ ie = xcore_ai_ie_usb()
 ie.connect()
 
 output_length = ie.output_length
-
 print("READING OUTPUT TENSOR LENGTH FROM DEVICE: " + str(output_length))
+
+input_length = ie.input_length
+print("READING INPUT TENSOR LENGTH FROM DEVICE: " + str(input_length))
 
 raw_img = None
 
