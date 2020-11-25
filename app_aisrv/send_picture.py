@@ -7,6 +7,7 @@ import time
 import struct
 import ctypes
 import cv2
+from math import sqrt
 
 import numpy as np
 from matplotlib import pyplot
@@ -17,11 +18,7 @@ import usb.util
 from xcore_ai_ie import xcore_ai_ie_usb
 
 DRAW = False
-SEND_MODEL = False
-MODEL_PATH = "./model/model_quant_xcore.tflite"
 
-MAX_PACKET_SIZE = 512 # TODO read from device
-INPUT_SHAPE = (128, 128, 3)
 INPUT_SCALE = 0.007843137718737125
 INPUT_ZERO_POINT = -1
 NORM_SCALE = 127.5
@@ -61,11 +58,15 @@ ie = xcore_ai_ie_usb()
 
 ie.connect()
 
+input_length = ie.input_length
+print("READING INPUT TENSOR LENGTH FROM DEVICE: " + str(input_length))
+
 output_length = ie.output_length
 print("READING OUTPUT TENSOR LENGTH FROM DEVICE: " + str(output_length))
 
-input_length = ie.input_length
-print("READING INPUT TENSOR LENGTH FROM DEVICE: " + str(input_length))
+input_shape_channels = 3
+input_shape_spacial =  int(sqrt(input_length/input_shape_channels))
+INPUT_SHAPE = (input_shape_spacial, input_shape_spacial, input_shape_channels)
 
 raw_img = None
 
