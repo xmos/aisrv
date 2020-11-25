@@ -9,16 +9,19 @@ void aisrv_usb(chanend c_ep_out[], chanend c_ep_in[]);
 
 #define CMD_LENGTH_BYTES (1)
 
+/* TODO single register "addresss" and read/write bit */
 typedef enum aisrv_cmd
 {
     CMD_NONE = 0,
     CMD_GET_INPUT_TENSOR_LENGTH =1,
     CMD_GET_OUTPUT_TENSOR_LENGTH =2,
-    CMD_SET_INPUT_TENSOR=3 ,
-    CMD_START_INFER=4,
+    CMD_SET_INPUT_TENSOR=0x83,
+    CMD_START_INFER= 0x84,
     CMD_GET_OUTPUT_TENSOR=5,
-    CMD_SET_MODEL=6, 
-    CMD_GET_MODEL=7, 
+   
+    CMD_SET_MODEL=0x86, 
+    CMD_GET_MODEL=0x06, 
+  
     CMD_END_MARKER=8,
 } aisrv_cmd_t;
 
