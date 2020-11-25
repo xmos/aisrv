@@ -68,6 +68,8 @@ input_shape_channels = 3
 input_shape_spacial =  int(sqrt(input_length/input_shape_channels))
 INPUT_SHAPE = (input_shape_spacial, input_shape_spacial, input_shape_channels)
 
+print("Inferred input shape: " + str(INPUT_SHAPE))
+
 raw_img = None
 
 # Send image to device
@@ -101,7 +103,7 @@ for arg in sys.argv[1:]:
         max_value_index = output_data_int.index(max_value)
 
         prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
-        print("Output tensor read as ", str(output_data_int), ", this is a " + OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
+        print("Output tensor read as ", str(output_data_int),", this is a " + OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
 
         if DRAW: 
 
