@@ -46,10 +46,20 @@ static inline transaction send_array(chanend c, unsigned char * unsafe array, un
         c <: array[i];
 }
 
-static inline transaction receive_array(chanend c, unsigned char * unsafe array, unsigned size)
+static inline void receive_array_(chanend c, unsigned char * unsafe array, unsigned size)
 {
-    for(int i = 0; i < size; i++)
-        c :> array[i];
+    unsigned i = 0;
+    while(1)
+    {
+        /* TODO transfer words */
+        if(!testct(c))
+            array[i++] = inuchar(c);
+        else
+        {    
+            chkct(c, XS1_CT_END);
+            break;
+        }
+    }
 }
 
 void interp_runner(chanend c)
@@ -69,22 +79,21 @@ void interp_runner(chanend c)
         {
             case CMD_SET_MODEL:
                 
-                slave 
-                {
-                    c :> model_size;
-            
-                    if(model_size > MAX_MODEL_SIZE_BYTES)
+                #if 0
+                     if(model_size > MAX_MODEL_SIZE_BYTES)
                         printf("Warning not enough space allocated for model %d %d\n", model_size, MAX_MODEL_SIZE_BYTES);
                     else
                         printf("Model size: %d\n", model_size);
+                #endif
+                
+                // TODO reinstate checks for witing out of bounds
+                receive_array_(c, model_data, model_size);
 
-                    receive_array(c, model_data, model_size);
+                haveModel = !interp_init();
+                outuint(c, haveModel);
+                outct(c, XS1_CT_END);
 
-                    haveModel = !interp_init();
-                    c <: haveModel;
-
-                    printf("Model written\n");
-                }
+                printf("Model written %d\n", haveModel);
 
                 break;
 
@@ -100,56 +109,63 @@ void interp_runner(chanend c)
 
             case CMD_SET_INPUT_TENSOR:
 
-                slave
-                {
-                    unsigned size;
-                    c :> size;
-
-                    // TODO check size vs input_size
+                 // TODO check size vs input_size
+               
+                unsigned i = 0; 
                 
-                    for(int i = 0; i < size; i++)
+                while(1)
+                {
+                    if(!testct(c))
                     {
                         unsigned char x;
-                        c :> x;
-
+                        x = inuchar(c);
+                    
                         /* If no valid model throw away data */
                         if(haveModel)
-                            input_buffer[i] = x;
+                            input_buffer[i++] = x;
                     }
-                
-                    if(haveModel)
-                        c <: (unsigned) STATUS_OKAY;
                     else
-                        c <: (unsigned) STATUS_ERROR_NO_MODEL;
-                }  
-
+                    {
+                        chkct(c, XS1_CT_END);
+                        break;
+                    }
+                }
+            
+                if(haveModel)
+                {
+                    outuint(c, STATUS_OKAY);
+                    outct(c, XS1_CT_END);
+                }
+                else
+                {
+                    outuint(c, STATUS_ERROR_NO_MODEL);
+                    outct(c, XS1_CT_END);
+                }
                 break;
 
             case CMD_START_INFER:
 
                 aisrv_status_t status = STATUS_OKAY;
                 
-                slave
+                inuchar(c); // dummy byte
+                inct(c);
+                    
+                if(haveModel)
                 {
-                    c :> int dummy_size;
-                    c :> unsigned char dummy_byte;
-
-                    if(haveModel)
-                    {
-                        status = interp_invoke();
-                        //print_output();
-                    }
-                    else
-                    {
-                        status = STATUS_ERROR_NO_MODEL;
-                    }
-                    c <: status;
+                    status = interp_invoke();
+                    //print_output();
+                }
+                else
+                {
+                    status = STATUS_ERROR_NO_MODEL;
                 }
 
+                outuint(c, status);
+                outct(c, XS1_CT_END);
                 break;
             
             case CMD_GET_OUTPUT_TENSOR_LENGTH:
-
+    
                 // TODO use a send array function 
                 slave
                 {
@@ -239,32 +255,31 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
         /* Check cmd write bit */
         if(cmd & 0x80)
         {
-            unsigned pktLength;
-            /* First packet contains size only */
-            XUD_GetBuffer(ep_out, data, pktLength);
-
-            int size = (data, unsigned[])[0];
-            
-            master
+            while(1)
             {
-                c <: size;
+                unsigned pktLength;
+                XUD_GetBuffer(ep_out, data, pktLength);
+       
+                printf("Received: %d bytes\n", pktLength);
 
-                while(size > 0)
+                if(pktLength)
                 {
-                    XUD_GetBuffer(ep_out, data, pktLength);
-    
+                    /* TODO transfer words */
                     for(int i = 0; i < pktLength; i++)
-                    {
-                        c <: data[i];
-                    }
-
-                    size = size - pktLength;
+                        outuchar(c, data[i]);
                 }
 
-                /* TODO handle any error */
-                aisrv_status_t status;
-                c :> status;
+                if(pktLength != MAX_PACKET_SIZE)
+                {
+                    outct(c, XS1_CT_END);
+                    printf("terminiating Rx\n");
+                    break;
+                }
             }
+
+            aisrv_status_t status;
+            status = inuint(c);
+            chkct(c, XS1_CT_END);
         }
         else
         {
@@ -280,8 +295,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                     unsigned size;
                     c :> size;
                 
-                    XUD_SetBuffer(ep_in, (size, unsigned char[]), 4);
-
                     while(size >= MAX_PACKET_SIZE)
                     {
                         for(int i = 0; i < MAX_PACKET_SIZE; i++)

@@ -5,6 +5,7 @@ import sys
 
 import usb.core
 import usb.util
+import array
 
 # Commands - TODO properly share with app code
 CMD_LENGTH_BYTES = 1
@@ -20,6 +21,8 @@ CMD_SET_MODEL = 0x86
 CMD_GET_MODEL = 0x06
 ###
 
+#TODO rm me and read from device
+MAX_PACKET_SIZE = 512
 
 class xcore_ai_ie(ABC):
     
@@ -161,13 +164,12 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         # Send model to device 
         self._out_ep.write(bytes([CMD_SET_MODEL]))
 
-        # Send model size
-        len_bytes = int.to_bytes(len(model_bytes), byteorder = "little", signed=True, length=4)
-
         print("Model length (bytes): " + str(len(model_bytes)))
-        self._out_ep.write(len_bytes, 1000)
 
         self._out_ep.write(model_bytes, 1000)
+        if((len(model_bytes) % MAX_PACKET_SIZE) == 0):
+            self._out_ep.write(bytearray([]), 1000)
+       
         print("FINISHED WRITING MODEL")
 
         # Update input/output tensor lengths
@@ -184,9 +186,11 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self._out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
     
         try:
-            length = int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
-            assert length == 4
-            return int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
+            buff = usb.util.create_buffer(MAX_PACKET_SIZE)
+            read_len = self._dev.read(self._in_ep, buff, 10000)
+            assert read_len == 4
+            return int.from_bytes(buff, byteorder = "little", signed=True)
+
         except usb.core.USBError as e:
             if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
                 print("Device error, IN pipe halted (issue with model?)")
@@ -198,9 +202,11 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self._out_ep.write(bytes([CMD_GET_INPUT_LENGTH]), self._timeout)
     
         try:
-            length = int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
-            assert length == 4
-            return int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
+            buff = usb.util.create_buffer(MAX_PACKET_SIZE)
+            read_len = self._dev.read(self._in_ep, buff, 10000)
+            assert read_len == 4
+            return int.from_bytes(buff, byteorder = "little", signed=True)
+        
         except usb.core.USBError as e:
             if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
                 print("Device error, IN pipe halted (issue with model?)")
@@ -209,25 +215,20 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def write_input_tensor(self, raw_img):
 
         self._out_ep.write(bytes([CMD_SET_INPUT_TENSOR]))
-    
-        len_bytes = int.to_bytes(len(raw_img), byteorder = "little", signed=True, length=4)
-
-        print("img length (bytes): " + str(len(raw_img)))
-        self._out_ep.write(len_bytes, 1000)
-
         self._out_ep.write(raw_img, 1000)
-        print("FINISHED WRITING INPUT TENSOR")
 
+        if((len(raw_img) % MAX_PACKET_SIZE) == 0):
+            print("SEND EXTRA 0 LENGTH");
+            self._out_ep.write(bytearray([]), 1000)
+
+        print("FINISHED WRITING INPUT TENSOR")
 
     def start_inference(self):
 
         # Send cmd
         self._out_ep.write(bytes([CMD_START_INFER]), 1000)
 
-        # Send dummy length of 1
-        len_bytes = int.to_bytes(1, byteorder = "little", signed=True, length=4)
-        self._out_ep.write(len_bytes, 1000)
-
+        # TOOD rm me
         # Send out a single byte packet 
         self._out_ep.write(bytes([1]), 1000)
 
@@ -237,9 +238,8 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             self._output_length = self._read_output_length()
             
         # Retrieve result from device
+        # TOOD this should be reading until a non-MAX_PACKET_LENGTH packets is received
         self._out_ep.write(bytes([CMD_GET_OUTPUT_TENSOR]), timeout)
-        output_length = int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
-        assert output_length == self.output_length
         output_data = self._dev.read(self._in_ep, self.output_length, 10000)
         return self.bytes_to_int(output_data)
 
