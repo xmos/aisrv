@@ -272,7 +272,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                 if(pktLength != MAX_PACKET_SIZE)
                 {
                     outct(c, XS1_CT_END);
-                    printf("terminiating Rx\n");
                     break;
                 }
             }
