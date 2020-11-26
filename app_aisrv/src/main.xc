@@ -24,6 +24,7 @@ extern "C"
     void print_output(); 
     extern unsigned char * unsafe output_buffer;
     void write_model_data(int i, unsigned char x);
+    void write_input_buffer(int i, unsigned char x);
     unsigned char read_model_data(int i);
     extern int input_size;
     extern int output_size;
@@ -49,7 +50,6 @@ void interp_runner(chanend c)
         switch(cmd)
         {
             case CMD_SET_MODEL:
-                
                 
                 slave 
                 {
@@ -94,77 +94,93 @@ void interp_runner(chanend c)
 
             case CMD_SET_INPUT_TENSOR:
 
-                aisrv_status_t status = STATUS_OKAY;
-
-                if(haveModel)
+                slave
                 {
-                    c <: STATUS_OKAY;
-                    c <: input_size;
+                    unsigned size;
+                    c :> size;
 
-                    slave
+                    // TODO check size vs input_size
+                
+                    for(int i = 0; i < size; i++)
                     {
-                        /* TODO improve efficiency of comms */
-                        int offset = 0;
-                        while(offset < input_size)
-                        {
-                            c :> length;
+                        unsigned char x;
+                        c :> x;
 
-                            for(int i = 0; i < length; i++)
-                                c :> data[i];
-                        
-                            buffer_input_data(data, offset, length);
-                            offset += length; 
-                        }
+                        /* If no valid model throw away data */
+                        if(haveModel)
+                            write_input_buffer(i, x);
                     }
-                }
+                }  
+                if(haveModel)
+                    c <: (unsigned) STATUS_OKAY;
                 else
-                {
-                    c <: STATUS_ERROR_NO_MODEL;
-                }
+                        c <: (unsigned) STATUS_ERROR_NO_MODEL;
 
                 break;
 
             case CMD_START_INFER:
 
                 aisrv_status_t status = STATUS_OKAY;
-
-                if(haveModel)
+                
+                slave
                 {
-                    status = interp_invoke();
-                    //print_output();
-                }
-                else
-                {
-                    status = STATUS_ERROR_NO_MODEL;
-                }
+                    c :> int dummy_size;
+                    c :> unsigned char dummy_byte;
 
+                    if(haveModel)
+                    {
+                        status = interp_invoke();
+                        //print_output();
+                    }
+                    else
+                    {
+                        status = STATUS_ERROR_NO_MODEL;
+                    }
+                }
                 c <: status;
+
                 break;
             
             case CMD_GET_OUTPUT_TENSOR_LENGTH:
 
-                if(haveModel)
+                // TODO use a send array function 
+                slave
                 {
-                    c <: STATUS_OKAY;
-                    c <: output_size; 
-                }
-                else
-                {
-                    c <: STATUS_ERROR_NO_MODEL;
+                    if(haveModel)
+                    {
+                        c <: (unsigned) STATUS_OKAY;
+                        c <: (unsigned)4; // 4 bytes for int
+                        for(int i = 0; i < 4; i++)
+                        {
+                            c <: (unsigned char) (output_size, unsigned char[])[i]; 
+                        }
+                    }
+                    else
+                    {
+                        c <: STATUS_ERROR_NO_MODEL;
+                    }
                 }
 
                 break;
 
              case CMD_GET_INPUT_TENSOR_LENGTH:
-
-                if(haveModel)
+                
+                // TODO use a send array function 
+                slave
                 {
-                    c <: STATUS_OKAY;
-                    c <: input_size; 
-                }
-                else
-                {
-                    c <: STATUS_ERROR_NO_MODEL;
+                    if(haveModel)
+                    {
+                        c <: (unsigned) STATUS_OKAY;
+                        c <: (unsigned)4; // 4 bytes for int
+                        for(int i = 0; i < 4; i++)
+                        {
+                            c <: (unsigned char) (input_size, unsigned char[])[i]; 
+                        }
+                    }
+                    else
+                    {
+                        c <: STATUS_ERROR_NO_MODEL;
+                    }
                 }
 
                 break;
@@ -172,6 +188,9 @@ void interp_runner(chanend c)
             case CMD_GET_OUTPUT_TENSOR:
                 slave
                 {
+                    c <: (unsigned) STATUS_OKAY;
+                    c <: (unsigned)output_size; // 4 bytes for int
+                    
                     for(int i = 0; i < output_size; i++)
                     {
                         c <: output_buffer[i];
@@ -213,59 +232,63 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
             printf("Bad cmd length: %d\n", length);
             continue;
         }
-        if(cmd > CMD_END_MARKER)
+        if((cmd & 0x7f) > CMD_END_MARKER)
         {
             printf("Bad cmd: %d\n", cmd);
         }
-                       
-        switch(cmd)
+             
+      
+
+        /* Pass on command */
+        c <: cmd;
+       
+        /* Check cmd write bit */
+        if(cmd & 0x80)
         {
-            case CMD_SET_MODEL: 
+            unsigned pktLength;
+            /* First packet contains size only */
+            XUD_GetBuffer(ep_out, data, pktLength);
 
-                c <: cmd;
+            int size = (data, unsigned[])[0];
+            
+            master
+            {
+                c <: size;
 
-                /* First packet contains size only */
-                XUD_GetBuffer(ep_out, data, length);
-    
-                int model_size = (data, unsigned[])[0];
-
-                master
+                while(size > 0)
                 {
-                    c <: model_size;
-
-                    while(model_size > 0)
+                    XUD_GetBuffer(ep_out, data, pktLength);
+    
+                    for(int i = 0; i < pktLength; i++)
                     {
-                        XUD_GetBuffer(ep_out, data, length);
-        
-                        for(int i = 0; i < length; i++)
-                        {
-                            c <: data[i];
-                        }
-
-                        model_size = model_size - length;
+                        c <: data[i];
                     }
+
+                    size = size - pktLength;
                 }
-    
-                /* TODO handle any error */
-                c :> int status;
-                break; 
+            }
 
-            case CMD_GET_MODEL: 
+            /* TODO handle any error */
+            aisrv_status_t status;
+            c :> status;
+        }
+        else
+        {
+            /* Read command */
+            master
+            {
+                aisrv_status_t status = STATUS_OKAY;
+               
+                c :> status;
 
-                unsigned model_size;
-
-                c <: cmd;
-
-                /* First packet contains size only */
-                master
+                if(status == STATUS_OKAY)
                 {
-                    c :> model_size;
-                    
-                    printf("model_size: %d\n", model_size);
+                    unsigned size;
+                    c :> size;
                 
-                    XUD_SetBuffer(ep_in, (model_size, unsigned char[]), 4);
+                    XUD_SetBuffer(ep_in, (size, unsigned char[]), 4);
 
-                    while(model_size >= MAX_PACKET_SIZE)
+                    while(size >= MAX_PACKET_SIZE)
                     {
                         for(int i = 0; i < MAX_PACKET_SIZE; i++)
                         {
@@ -274,129 +297,25 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                        
                         XUD_SetBuffer(ep_in, data, MAX_PACKET_SIZE);
 
-                        model_size = model_size - MAX_PACKET_SIZE;
+                        size = size - MAX_PACKET_SIZE;
                     }
 
                     // Send tail packet 
-                    if(model_size)
+                    if(size)
                     {
-                        for(int i = 0; i < model_size; i++)
+                        for(int i = 0; i < size; i++)
                         {
                             c :> data[i];
                         }
-                        XUD_SetBuffer(ep_in, data, model_size);
+                        XUD_SetBuffer(ep_in, data, size);
                     }
-                }
-    
-                break; 
-
-            case CMD_SET_INPUT_TENSOR:
-                
-                aisrv_status_t status;
-
-                c <: cmd;
-
-                c :> status;
-
-                if(status == STATUS_OKAY)
-                {
-                    unsigned pktLength, tensorLength;
-                    
-                    c :> tensorLength;
-
-                    master
-                    {
-                        while(tensorLength > 0)
-                        {
-                            XUD_GetBuffer(ep_out, data, pktLength);
-                            
-                            c <: pktLength;
-                            
-                            for(int i = 0; i < pktLength; i++)
-                                c <: data[i];
-
-                            tensorLength = tensorLength - pktLength;
-                        }
-                    }
-                }
-
-                break;
-
-             case CMD_GET_INPUT_TENSOR_LENGTH:
-
-                aisrv_status_t status = STATUS_OKAY;
-            
-                c <: cmd;
-                c :> status;
-
-                if(status == STATUS_OKAY)
-                {
-                    c :> input_size;
-                    XUD_SetBuffer(ep_in, (input_size, unsigned char[]), 4);
                 }
                 else
                 {
                     XUD_SetStall(ep_in);
                     XUD_SetStall(ep_out);
                 }
-
-                break;
-
-            case CMD_GET_OUTPUT_TENSOR_LENGTH:
-
-                aisrv_status_t status = STATUS_OKAY;
-            
-                c <: cmd;
-                c :> status;
-
-                if(status == STATUS_OKAY)
-                {
-                    c :> output_size;
-                    XUD_SetBuffer(ep_in, (output_size, unsigned char[]), 4);
-                }
-                else
-                {
-                    XUD_SetStall(ep_in);
-                    XUD_SetStall(ep_out);
-                }
-
-                break;
-
-            case CMD_START_INFER:
-
-                c <: CMD_START_INFER;
-                /* Block this thread until done - we have no way of responding to commands while one is in progress */
-
-                aisrv_status_t status;
-                c :> status;
-
-                if(status != STATUS_OKAY)
-                {
-                    XUD_SetStall(ep_in);
-                    XUD_SetStall(ep_out);
-                }
-
-                break;
-
-            case CMD_GET_OUTPUT_TENSOR:
-              
-                /* TODO this will break if output_size is not set */ 
-                /* TODO handle len(output_buffer) > MAX_PACKET_SIZE */
-                unsigned char buffer[MAX_PACKET_SIZE];
-   
-                c <: cmd;
-
-                master 
-                {
-                    for(int i = 0; i < output_size; i++)
-                        c :> buffer[i] ;
-                }
-                XUD_SetBuffer(ep_in, buffer, output_size);
-
-             default:
-                break;
-
-
+            }
         }
     } // while(1)
 }

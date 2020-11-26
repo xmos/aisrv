@@ -12,11 +12,12 @@ CMD_LENGTH_BYTES = 1
 CMD_NONE = 0
 CMD_GET_INPUT_LENGTH = 1
 CMD_GET_OUTPUT_LENGTH = 2
-CMD_SET_INPUT_TENSOR = 3
-CMD_START_INFER = 4
+CMD_SET_INPUT_TENSOR = 0x83
+CMD_START_INFER = 0x84
 CMD_GET_OUTPUT_TENSOR = 5
-CMD_SET_MODEL = 6
-CMD_GET_MODEL = 7
+
+CMD_SET_MODEL = 0x86
+CMD_GET_MODEL = 0x06
 ###
 
 
@@ -171,8 +172,11 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
         # Update input/output tensor lengths
         self._output_length = self._read_output_length() 
+        print("output_length: " + str(self._output_length))
         self._input_length = self._read_input_length() 
+        print("input_length: " + str(self._input_length))
         self._model_length = len(model_bytes)
+        print("model_length: " + str(self._model_length))
 
     def _read_output_length(self):
 
@@ -180,6 +184,8 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self._out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
     
         try:
+            length = int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
+            assert length == 4
             return int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
         except usb.core.USBError as e:
             if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
@@ -192,6 +198,8 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self._out_ep.write(bytes([CMD_GET_INPUT_LENGTH]), self._timeout)
     
         try:
+            length = int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
+            assert length == 4
             return int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
         except usb.core.USBError as e:
             if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
@@ -201,21 +209,27 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def write_input_tensor(self, raw_img):
 
         self._out_ep.write(bytes([CMD_SET_INPUT_TENSOR]))
+    
+        len_bytes = int.to_bytes(len(raw_img), byteorder = "little", signed=True, length=4)
 
-        MAX_PACKET_SIZE = 512 # TODO, required?
+        print("img length (bytes): " + str(len(raw_img)))
+        self._out_ep.write(len_bytes, 1000)
 
-        sentcount = 0
-        for i in range(0, len(raw_img), MAX_PACKET_SIZE):
-            self._out_ep.write(raw_img[i : i + MAX_PACKET_SIZE])
-            sentcount = sentcount + MAX_PACKET_SIZE
-            size_str = "sent: " + str(sentcount)
-            sys.stdout.write('%s\r' % size_str)
-            sys.stdout.flush()
-        sys.stdout.write('%s.. Done\n'  % size_str)
+        self._out_ep.write(raw_img, 1000)
+        print("FINISHED WRITING INPUT TENSOR")
+
 
     def start_inference(self):
 
+        # Send cmd
         self._out_ep.write(bytes([CMD_START_INFER]), 1000)
+
+        # Send dummy length of 1
+        len_bytes = int.to_bytes(1, byteorder = "little", signed=True, length=4)
+        self._out_ep.write(len_bytes, 1000)
+
+        # Send out a single byte packet 
+        self._out_ep.write(bytes([1]), 1000)
 
     def read_output_tensor(self, timeout = 50000):
 
@@ -224,6 +238,8 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             
         # Retrieve result from device
         self._out_ep.write(bytes([CMD_GET_OUTPUT_TENSOR]), timeout)
+        output_length = int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
+        assert output_length == self.output_length
         output_data = self._dev.read(self._in_ep, self.output_length, 10000)
         return self.bytes_to_int(output_data)
 

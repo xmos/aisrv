@@ -31,9 +31,15 @@ int interp_init()
 }
 
 // TODO rm this wrapper
-int buffer_input_data(void *data, int offset, size_t size) 
+//int buffer_input_data(void *data, int offset, size_t size) 
+//{
+ //   memcpy(input_buffer + offset, data, size);
+  ///  return 0;
+  //
+//}/
+
+void write_input_buffer(int i, unsigned char x)
 {
-    memcpy(input_buffer + offset, data, size);
-    return 0;
+    input_buffer[i] = x;
 }
 
