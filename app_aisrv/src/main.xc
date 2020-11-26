@@ -79,12 +79,12 @@ void interp_runner(chanend c)
                         printf("Model size: %d\n", model_size);
 
                     receive_array(c, model_data, model_size);
+
+                    haveModel = !interp_init();
+                    c <: haveModel;
+
+                    printf("Model written\n");
                 }
-
-                haveModel = !interp_init();
-                c <: haveModel;
-
-                printf("Model written\n");
 
                 break;
 
@@ -116,11 +116,12 @@ void interp_runner(chanend c)
                         if(haveModel)
                             input_buffer[i] = x;
                     }
+                
+                    if(haveModel)
+                        c <: (unsigned) STATUS_OKAY;
+                    else
+                        c <: (unsigned) STATUS_ERROR_NO_MODEL;
                 }  
-                if(haveModel)
-                    c <: (unsigned) STATUS_OKAY;
-                else
-                    c <: (unsigned) STATUS_ERROR_NO_MODEL;
 
                 break;
 
@@ -142,8 +143,8 @@ void interp_runner(chanend c)
                     {
                         status = STATUS_ERROR_NO_MODEL;
                     }
+                    c <: status;
                 }
-                c <: status;
 
                 break;
             
@@ -259,11 +260,11 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 
                     size = size - pktLength;
                 }
-            }
 
-            /* TODO handle any error */
-            aisrv_status_t status;
-            c :> status;
+                /* TODO handle any error */
+                aisrv_status_t status;
+                c :> status;
+            }
         }
         else
         {
