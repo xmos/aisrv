@@ -29,16 +29,6 @@ __attribute__((section(".ExtMem_data")))
 #endif
 unsigned char model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
 
-void write_model_data(int i, unsigned char x)
-{
-    model_data[i] = x;
-}
-
-unsigned char read_model_data(int i)
-{
-    return model_data[i];
-}
-
 aisrv_status_t interp_invoke() 
 {
     // Run inference, and report any error

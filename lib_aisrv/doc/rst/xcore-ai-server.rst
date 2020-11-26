@@ -195,6 +195,27 @@ In situations where the device is working, we could add an interrupt
 endpoint to indicate that something interesting is happening in order not
 to saturate the USB bus with status requests.
 
+USB Packet/Transaction Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  * TODO majority of this scheme should be shared with SPI
+
+  * Command packets are sent to to the IN endpoint with the format:
+
+      * | byte[0]: COMMAND | byte[1:4]: LENGTH(N) | byte[5:5+N]: PAYLOAD[0] .. PAYLOAD[N-1] |
+
+  * Note, data transfers may span over multipe USB transactions and the 
+    length N above relates to the total length of the data transfer e.g. 
+    the length of the tensor being set.
+
+  * The top bit (bit 7) of the COMMAND byte signifies read/write 
+
+  * All transfers to/from the device occur at MAX_PACKET_LEN bytes and are
+    terminated by a packet of length less than MAX_PACKET_LEN. If the transfer
+    length is exactly divisiable by MAX_PACKET_LENGTH an extra zero length
+    packet must be send/received.
+
+
 Embedded interface: QSPI, SPI, or QPI
 +++++++++++++++++++++++++++++++++++++
 

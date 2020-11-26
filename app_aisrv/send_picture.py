@@ -17,6 +17,7 @@ import usb.util
 
 from xcore_ai_ie import xcore_ai_ie_usb
 
+
 DRAW = False
 
 INPUT_SCALE = 0.007843137718737125
@@ -45,6 +46,7 @@ PRINT_CALLBACK = ctypes.CFUNCTYPE(
 )
 
 # TODO use quantize/dequantize from ai_tools
+#from tflite2xcore.utils import quantize, dequantize   
 def quantize(arr, scale, zero_point, dtype=np.int8):
     t = np.round(arr / scale + zero_point)
     return dtype(np.round(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max)))

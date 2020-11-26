@@ -20,12 +20,10 @@
 extern "C" 
 {
     int interp_init();
-    int buffer_input_data(void *data, int offset, size_t size);
     void print_output(); 
+    extern unsigned char model_data[MAX_MODEL_SIZE_BYTES];
     extern unsigned char * unsafe output_buffer;
-    void write_model_data(int i, unsigned char x);
-    void write_input_buffer(int i, unsigned char x);
-    unsigned char read_model_data(int i);
+    extern unsigned char * unsafe input_buffer;
     extern int input_size;
     extern int output_size;
 }
@@ -34,6 +32,26 @@ XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, X
 XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 
 unsafe{
+static inline transaction send_int(chanend c, unsigned x)
+{
+    c <: (unsigned) 4;
+    for(int i = 0; i < 4; i++)
+        c <: (unsigned char) (x, unsigned char[])[i]; 
+}
+
+static inline transaction send_array(chanend c, unsigned char * unsafe array, unsigned size)
+{
+    c <: (unsigned)size;
+    for(int i = 0; i < size; i++)
+        c <: array[i];
+}
+
+static inline transaction receive_array(chanend c, unsigned char * unsafe array, unsigned size)
+{
+    for(int i = 0; i < size; i++)
+        c :> array[i];
+}
+
 void interp_runner(chanend c)
 {
     aisrv_cmd_t cmd = CMD_NONE;
@@ -60,20 +78,13 @@ void interp_runner(chanend c)
                     else
                         printf("Model size: %d\n", model_size);
 
-                    for(int i = 0; i < model_size; i++)
-                    {
-                        unsigned char x;
-                        c :> x;
+                    receive_array(c, model_data, model_size);
 
-                        /* TODO remove this wrapper*/
-                        write_model_data(i,x); 
-                    }
+                    haveModel = !interp_init();
+                    c <: haveModel;
+
+                    printf("Model written\n");
                 }
-
-                haveModel = !interp_init();
-                c <: haveModel;
-
-                printf("Model written\n");
 
                 break;
 
@@ -81,14 +92,9 @@ void interp_runner(chanend c)
                 
                 slave
                 {
-                    c <: model_size;
-
-                     for(int i = 0; i < model_size; i++)
-                    {
-                        unsigned char x;
-                        x = read_model_data(i); 
-                        c <: x;
-                    }
+                    /* TODO bad status if no model */
+                    c <: (unsigned) STATUS_OKAY;
+                    send_array(c, model_data, model_size);
                 }
                 break;
 
@@ -108,13 +114,14 @@ void interp_runner(chanend c)
 
                         /* If no valid model throw away data */
                         if(haveModel)
-                            write_input_buffer(i, x);
+                            input_buffer[i] = x;
                     }
-                }  
-                if(haveModel)
-                    c <: (unsigned) STATUS_OKAY;
-                else
+                
+                    if(haveModel)
+                        c <: (unsigned) STATUS_OKAY;
+                    else
                         c <: (unsigned) STATUS_ERROR_NO_MODEL;
+                }  
 
                 break;
 
@@ -136,8 +143,8 @@ void interp_runner(chanend c)
                     {
                         status = STATUS_ERROR_NO_MODEL;
                     }
+                    c <: status;
                 }
-                c <: status;
 
                 break;
             
@@ -149,11 +156,7 @@ void interp_runner(chanend c)
                     if(haveModel)
                     {
                         c <: (unsigned) STATUS_OKAY;
-                        c <: (unsigned)4; // 4 bytes for int
-                        for(int i = 0; i < 4; i++)
-                        {
-                            c <: (unsigned char) (output_size, unsigned char[])[i]; 
-                        }
+                        send_int(c, output_size);
                     }
                     else
                     {
@@ -171,11 +174,7 @@ void interp_runner(chanend c)
                     if(haveModel)
                     {
                         c <: (unsigned) STATUS_OKAY;
-                        c <: (unsigned)4; // 4 bytes for int
-                        for(int i = 0; i < 4; i++)
-                        {
-                            c <: (unsigned char) (input_size, unsigned char[])[i]; 
-                        }
+                        send_int(c, input_size);
                     }
                     else
                     {
@@ -189,12 +188,7 @@ void interp_runner(chanend c)
                 slave
                 {
                     c <: (unsigned) STATUS_OKAY;
-                    c <: (unsigned)output_size; // 4 bytes for int
-                    
-                    for(int i = 0; i < output_size; i++)
-                    {
-                        c <: output_buffer[i];
-                    }
+                    send_array(c, output_buffer, output_size);
                 }
                 break;
 
@@ -266,11 +260,11 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 
                     size = size - pktLength;
                 }
-            }
 
-            /* TODO handle any error */
-            aisrv_status_t status;
-            c :> status;
+                /* TODO handle any error */
+                aisrv_status_t status;
+                c :> status;
+            }
         }
         else
         {
