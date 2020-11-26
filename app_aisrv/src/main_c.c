@@ -30,8 +30,3 @@ int interp_init()
     return error;
 }
 
-void write_input_buffer(int i, unsigned char x)
-{
-    input_buffer[i] = x;
-}
-
