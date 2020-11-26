@@ -8,7 +8,7 @@
 
 static int input_bytes = 0;
 int input_size;
-static unsigned char *input_buffer;
+unsigned char *input_buffer;
 int output_size;
 unsigned char *output_buffer;
 
