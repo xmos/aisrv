@@ -34,6 +34,23 @@ XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, X
 XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 
 unsafe{
+static inline transaction send_int(chanend c, unsigned x)
+{
+    c <: (unsigned)4; // 4 bytes for int
+    for(int i = 0; i < 4; i++)
+    {
+        c <: (unsigned char) (x, unsigned char[])[i]; 
+    }
+}
+
+static inline transaction send_array(chanend c, unsigned char * unsafe array, unsigned size)
+{
+    c <: (unsigned)size; // 4 bytes for int
+
+    for(int i = 0; i < size; i++)
+        c <: array[i];
+}
+
 void interp_runner(chanend c)
 {
     aisrv_cmd_t cmd = CMD_NONE;
@@ -81,6 +98,8 @@ void interp_runner(chanend c)
                 
                 slave
                 {
+                    /* TODO bad status if no model */
+                    c <: (unsigned) STATUS_OKAY;
                     c <: model_size;
 
                      for(int i = 0; i < model_size; i++)
@@ -149,11 +168,7 @@ void interp_runner(chanend c)
                     if(haveModel)
                     {
                         c <: (unsigned) STATUS_OKAY;
-                        c <: (unsigned)4; // 4 bytes for int
-                        for(int i = 0; i < 4; i++)
-                        {
-                            c <: (unsigned char) (output_size, unsigned char[])[i]; 
-                        }
+                        send_int(c, output_size);
                     }
                     else
                     {
@@ -171,11 +186,7 @@ void interp_runner(chanend c)
                     if(haveModel)
                     {
                         c <: (unsigned) STATUS_OKAY;
-                        c <: (unsigned)4; // 4 bytes for int
-                        for(int i = 0; i < 4; i++)
-                        {
-                            c <: (unsigned char) (input_size, unsigned char[])[i]; 
-                        }
+                        send_int(c, input_size);
                     }
                     else
                     {
@@ -189,12 +200,7 @@ void interp_runner(chanend c)
                 slave
                 {
                     c <: (unsigned) STATUS_OKAY;
-                    c <: (unsigned)output_size; // 4 bytes for int
-                    
-                    for(int i = 0; i < output_size; i++)
-                    {
-                        c <: output_buffer[i];
-                    }
+                    send_array(c, output_buffer, output_size);
                 }
                 break;
 

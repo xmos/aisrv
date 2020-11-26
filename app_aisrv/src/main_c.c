@@ -30,14 +30,6 @@ int interp_init()
     return error;
 }
 
-// TODO rm this wrapper
-//int buffer_input_data(void *data, int offset, size_t size) 
-//{
- //   memcpy(input_buffer + offset, data, size);
-  ///  return 0;
-  //
-//}/
-
 void write_input_buffer(int i, unsigned char x)
 {
     input_buffer[i] = x;
