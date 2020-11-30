@@ -8,7 +8,7 @@
 
 static int input_bytes = 0;
 int input_size;
-static unsigned char *input_buffer;
+unsigned char *input_buffer;
 int output_size;
 unsigned char *output_buffer;
 
@@ -28,12 +28,5 @@ int interp_init()
     int error = interp_initialize(&input_buffer, &input_size, &output_buffer, &output_size);
     
     return error;
-}
-
-// TODO rm this wrapper
-int buffer_input_data(void *data, int offset, size_t size) 
-{
-    memcpy(input_buffer + offset, data, size);
-    return 0;
 }
 

@@ -1,5 +1,4 @@
-
-// Copyright (c) 2019, XMOS Ltd, All rights reserved
+// Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 #include "inference_engine.h"
 
@@ -8,7 +7,6 @@
 #include <cstdio>
 #include <iostream>
 
-//#include "mobilenet_v1.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
@@ -30,11 +28,6 @@ __attribute__((section(".SwMem_data")))
 __attribute__((section(".ExtMem_data")))
 #endif
 unsigned char model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
-
-void write_model_data(int i, unsigned char x)
-{
-    model_data[i] = x;
-}
 
 aisrv_status_t interp_invoke() 
 {

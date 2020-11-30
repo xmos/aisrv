@@ -2,19 +2,22 @@
 app_aisrv
 =========
 
-Required Dependancies
+Env/Dependancies etc
 ---------------------
 
-python:
-- pyusb
-- cv2
-- matplotlib
+- git clone --recursive https://github0/xmos-int/aisrv.git
+- cd aisrv
+- pip install --upgrade pip
+- pyenv install 3.7.7
+- virtualenv -p /Users/<username>/.pyenv/versions/3.7.7/bin/python3.7 venv
+- source venv/bin/activate
+- pip install -r requirements.txt
 
-other: 
+other deps: 
 
 - brew install libusb
 
-(slightly messy) build instructions
+(slightly messy) Build Instructions
 -----------------------------------
 
 - ensure XMOS tools are setup

@@ -101,17 +101,37 @@ Python
 The highest level interface is a Python interface that over USB interfaces
 with an xcore.ai inference engine. It will look something like::
 
-  class Xcore_ai_ie:
-    # setup the USB connection
-    def __init__(self):
+  class xcore_ai_ie:
+    # setup the USB connection to the device
+    def connect(self):
        ...
        
-    # stores model on the inference engine
+    # stores model (byte array) on the inference engine
+    def download_model(self, model):
+       ...
+       
+    # read model model from the inference engine
     def upload_model(self, model):
        ...
-  
+     
+    # getter for input tensor length (read from device). Note, valid model must be on device
+    def input_length(self):
+        ...
+        
+    # write input tensor to device
+    def write_input_tensor(self, input_tensor)
+        ...
+
+    # getter for output tensor length (read from device)
+    def output_length(self):
+        ...
+        
+    # read output tensor from device
+    def read_output_tensor(self):
+        ...
+        
     # runs an inference, and returns an output tensor
-    def inference(self, input_tensor):
+    def start_inference(self, input_tensor):
        ...
        
     # grabs a frame of data over the attached sensor
@@ -174,6 +194,27 @@ acquire data from the device.
 In situations where the device is working, we could add an interrupt
 endpoint to indicate that something interesting is happening in order not
 to saturate the USB bus with status requests.
+
+USB Packet/Transaction Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  * TODO majority of this scheme should be shared with SPI
+
+  * Command packets are sent to to the IN endpoint with the format:
+
+      * | byte[0]: COMMAND | byte[1:4]: LENGTH(N) | byte[5:5+N]: PAYLOAD[0] .. PAYLOAD[N-1] |
+
+  * Note, data transfers may span over multipe USB transactions and the 
+    length N above relates to the total length of the data transfer e.g. 
+    the length of the tensor being set.
+
+  * The top bit (bit 7) of the COMMAND byte signifies read/write 
+
+  * All transfers to/from the device occur at MAX_PACKET_LEN bytes and are
+    terminated by a packet of length less than MAX_PACKET_LEN. If the transfer
+    length is exactly divisiable by MAX_PACKET_LENGTH an extra zero length
+    packet must be send/received.
+
 
 Embedded interface: QSPI, SPI, or QPI
 +++++++++++++++++++++++++++++++++++++

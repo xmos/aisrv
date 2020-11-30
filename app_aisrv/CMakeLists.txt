@@ -35,7 +35,6 @@ set(LIB_XUD_SRC_DIR "${LIB_XUD_DIR}/lib_xud/src/")
 #**********************
 
 add_executable(aisrv_usb)
-add_library(inference_engine STATIC)
 
 # Optimization
 # -DNDEBUG                        # define this to remove debug and profiling
@@ -56,13 +55,10 @@ set(BUILD_FLAGS
   "-Os"
 )
 
-target_compile_options(inference_engine PRIVATE ${BUILD_FLAGS})
 target_compile_options(aisrv_usb PRIVATE ${BUILD_FLAGS})
 
 target_link_options(aisrv_usb PRIVATE ${BUILD_FLAGS} -lquadspi -w)
 set_target_properties(aisrv_usb PROPERTIES OUTPUT_NAME aisrv_usb.xe)
-
-target_link_libraries(aisrv_usb PUBLIC inference_engine)
 
 #***
 #lib_xud sources
@@ -108,7 +104,7 @@ set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_std_requests.xc
 include("${AI_TOOLS_DIR}/utils/cmake/xcore_interpreter.cmake")
 
 set(INFERENCE_ENGINE_SOURCE_DIR
-  "${PROJECT_SOURCE_DIR}/inference_engine/src"
+  "${PROJECT_SOURCE_DIR}/src"
 )
 
 set(INFERENCE_ENGINE_SOURCES
@@ -130,21 +126,19 @@ set(LIB_XUD_INCLUDE_DIRS
 )
 
 
-target_sources(inference_engine PRIVATE ${INFERENCE_ENGINE_SOURCES})
-target_include_directories(inference_engine PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS})
-
 #**********************
 # APP sources
 #**********************
 
 set(APP_SOURCES
-  "${PROJECT_SOURCE_DIR}/app/main.xc"
-  "${PROJECT_SOURCE_DIR}/app/main_c.c"
-  "${PROJECT_SOURCE_DIR}/app/aisrv_usb.xc"
+  "${PROJECT_SOURCE_DIR}/src/main.xc"
+  "${PROJECT_SOURCE_DIR}/src/main_c.c"
+  "${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc"
+  ${INFERENCE_ENGINE_SOURCES}
 )
 
-set_source_files_properties("${PROJECT_SOURCE_DIR}/app/main.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/app/aisrv_usb.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc" PROPERTIES LANGUAGE C)
 
 #**********************
 # targets
@@ -156,7 +150,7 @@ target_sources(aisrv_usb
 
 target_include_directories(aisrv_usb
   PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app/src"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/src"
   PRIVATE ${LIB_XUD_INCLUDE_DIRS}
 
 
@@ -168,4 +162,3 @@ target_include_directories(aisrv_usb
 set(INSTALL_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
 set(INSTALL_BIN_DIR "${PROJECT_SOURCE_DIR}/bin")
 install(TARGETS aisrv_usb DESTINATION ${INSTALL_BIN_DIR})
-install(TARGETS inference_engine DESTINATION ${INSTALL_LIB_DIR})
