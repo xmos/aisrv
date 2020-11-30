@@ -1,32 +1,21 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "acquire.h"
-#include "inference_commands.h"
+#include "aisrv.h"
 
-static void acquire_data(uint32_t buffer[]) {
+static void acquire_data(uint32_t buffer[], int length) {
 }
 
 void acquire(chanend from_buffer, struct memory * unsafe mem) {
-    int running = 1;
-    uint32_t frame[100];
-    while(running) {
+    while(1) {
         int cmd;
         from_buffer :> cmd;
         switch(cmd) {
-        case INFERENCE_ENGINE_ACQUIRE:
-            acquire_data(frame);
-            from_buffer <: cmd;
-            from_buffer <: INFERENCE_ENGINE_WRITE_TENSOR;
-            slave {
-                int N;
-                from_buffer :> N;
-                for(int i = 0; i < N; i++) {
-                    from_buffer <: frame[i];
-                }
+        case CMD_START_ACQUIRE:
+            unsafe {
+                acquire_data(&mem->memory[mem->input_tensor_index], mem->input_tensor_length);
             }
-            break;
-        case INFERENCE_ENGINE_EXIT:
-            running = 0;
+            from_buffer <: 0;
             break;
         default:
             printf("Error in acquire: cmd = 0x%02x\n", cmd);

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "aiengine.h"
-#include "inference_commands.h"
+#include "aisrv.h"
 #include "inference_engine.h"
 
 
@@ -21,15 +21,14 @@ extern "C"
 }
 
 void aiengine(chanend x) {
-    int running = 1;
     int model_offset = 0;
     int input_tensor_offset = 0;
     uint32_t status = 0;
-    while(running) {
+    while(1) {
         int cmd, N;
         x :> cmd;
         switch(cmd) {
-        case INFERENCE_ENGINE_READ_SPEC:
+        case CMD_GET_SPEC:
             slave {
                 x <: 0x0;
                 x <: 0x0;
@@ -38,7 +37,7 @@ void aiengine(chanend x) {
                 x <: output_times_size;
             }
             break;
-        case INFERENCE_ENGINE_READ_TENSOR:
+        case CMD_GET_TENSOR:
             slave {
                 x :> N;
                 for(int i = 0; i < 4*N; i++) {
@@ -48,7 +47,7 @@ void aiengine(chanend x) {
                 }
             }
             break;
-        case INFERENCE_ENGINE_READ_TIMINGS:
+        case CMD_GET_TIMINGS:
             slave {
                 x :> N;
                 for(int i = 0; i < N; i++) {
@@ -58,7 +57,7 @@ void aiengine(chanend x) {
                 }
             }
             break;
-        case INFERENCE_ENGINE_WRITE_MODEL:
+        case CMD_SET_MODEL:
             slave {
                 x :> N;
                 for(int i = 0; i < N; i++) {
@@ -77,7 +76,7 @@ void aiengine(chanend x) {
 //            c <: status;
 
             break;
-        case INFERENCE_ENGINE_WRITE_TENSOR:
+        case CMD_SET_TENSOR:
             slave {
                 x :> N;
                 for(int i = 0; i < N; i++) {
@@ -91,11 +90,8 @@ void aiengine(chanend x) {
                 input_tensor_offset = 0;
             }
             break;
-        case INFERENCE_ENGINE_INFERENCE:
+        case CMD_START_INFER:
             uint32_t status = interp_invoke();
-            break;
-        case INFERENCE_ENGINE_EXIT:
-            running = 0;
             break;
         }
     }

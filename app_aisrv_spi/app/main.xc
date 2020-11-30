@@ -13,7 +13,7 @@
 #include "spi.h"
 #include "spibuffer.h"
 #include "aiengine.h"
-#include "inference_commands.h"
+#include "aisrv.h"
 
 on tile[0]: port p_led = XS1_PORT_4C;
 

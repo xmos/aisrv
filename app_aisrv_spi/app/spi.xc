@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <print.h>
 #include "spi.h"
-#include "inference_commands.h"
+#include "aisrv.h"
 #include "shared_memory.h"
 
 static void reset_port(buffered port:32 p_data, clock clkblk) {
@@ -20,11 +20,9 @@ static void data_words_out(out buffered port:32 p_data, int cycle,
                            uint32_t words[], uint32_t index, uint32_t n) {
     uint32_t word = words[index++];
     p_data @ (cycle+1) <: word;
-    int cnt = 1;
     while (--n > 0) {
         word = words[index++];
         p_data <: word;
-        cnt++;
     }
     sync(p_data);      // Wait for final clock of data to go.
 }
@@ -63,9 +61,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
                         chanend led,
                         chanend c_to_buffer,
                         struct memory * unsafe mem) {
-    uint32_t running = 1;
     int cycle;
-    int cnt = 0;
     printf("Ready\n");
     set_port_pull_up(p_cs);
     set_port_pull_down(p_clk);
@@ -83,7 +79,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
     clearbuf(p_data);
     unsafe {
         uint32_t lastcmd;
-    while (running) {
+    while (1) {
         uint32_t cmd;
         int data, bytes;
         clearbuf(p_data);
@@ -93,58 +89,54 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
         p_data :> cmd @ cycle;
         cmd >>= 24;
         switch(cmd) {
-        case INFERENCE_ENGINE_READ_STATUS:
+        case CMD_GET_STATUS:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
                            mem->status, 0, 1);
             (mem->status, uint8_t[])[STATUS_BYTE_ERROR] = 0;
             break;
-        case INFERENCE_ENGINE_READ_ID:
+        case CMD_GET_ID:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
                            mem->ai_server_id, 0, 1);
             break;
-        case INFERENCE_ENGINE_READ_SPEC:
+        case CMD_GET_SPEC:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
                            mem->spec, 0, 5);
             break;
-        case INFERENCE_ENGINE_READ_TIMINGS:
+        case CMD_GET_TIMINGS:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
                            mem->memory, mem->timings_index, mem->timings_length);
             break;
-        case INFERENCE_ENGINE_READ_TENSOR:
+        case CMD_GET_TENSOR:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
                            mem->memory, mem->output_tensor_index, mem->output_tensor_length);
             break;
-        case INFERENCE_ENGINE_WRITE_MODEL:
+        case CMD_SET_MODEL:
             bytes = 4*data_word_in(p_data, p_cs, mem->memory, mem->model_index);
             c_to_buffer <: cmd;
             c_to_buffer <: bytes;
             break;
-        case INFERENCE_ENGINE_WRITE_SERVER:
+        case CMD_SET_SERVER:
             bytes = data_word_in(p_data, p_cs, mem->memory, 0);
             break;
-        case INFERENCE_ENGINE_WRITE_TENSOR:
+        case CMD_SET_TENSOR:
             bytes = 4*data_word_in(p_data, p_cs, mem->memory, mem->input_tensor_index);
             c_to_buffer <: cmd;
             c_to_buffer <: bytes;
             break;
-        case INFERENCE_ENGINE_INFERENCE:
+        case CMD_START_INFER:
             c_to_buffer <: cmd;
             break;
-        case INFERENCE_ENGINE_ACQUIRE:
+        case CMD_START_ACQUIRE:
             c_to_buffer <: cmd;
             break;
-        case INFERENCE_ENGINE_EXIT:
-            c_to_buffer <: cmd;
-            running = 0;
-            break;
-        case INFERENCE_ENGINE_HELLO:
-        case INFERENCE_ENGINE_HELLO*2:
-        case INFERENCE_ENGINE_HELLO*2+1:
+        case CMD_HELLO:
+        case CMD_HELLO*2:
+        case CMD_HELLO*2+1:
             break;
         default:
             (mem->status, uint8_t[])[STATUS_BYTE_ERROR] = STATUS_ERROR;

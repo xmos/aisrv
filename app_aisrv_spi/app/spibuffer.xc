@@ -1,12 +1,12 @@
 #include <xs1.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "inference_commands.h"
+#include "aisrv.h"
 #include "shared_memory.h"
 #include "spibuffer.h"
 
 static void read_spec(chanend to_engine, struct memory * unsafe mem) {
-    to_engine <: INFERENCE_ENGINE_READ_SPEC;
+    to_engine <: CMD_GET_SPEC;
     unsafe {
         master {
             to_engine :> mem->spec[0];
@@ -27,16 +27,15 @@ static inline void set_mem_status(uint32_t status[1], uint32_t byte, uint32_t va
 //         = STATUS_NORMAL;
 
 void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct memory * unsafe mem) {
-    int running = 1;
     unsafe {
-    while(running) {
+    while(1) {
         int cmd;
         int N;
         set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL);
         from_spi :> cmd;
         set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL | STATUS_BUSY);
         switch(cmd) {
-        case INFERENCE_ENGINE_WRITE_MODEL:
+        case CMD_SET_MODEL:
             from_spi :> N;
             to_engine <: cmd;
             master {
@@ -49,7 +48,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                 read_spec(to_engine, mem);
             }
             break;
-        case INFERENCE_ENGINE_WRITE_TENSOR:
+        case CMD_SET_TENSOR:
             from_spi :> N;
             to_engine <: cmd;
             master {
@@ -59,16 +58,16 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                 }
             }
             break;
-        case INFERENCE_ENGINE_INFERENCE:
-            to_engine <: INFERENCE_ENGINE_INFERENCE;
-            to_engine <: INFERENCE_ENGINE_READ_TENSOR;
+        case CMD_START_INFER:
+            to_engine <: CMD_START_INFER;
+            to_engine <: CMD_GET_TENSOR;
             master {
                 to_engine <: mem->output_tensor_length;
                 for(int i = 0; i < 4*mem->output_tensor_length; i++) {
                 to_engine :> (mem->memory, uint8_t[])[mem->output_tensor_index + i];
                 }
             }
-            to_engine <: INFERENCE_ENGINE_READ_TIMINGS;
+            to_engine <: CMD_GET_TIMINGS;
             master {
                 to_engine <: mem->timings_length;
                 for(int i = 0; i < mem->timings_length; i++) {
@@ -78,27 +77,19 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                 }
             }
             break;
-        case INFERENCE_ENGINE_WRITE_SERVER:
+        case CMD_SET_SERVER:
             // DFU
             break;
-        case INFERENCE_ENGINE_ACQUIRE:
+        case CMD_START_ACQUIRE:
             to_sensor <: cmd;
-            to_engine <: INFERENCE_ENGINE_WRITE_TENSOR;
-            master {
-                to_sensor <: mem->input_tensor_length;
-                for(int i = 0; i < mem->input_tensor_length; i++) {
-                    to_sensor :> mem->memory[i];
-                }
-            }
+            to_sensor :> int _;
+            to_engine <: CMD_SET_TENSOR;
             master {
                 to_engine <: mem->input_tensor_length;
                 for(int i = 0; i < mem->input_tensor_length; i++) {
                     to_engine <: mem->memory[i];
                 }
             }
-            break;
-        case INFERENCE_ENGINE_EXIT:
-            running = 0;
             break;
         }
     }
