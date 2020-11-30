@@ -11,6 +11,8 @@ int input_size;
 static unsigned char *input_buffer;
 int output_size;
 unsigned char *output_buffer;
+unsigned int *output_times;
+unsigned int output_times_size;
 
 // TODO rm me
 void print_output() 
@@ -25,7 +27,7 @@ void print_output()
 // TODO rm this wrapper
 int interp_init() 
 {
-    int error = interp_initialize(&input_buffer, &input_size, &output_buffer, &output_size);
+    int error = interp_initialize(&input_buffer, &input_size, &output_buffer, &output_size, &output_times, &output_times_size);
     
     return error;
 }

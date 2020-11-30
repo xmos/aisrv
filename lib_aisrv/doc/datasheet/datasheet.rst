@@ -230,7 +230,54 @@ device.
            
    Timing diagram
 
+Power-up and power-down sequences
+---------------------------------
 
+To power-up, VDDIO and VDD should be applied with CS_N pullled high to
+VDDIO. After this, steps should be followed detailed in later subsections.
+The device can be powered down any time when the SPI interface signals that
+it is not busy. To power it down, remove at least VDD from the device, and
+VDDIO for maximum power savings. 
+
+Bare device
++++++++++++
+
+For a bare device, the following steps should be taken:
+
+  #. Wait for at least 200 us after the power supplies are valid
+  #. Pull CS_N down, and clock a boot image in at at most 50 MHz
+  #. Pull CS_N up
+  #. Wait for at least 100 us
+  #. Pull CS_N down
+  #. Issue a HELLO command
+  #. Pull CS_N up
+
+The device is now ready for use. A model will typically have to be
+downloaded to the device first.
+
+Device with Flash
++++++++++++++++++
+
+For a device with a programmed flash attached, the following steps should
+be taken:
+
+  #. Wait for at least 10 ms (TBC) after the power supplies are valid
+  #. Pull CS_N down
+  #. Issue a HELLO command
+  #. Pull CS_N up
+
+The device is now ready for use. Typically the model will be stored in
+flash, so the device can be used without uploading a new model
+
+Volume production for devices with flash
+----------------------------------------
+
+In a typical production environment the flash should be pre-programmed with
+the desired factory image and factory model. Both can be upgraded using DFU
+(Device Firmware Upgrade) over the SPI interface.
+
+Note that if the flash is not pre-programmed with firmware, the system will
+not work. The model can always be added over the SPI interface if required.
 
 Detailed command description
 ----------------------------
@@ -415,7 +462,7 @@ XIN/XOUT     XIN/XOUT Crystal oscillator       At least XIN
 ===========  ======== ======================== ==============
 
 
-If the device is equipped without a flash chip then the portmap to be used
+If the device is equipped with a flash chip then the portmap to be used
 is:
 
 ===========  ======== ======================== ============

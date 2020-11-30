@@ -44,12 +44,13 @@ set(BUILD_FLAGS
   "-mcmodel=large"
   "-Wno-xcore-fptrgroup"
   "-Wno-unknown-pragmas"
-  "-Wbidirectional-buffered-port"
+  "-Wno-bidirectional-buffered-port"
   "-report"
   "-DTF_LITE_STATIC_MEMORY"
   "-DXCORE"
   "-DUSE_EXTMEM"
-  "-Os"
+  "-g"
+  "-O2"
 )
 
 target_compile_options(inference_engine PRIVATE ${BUILD_FLAGS})
@@ -94,6 +95,7 @@ set(APP_SOURCES
   "${PROJECT_SOURCE_DIR}/app/aiengine.xc"
   "${PROJECT_SOURCE_DIR}/app/main.xc"
   "${PROJECT_SOURCE_DIR}/app/main_c.c"
+  "${PROJECT_SOURCE_DIR}/app/mobilenet_v1.c"
   "${PROJECT_SOURCE_DIR}/app/spi.xc"
   "${PROJECT_SOURCE_DIR}/app/spibuffer.xc"
 )

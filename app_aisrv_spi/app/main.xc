@@ -13,6 +13,7 @@
 #include "spi.h"
 #include "spibuffer.h"
 #include "aiengine.h"
+#include "inference_commands.h"
 
 on tile[0]: port p_led = XS1_PORT_4C;
 
@@ -52,6 +53,16 @@ int main(void) {
             unsafe {
                 struct memory memory;
                 struct memory * unsafe mem = & memory;
+                mem->status[0] = 0x00000080;
+                mem->input_tensor_index = 0;
+                mem->input_tensor_length = 0;
+                mem->output_tensor_index = 0;
+                mem->output_tensor_length = 0;
+                mem->timings_index = 10;
+                mem->timings_length = 31;
+                mem->model_index = 0;
+                mem->ai_server_id[0] = INFERENCE_ENGINE_ID;
+                reset1 <: 0;
                 par {
                     spi_xcore_ai_slave(p_cs_s, p_clk_s,
                                        p_miso_s, p_mosi_s,
