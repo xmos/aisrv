@@ -1,0 +1,129 @@
+cmake_minimum_required(VERSION 3.14)
+
+#**********************
+# Setup XMOS toolchain
+#**********************
+
+set(XMOS_TOOLS_PATH "$ENV{XMOS_TOOL_PATH}/bin")
+include("$ENV{XMOS_AISRV_PATH}/tools/cmake_utils/xmos_toolchain.cmake")
+
+#**********************
+# Project
+#**********************
+
+# Disable in-source build.
+if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+    message(FATAL_ERROR "In-source build is not allowed! Please specify a build folder.\n\tex:cmake -B build")
+endif()
+
+project(aisrv_spi VERSION 1.0.0)
+
+enable_language(CXX C ASM)
+
+#**********************
+# Paths
+#**********************
+
+set(AI_TOOLS_DIR "$ENV{XMOS_AISRV_PATH}/submodules/ai_tools")
+
+#**********************
+# Build flags
+#**********************
+
+add_executable(aisrv_spi)
+add_library(inference_engine STATIC)
+
+# Optimization
+# -DNDEBUG                        # define this to remove debug and profiling
+# -DTF_LITE_STRIP_ERROR_STRINGS   # define this to remove logging
+
+set(BUILD_FLAGS
+  "-target=XCORE-AI-EXPLORER"
+  "-fxscope"
+  "${CMAKE_CURRENT_SOURCE_DIR}/config.xscope"
+  "-mcmodel=large"
+  "-Wno-xcore-fptrgroup"
+  "-Wno-unknown-pragmas"
+  "-Wno-bidirectional-buffered-port"
+  "-report"
+  "-DTF_LITE_STATIC_MEMORY"
+  "-DXCORE"
+  "-DUSE_EXTMEM"
+  "-g"
+  "-O2"
+)
+
+target_compile_options(inference_engine PRIVATE ${BUILD_FLAGS})
+target_compile_options(aisrv_spi PRIVATE ${BUILD_FLAGS})
+
+target_link_options(aisrv_spi PRIVATE ${BUILD_FLAGS} -lquadspi -w)
+set_target_properties(aisrv_spi PROPERTIES OUTPUT_NAME aisrv_spi.xe)
+
+target_link_libraries(aisrv_spi PUBLIC inference_engine)
+
+#**********************
+# LIB sources
+#**********************
+
+include("${AI_TOOLS_DIR}/utils/cmake/xcore_interpreter.cmake")
+
+set(INFERENCE_ENGINE_SOURCE_DIR
+  "${PROJECT_SOURCE_DIR}/inference_engine/src"
+)
+
+set(INFERENCE_ENGINE_SOURCES
+  ${XCORE_INTERPRETER_SOURCES}
+  "$ENV{XMOS_AISRV_PATH}/submodules/tensorflow_support/qspi_flash/xcore_device_memory.c"
+  "${INFERENCE_ENGINE_SOURCE_DIR}/inference_engine.cc"
+)
+
+set(INFERENCE_ENGINE_INCLUDE_DIRS
+  ${XCORE_INTERPRETER_INCLUDE_DIRS}
+  "$ENV{XMOS_AISRV_PATH}/submodules/tensorflow_support/qspi_flash"
+  ${INFERENCE_ENGINE_SOURCE_DIR}
+)
+
+target_sources(inference_engine PRIVATE ${INFERENCE_ENGINE_SOURCES})
+target_include_directories(inference_engine PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS})
+
+#**********************
+# APP sources
+#**********************
+
+set(APP_SOURCES
+  "${PROJECT_SOURCE_DIR}/app/acquire.xc"
+  "${PROJECT_SOURCE_DIR}/app/aiengine.xc"
+  "${PROJECT_SOURCE_DIR}/app/main.xc"
+  "${PROJECT_SOURCE_DIR}/app/main_c.c"
+  "${PROJECT_SOURCE_DIR}/app/mobilenet_v1.c"
+  "${PROJECT_SOURCE_DIR}/app/spi.xc"
+  "${PROJECT_SOURCE_DIR}/app/spibuffer.xc"
+)
+
+set_source_files_properties("${PROJECT_SOURCE_DIR}/app/main.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/app/spibuffer.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/app/spi.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/app/aiengine.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/app/acquire.xc" PROPERTIES LANGUAGE C)
+
+#**********************
+# targets
+#**********************
+target_sources(aisrv_spi
+  PRIVATE ${APP_SOURCES}
+)
+
+target_include_directories(aisrv_spi
+  PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app/src"
+
+
+)
+
+#**********************
+# install
+#**********************
+set(INSTALL_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
+set(INSTALL_BIN_DIR "${PROJECT_SOURCE_DIR}/bin")
+install(TARGETS aisrv_spi DESTINATION ${INSTALL_BIN_DIR})
+install(TARGETS inference_engine DESTINATION ${INSTALL_LIB_DIR})

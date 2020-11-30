@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "acquire.h"
-#include "inference_engine.h"
+#include "inference_commands.h"
 
 static void acquire_data(uint32_t buffer[]) {
 }
 
-void acquire(chanend from_buffer) {
+void acquire(chanend from_buffer, struct memory * unsafe mem) {
     int running = 1;
     uint32_t frame[100];
     while(running) {
