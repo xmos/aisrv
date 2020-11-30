@@ -10,10 +10,10 @@ extern int output_size;
 extern "C" 
 {
     int interp_init();
-    int buffer_input_data(void *data, int offset, size_t size);
     void print_output(); 
+    extern unsigned char model_data[MAX_MODEL_SIZE_BYTES];
     extern unsigned char * unsafe output_buffer;
-    void write_model_data(int i, unsigned char x);
+    extern unsigned char * unsafe input_buffer;
     extern int input_size;
     extern int output_size;
     extern unsigned int output_times_size;
@@ -64,12 +64,8 @@ void aiengine(chanend x) {
                 for(int i = 0; i < N; i++) {
                     uint32_t data;
                     x :> data;
-                    // TODO: remove this wrapper, and just dump words!
-                    write_model_data(model_offset,  (data >>  0) & 0xff); 
-                    write_model_data(model_offset+1,(data >>  8) & 0xff); 
-                    write_model_data(model_offset+2,(data >> 16) & 0xff); 
-                    write_model_data(model_offset+3,(data >> 24) & 0xff);
-                    model_offset += 4;
+                    (model_data, uint32_t[])[model_offset] = data;
+                    model_offset ++;
                 }
             }
             if (N != 64) {
@@ -87,8 +83,8 @@ void aiengine(chanend x) {
                 for(int i = 0; i < N; i++) {
                     uint32_t data;
                     x :> data;
-                    buffer_input_data(&data, input_tensor_offset, 4);
-                    input_tensor_offset += 4;
+                    unsafe {((uint32_t *)input_buffer)[input_tensor_offset] = data;}
+                    input_tensor_offset ++;
                 }
             }
             if (N != 256/4) {

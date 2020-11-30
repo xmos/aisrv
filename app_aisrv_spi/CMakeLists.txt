@@ -95,7 +95,6 @@ set(APP_SOURCES
   "${PROJECT_SOURCE_DIR}/app/aiengine.xc"
   "${PROJECT_SOURCE_DIR}/app/main.xc"
   "${PROJECT_SOURCE_DIR}/app/main_c.c"
-  "${PROJECT_SOURCE_DIR}/app/mobilenet_v1.c"
   "${PROJECT_SOURCE_DIR}/app/spi.xc"
   "${PROJECT_SOURCE_DIR}/app/spibuffer.xc"
 )
