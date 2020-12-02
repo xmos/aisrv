@@ -112,7 +112,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         self._device = device
         self._speed = speed
         self._dummy_bytes = [0,0,0] # cmd + 2 dummy
-        self._dummy_byte_count = 3
+        self._dummy_byte_count = len(self._dummy_bytes)
         super().__init__()
 
     def _construct_packet(self, cmd, length):
@@ -136,7 +136,6 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
     def _wait_for_device(self):
         
-        # TODO fix magic numbers
         while True:
             status = self._read_status()
             if (status[self._dummy_byte_count] & 0xf) == 0:
@@ -150,9 +149,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         data_ints = self.bytes_to_int(data_bytes)
         
-        while data_len > XCORE_IE_MAX_BLOCK_SIZE:
-            
-            print(str(data_len))
+        while data_len >= XCORE_IE_MAX_BLOCK_SIZE:
             
             self._wait_for_device()
 
@@ -169,6 +166,12 @@ class xcore_ai_ie_spi(xcore_ai_ie):
             to_send = [cmd]
             to_send.extend(data_ints[data_index:data_index+data_len])
             self._dev.xfer(to_send)
+        else:
+            # Send extra 0 length
+            self._wait_for_device()
+            to_send = [cmd]
+            self._dev.xfer(to_send)
+
 
     def _upload_data(self, cmd, length):
 
