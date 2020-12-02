@@ -3,8 +3,6 @@ from abc import ABC, abstractmethod
 
 import sys
 
-import usb.core
-import usb.util
 import array
 
 # Commands - TODO properly share with app code
@@ -242,6 +240,8 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 class xcore_ai_ie_usb(xcore_ai_ie):
 
     def __init__(self, timeout = 50000):
+        import usb.core
+        import usb.util
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None
