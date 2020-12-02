@@ -6,7 +6,7 @@ import os
 import time
 import struct
 import ctypes
-#import cv2
+import cv2
 from math import sqrt
 
 import numpy as np
@@ -25,7 +25,7 @@ INPUT_ZERO_POINT = -1
 NORM_SCALE = 127.5
 NORM_SHIFT = 1
 
-OUTPUT_SCALE = 0.00390625
+OUTPUT_SCALE = 1/255.0
 OUTPUT_ZERO_POINT = -128
 
 OBJECT_CLASSES = [
