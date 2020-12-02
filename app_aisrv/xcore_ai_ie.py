@@ -240,8 +240,6 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 class xcore_ai_ie_usb(xcore_ai_ie):
 
     def __init__(self, timeout = 50000):
-        import usb.core
-        import usb.util
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None
@@ -249,7 +247,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         super().__init__()
 
     def _read_int_from_device(self):
-
+        import usb
         try:
             buff = usb.util.create_buffer(MAX_PACKET_SIZE)
             read_len = self._dev.read(self._in_ep, buff, 10000)
@@ -272,7 +270,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             self._out_ep.write(bytearray([]), 1000)
 
     def connect(self):
-
+        import usb
         self._dev = None
         while self._dev is None:
 

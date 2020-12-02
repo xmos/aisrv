@@ -6,7 +6,6 @@ import os
 import time
 import struct
 import ctypes
-#import cv2
 from math import sqrt
 
 import numpy as np
@@ -79,7 +78,7 @@ for arg in sys.argv[1:]:
         print("SETTING INPUT TENSOR VIA USB\n")
         try:
             if not arg.endswith('.raw'):
-            
+                import cv2
                 img = cv2.imread(arg)
                 img = cv2.resize(img, (INPUT_SHAPE[0], INPUT_SHAPE[1]))
             
