@@ -3,9 +3,19 @@
 
 typedef enum aisrv_cmd
 {
-#define int(x) x,
-#include "../aisrv_cmd.py"
-#undef int
+    CMD_GET_STATUS        = 0x01,
+    CMD_GET_ID            = 0x03,
+    CMD_GET_SPEC          = 0x05,
+    CMD_GET_TENSOR        = 0x07,
+    CMD_GET_TIMINGS       = 0x09,
+
+    CMD_SET_MODEL         = 0x02,
+    CMD_SET_SERVER        = 0x04,
+    CMD_SET_TENSOR        = 0x06,
+
+    CMD_START_INFER       = 0x08,
+    CMD_START_ACQUIRE     = 0x0A,
+    CMD_HELLO             = 0x55,
 } aisrv_cmd_t;
     
 #define STATUS_BYTE_STATUS        0
