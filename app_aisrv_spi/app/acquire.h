@@ -1,3 +1,3 @@
 #include "shared_memory.h"
 
-void acquire(chanend from_buffer, struct memory * unsafe mem);
+void acquire(chanend from_buffer, chanend to_sensor, struct memory * unsafe mem);

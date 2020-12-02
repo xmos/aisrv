@@ -103,7 +103,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
         case CMD_GET_SPEC:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
-                           mem->spec, 0, 5);
+                           mem->spec, 0, SPEC_ALL_TOTAL);
             break;
         case CMD_GET_TIMINGS:
             data_words_out(isnull(p_miso) ? p_data : p_miso,

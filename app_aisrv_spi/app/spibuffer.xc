@@ -9,15 +9,14 @@ static void read_spec(chanend to_engine, struct memory * unsafe mem) {
     to_engine <: CMD_GET_SPEC;
     unsafe {
         master {
-            to_engine :> mem->spec[0];
-            to_engine :> mem->spec[1];
-            to_engine :> mem->spec[2];
-            to_engine :> mem->spec[3];
-            to_engine :> mem->spec[4];
+            for(int i = 0; i < SPEC_MODEL_TOTAL; i++) {
+                to_engine :> mem->spec[i];
+            }
         }
-        mem->input_tensor_length = (mem->spec[2]+3) / 4;
-        mem->output_tensor_length = (mem->spec[3]+3) / 4;
-        mem->timings_length = mem->spec[4];
+        mem->input_tensor_length = (mem->spec[SPEC_INPUT_TENSOR_LENGTH]+3) / 4;
+        mem->output_tensor_length = (mem->spec[SPEC_OUTPUT_TENSOR_LENGTH]+3) / 4;
+        mem->timings_length = mem->spec[SPEC_TIMINGS_LENGTH];
+        mem->sensor_tensor_length = (mem->spec[SPEC_SENSOR_TENSOR_LENGTH]+3) / 4;
     }
 }
 

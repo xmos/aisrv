@@ -30,11 +30,15 @@ void aiengine(chanend x) {
         switch(cmd) {
         case CMD_GET_SPEC:
             slave {
-                x <: 0x0;
-                x <: 0x0;
-                x <: input_size;
-                x <: output_size;
-                x <: output_times_size;
+                uint32_t spec[SPEC_MODEL_TOTAL];
+                spec[SPEC_WORD_0] = 0;
+                spec[SPEC_WORD_1] = 0;
+                spec[SPEC_INPUT_TENSOR_LENGTH] = input_size;
+                spec[SPEC_OUTPUT_TENSOR_LENGTH] = output_size;
+                spec[SPEC_TIMINGS_LENGTH] = output_times_size;
+                for(int i = 0; i < SPEC_MODEL_TOTAL; i++) {
+                    x <: spec[i];
+                }
             }
             break;
         case CMD_GET_TENSOR:

@@ -6,23 +6,12 @@
 #include "inference_engine.h"
 #include "aisrv.h"
 
-static int input_bytes = 0;
 int input_size;
 unsigned char *input_buffer;
 int output_size;
 unsigned char *output_buffer;
 unsigned int *output_times;
 unsigned int output_times_size;
-
-// TODO rm me
-void print_output() 
-{
-    for (int i = 0; i < output_size; i++) 
-    {
-        printf("Output index=%u, value=%i\n", i, (signed char)output_buffer[i]);
-    }
-    printf("DONE!\n");
-}
 
 // TODO rm this wrapper
 int interp_init() 

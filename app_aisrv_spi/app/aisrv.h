@@ -24,6 +24,17 @@ typedef enum aisrv_cmd
 #define STATUS_BYTE_ERROR         1
 #define STATUS_ERROR           0x01
 
+typedef enum aisrv_spec {
+    SPEC_WORD_0                   = 0x00,
+    SPEC_WORD_1                   = 0x01,
+    SPEC_INPUT_TENSOR_LENGTH      = 0x02,
+    SPEC_OUTPUT_TENSOR_LENGTH     = 0x03,
+    SPEC_TIMINGS_LENGTH           = 0x04,
+    SPEC_MODEL_TOTAL         = 0x05,      // Up to this one it is the model
+    SPEC_SENSOR_TENSOR_LENGTH     = 0x05, // From here it is acquistion
+    SPEC_ALL_TOTAL           = 0x06       // All data words.
+} aisrv_spec_t;
+
 #define INFERENCE_ENGINE_ID          0x12345678//0x633
 
 
