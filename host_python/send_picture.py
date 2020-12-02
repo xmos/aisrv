@@ -14,7 +14,7 @@ from matplotlib import pyplot
 import usb.core
 import usb.util
 
-from xcore_ai_ie import xcore_ai_ie_usb
+from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi
 
 
 DRAW = False
@@ -54,8 +54,12 @@ def quantize(arr, scale, zero_point, dtype=np.int8):
 def dequantize(arr, scale, zero_point):
     return np.float32((arr.astype(np.int32) - np.int32(zero_point)) * scale)
 
-
-ie = xcore_ai_ie_usb()
+if sys.argv[1] == 'usb':
+    ie = xcore_ai_ie_usb()
+elif sys.argv[1] == 'spi':
+    ie = xcore_ai_ie_spi()
+else:
+    print("Only spi or usb supported")
 
 ie.connect()
 
@@ -74,7 +78,7 @@ print("Inferred input shape: " + str(INPUT_SHAPE))
 raw_img = None
 
 # Send image to device
-for arg in sys.argv[1:]:
+for arg in sys.argv[2:]:
         print("SETTING INPUT TENSOR VIA USB\n")
         try:
             if not arg.endswith('.raw'):
