@@ -6,7 +6,6 @@ import sys
 import usb.core
 import usb.util
 import array
-import spidev
 
 # Commands - TODO properly share with app code
 CMD_LENGTH_BYTES = 1
@@ -110,6 +109,7 @@ class xcore_ai_ie(ABC):
 class xcore_ai_ie_spi(xcore_ai_ie):
 
     def __init__(self, bus=0, device=0, speed=7800000):
+        import spidev
         self._dev = None
         self._bus = bus
         self._device = device
