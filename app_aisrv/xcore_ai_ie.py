@@ -232,7 +232,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
     def read_output_tensor(self):
 
         output_tensor = self._upload_data(CMD_GET_OUTPUT_TENSOR, self.output_length)
-        output_tensor = output_tensor[:self.output_length]
+        output_tensor = output_tensor[:self.output_length+1]
         return output_tensor
 
     def upload_model(self):
