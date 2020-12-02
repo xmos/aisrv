@@ -1,22 +1,33 @@
-// Copyright (c) 2019, XMOS Ltd, All rights reserved
+// Copyright (c) 2020, XMOS Ltd, All rights reserved
 #ifndef INFERENCE_ENGINE_H_
 #define INFERENCE_ENGINE_H_
 
 #include "../../app/aisrv.h"
 
 #ifdef __cplusplus
-extern "C" {
+#define UNSAFE /**/
+#else
+#define UNSAFE unsafe
 #endif
 
+typedef struct inference_engine {
+    unsigned char * UNSAFE model_data;
+    unsigned char * UNSAFE output_buffer;
+    unsigned char * UNSAFE input_buffer;
+    unsigned int input_size;
+    unsigned int output_size;
+    unsigned int output_times_size;
+    unsigned int * UNSAFE output_times;
+} inference_engine_t;
 
-#define MAX_MODEL_SIZE_BYTES (910000)
+#define MAX_MODEL_SIZE_BYTES (1060000)
 
-    int interp_initialize(unsigned char **input, int *input_size, unsigned char **output, int *output_size, unsigned int **times, unsigned int *times_size);
-
-aisrv_status_t interp_invoke();
-
-void write_model_data(int i, unsigned char x);
-
+#ifdef __cplusplus
+extern "C" {
+#endif
+    void inference_engine_initialize(inference_engine_t * UNSAFE ie);
+    int interp_initialize(inference_engine_t * UNSAFE ie);
+    aisrv_status_t interp_invoke();
 #ifdef __cplusplus
 };
 #endif
