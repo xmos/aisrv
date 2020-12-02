@@ -6,6 +6,7 @@ import sys
 import usb.core
 import usb.util
 import array
+import spidev
 
 # Commands - TODO properly share with app code
 CMD_LENGTH_BYTES = 1
@@ -24,7 +25,7 @@ CMD_SET_MODEL_SPI = 0x2
 CMD_GET_MODEL = 0x06
 
 CMD_READ_STATUS = 0x01
-CMD_READ_SPEC = 0x05
+CMD_READ_SPEC = 0x07
 ###
 
 #TODO rm me and read from device
@@ -106,6 +107,137 @@ class xcore_ai_ie(ABC):
 
         return output_data_int
     
+class xcore_ai_ie_spi(xcore_ai_ie):
+
+    def __init__(self, bus=0, device=0, speed=7800000):
+        self._dev = None
+        self._bus = bus
+        self._device = device
+        self._speed = speed
+        self._dummy_bytes = [0,0,0] # cmd + 2 dummy
+        self._dummy_byte_count = 3
+        super().__init__()
+
+    def _construct_packet(self, cmd, length):
+
+        def round_to_word(x):
+            return 4 * round(x/4)
+
+        return [cmd] + self._dummy_bytes + (round_to_word(length) * [0])
+
+    def connect(self):
+        self._dev = spidev.SpiDev()
+        self._dev.open(self._bus, self._device)
+        self._dev.max_speed_hz = self._speed
+
+    def _read_status(self):
+
+        to_send = [CMD_READ_STATUS] + self._dummy_bytes + (4 * [0])
+        r =  self._dev.xfer(to_send)
+        return r
+
+    def _wait_for_device(self):
+        
+        # TODO fix magic numbers
+        while True:
+            status = self._read_status()
+            if (status[self._dummy_byte_count] & 0xf) == 0:
+                break;
+
+    def _download_data(self, cmd, data_bytes):
+        
+        data_len = len(data_bytes)
+        
+        data_index = 0
+
+        data_ints = self.bytes_to_int(data_bytes)
+        
+        while data_len > XCORE_IE_MAX_BLOCK_SIZE:
+            
+            print(str(data_len))
+            
+            self._wait_for_device()
+
+            to_send = [cmd]
+            to_send.extend(data_ints[data_index:data_index+XCORE_IE_MAX_BLOCK_SIZE])
+
+            data_len = data_len - XCORE_IE_MAX_BLOCK_SIZE
+            data_index = data_index  + XCORE_IE_MAX_BLOCK_SIZE
+
+            self._dev.xfer(to_send)
+
+        if data_len > 0:
+            self._wait_for_device()
+            to_send = [cmd]
+            to_send.extend(data_ints[data_index:data_index+data_len])
+            self._dev.xfer(to_send)
+
+    def _upload_data(self, cmd, length):
+
+        self._wait_for_device()
+
+        to_send = self._construct_packet(cmd, length)
+    
+        r =  self._dev.xfer(to_send)
+
+        for i in range(len(r)): 
+            if r[i] > 127:
+                r[i] = r[i] - 256
+
+        return r[self._dummy_byte_count:]
+
+    def download_model(self, model_bytes):
+        
+        # Download model to device
+        self._download_data(CMD_SET_MODEL_SPI, model_bytes)
+
+        # Update lengths
+        self._input_size, self._output_size = self._read_spec()
+        
+        print("input_size: " + str(self._input_size))
+        print("output_size: " + str(self._output_size))
+
+    def _read_spec(self):
+
+        self._wait_for_device()
+        # TODO fix magic number
+        to_send = [CMD_READ_SPEC] + self._dummy_bytes + ([0] * 20)
+
+        r = self._dev.xfer2(to_send)
+        r = r[self._dummy_byte_count:]
+        # TODO tidy this
+        input_size = r[8] + (r[9]<<8) + (r[10] << 16) + (r[11] << 24)
+        output_size = r[12] + (r[13]<<8) + (r[14] << 16) + (r[15] << 24)
+        return input_size, output_size
+
+    def _read_output_length(self):
+        # TODO this is quite inefficient..
+        input_length, output_length = self._read_spec()
+        return output_length
+
+    def _read_input_length(self):
+        # TODO this is quite inefficient..
+        input_length, output_length = self._read_spec()
+        return input_length
+
+    def write_input_tensor(self, raw_img):
+        
+        self._download_data(CMD_SET_INPUT_TENSOR, raw_img)
+    
+    def start_inference(self):
+
+        to_send = self._construct_packet(CMD_START_INFER, 0)
+        r =  self._dev.xfer(to_send)
+    
+    def read_output_tensor(self):
+
+        output_tensor = self._upload_data(CMD_GET_OUTPUT_TENSOR, self.output_length)
+        output_tensor = output_tensor[:self.output_length+1]
+        return output_tensor
+
+    def upload_model(self):
+        # TODO
+        pass
 
 class xcore_ai_ie_usb(xcore_ai_ie):
 
