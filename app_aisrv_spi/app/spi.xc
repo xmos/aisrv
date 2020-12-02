@@ -17,12 +17,15 @@ static void reset_port(buffered port:32 p_data, clock clkblk) {
 }
 
 static void data_words_out(out buffered port:32 p_data, int cycle,
-                           uint32_t words[], uint32_t index, uint32_t n) {
+                           uint32_t words[], uint32_t index, int32_t n) {
     uint32_t word = words[index++];
+    word = byterev(bitrev(word));
     p_data @ (cycle+1) <: word;
     while (--n > 0) {
-        word = words[index++];
+        word = words[index];
+        word = byterev(bitrev(word));
         p_data <: word;
+        index++;
     }
     sync(p_data);      // Wait for final clock of data to go.
 }
@@ -37,6 +40,7 @@ static uint32_t data_word_in(in buffered port:32 p_data, in port p_cs,
             cs_low = 0;
             break;
         case p_data :> words[index]:
+            words[index] = byterev(bitrev(words[index]));
             index++;
             break;
         }
@@ -87,7 +91,9 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
         p_cs when pinsneq(1) :> void;
 //        p_cs :> int _;
         p_data :> cmd @ cycle;
-        cmd >>= 24;
+        //cmd >>= 24;
+        cmd = bitrev(cmd) & 0xff;
+
         switch(cmd) {
         case CMD_GET_STATUS:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
