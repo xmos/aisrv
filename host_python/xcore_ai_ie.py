@@ -160,18 +160,12 @@ class xcore_ai_ie_spi(xcore_ai_ie):
             data_index = data_index  + XCORE_IE_MAX_BLOCK_SIZE
 
             self._dev.xfer(to_send)
-
-        if data_len > 0:
-            self._wait_for_device()
-            to_send = [cmd]
-            to_send.extend(data_ints[data_index:data_index+data_len])
-            self._dev.xfer(to_send)
-        else:
-            # Send extra 0 length
-            self._wait_for_device()
-            to_send = [cmd]
-            self._dev.xfer(to_send)
-
+        
+        # Note, send a 0 length if size % XCORE_IE_MAX_BLOCK_SIZE == 0
+        self._wait_for_device()
+        to_send = [cmd]
+        to_send.extend(data_ints[data_index:data_index+data_len])
+        self._dev.xfer(to_send)
 
     def _upload_data(self, cmd, length):
 
