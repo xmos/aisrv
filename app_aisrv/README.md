@@ -13,9 +13,10 @@ Env/Dependancies etc
 - source venv/bin/activate
 - pip install -r requirements.txt
 
-other deps: 
+other deps: USB
 
 - brew install libusb
+
 
 (slightly messy) Build Instructions
 -----------------------------------
