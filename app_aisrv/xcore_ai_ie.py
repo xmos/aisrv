@@ -110,10 +110,27 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         super().__init__()
 
     def _read_int_from_device(self):
-        return int.from_bytes(self._dev.read(self._in_ep, 4, 10000), byteorder = "little", signed=True)
+
+        try:
+            buff = usb.util.create_buffer(MAX_PACKET_SIZE)
+            read_len = self._dev.read(self._in_ep, buff, 10000)
+            assert read_len == 4
+            return int.from_bytes(buff, byteorder = "little", signed=True)
+
+        except usb.core.USBError as e:
+            if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
+                print("Device error, IN pipe halted (issue with model?)")
+                sys.exit(1)
 
     def _write_int_to_device(self, i):
         self._out_ep.write(bytes([i]))
+
+    def _write_array_to_device(self, a):
+
+        self._out_ep.write(a, 1000)
+
+        if (len(a) % MAX_PACKET_SIZE) == 0:
+            self._out_ep.write(bytearray([]), 1000)
 
     def connect(self):
 
@@ -157,8 +174,6 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     
     def download_model(self, model_bytes):
 
-        print("WRITING MODEL VIA USB..\n")
-
         #TODO assert type(model_bytes) == bytes
         
         # Send model to device 
@@ -166,11 +181,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
         print("Model length (bytes): " + str(len(model_bytes)))
 
-        self._out_ep.write(model_bytes, 1000)
-        if((len(model_bytes) % MAX_PACKET_SIZE) == 0):
-            self._out_ep.write(bytearray([]), 1000)
-       
-        print("FINISHED WRITING MODEL")
+        self._write_array_to_device(model_bytes) 
 
         # Update input/output tensor lengths
         self._output_length = self._read_output_length() 
@@ -184,44 +195,18 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
         # Get output tensor length from device
         self._out_ep.write(bytes([CMD_GET_OUTPUT_LENGTH]), 50000)
-    
-        try:
-            buff = usb.util.create_buffer(MAX_PACKET_SIZE)
-            read_len = self._dev.read(self._in_ep, buff, 10000)
-            assert read_len == 4
-            return int.from_bytes(buff, byteorder = "little", signed=True)
-
-        except usb.core.USBError as e:
-            if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
-                print("Device error, IN pipe halted (issue with model?)")
-                sys.exit(1)
+        return self._read_int_from_device()
 
     def _read_input_length(self):
     
         # Get input tensor length from device
         self._out_ep.write(bytes([CMD_GET_INPUT_LENGTH]), self._timeout)
-    
-        try:
-            buff = usb.util.create_buffer(MAX_PACKET_SIZE)
-            read_len = self._dev.read(self._in_ep, buff, 10000)
-            assert read_len == 4
-            return int.from_bytes(buff, byteorder = "little", signed=True)
-        
-        except usb.core.USBError as e:
-            if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
-                print("Device error, IN pipe halted (issue with model?)")
-                sys.exit(1)
+        return self._read_int_from_device()
 
     def write_input_tensor(self, raw_img):
 
         self._out_ep.write(bytes([CMD_SET_INPUT_TENSOR]))
-        self._out_ep.write(raw_img, 1000)
-
-        if((len(raw_img) % MAX_PACKET_SIZE) == 0):
-            print("SEND EXTRA 0 LENGTH");
-            self._out_ep.write(bytearray([]), 1000)
-
-        print("FINISHED WRITING INPUT TENSOR")
+        self._write_array_to_device(raw_img)
 
     def start_inference(self):
 
@@ -248,10 +233,6 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         print("READING MODEL VIA USB..\n")
         
         self._write_int_to_device(CMD_GET_MODEL)
-
-        length = self._read_int_from_device()
-
-        assert length == self._model_length
 
         try:
             return self._dev.read(self._in_ep, self._model_length, self._timeout)
