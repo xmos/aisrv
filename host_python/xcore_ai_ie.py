@@ -107,7 +107,6 @@ class xcore_ai_ie(ABC):
 class xcore_ai_ie_spi(xcore_ai_ie):
 
     def __init__(self, bus=0, device=0, speed=7800000):
-        import spidev
         self._dev = None
         self._bus = bus
         self._device = device
@@ -124,6 +123,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         return [cmd] + self._dummy_bytes + (round_to_word(length) * [0])
 
     def connect(self):
+        import spidev
         self._dev = spidev.SpiDev()
         self._dev.open(self._bus, self._device)
         self._dev.max_speed_hz = self._speed
