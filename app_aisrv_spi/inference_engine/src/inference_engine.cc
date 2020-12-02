@@ -100,8 +100,13 @@ int interp_initialize(unsigned char **input, int *input_size, unsigned char **ou
     *input_size = interpreter->input(0)->bytes;
     *output = (unsigned char *)(interpreter->output(0)->data.raw);
     *output_size = interpreter->output(0)->bytes;
-    //*times = (unsigned int *) xcore_profiler.times;
-    //*times_size = interpreter->operators_size();
+#if defined(XCORE_PROFILER_MAX_LEVELS)
+    *times = (unsigned int *) xcore_profiler.times;
+    *times_size = interpreter->operators_size();
+#else
+    *times = NULL;
+    *times_size = 0;
+#endif
     
     return 0;
 }

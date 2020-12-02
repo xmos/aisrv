@@ -35,12 +35,13 @@ static uint32_t data_word_in(in buffered port:32 p_data, in port p_cs,
     int cs_low = 1;
     int oindex = index;
     while(cs_low) {
+        int word;
         select {
         case p_cs when pinseq(1) :> void:
             cs_low = 0;
             break;
-        case p_data :> words[index]:
-            words[index] = byterev(bitrev(words[index]));
+        case p_data :> word:
+            words[index] = byterev(bitrev(word));
             index++;
             break;
         }
