@@ -31,7 +31,6 @@ set(AI_TOOLS_DIR "$ENV{XMOS_AISRV_PATH}/submodules/ai_tools")
 #**********************
 
 add_executable(aisrv_spi)
-add_library(inference_engine STATIC)
 
 # Optimization
 # -DNDEBUG                        # define this to remove debug and profiling
@@ -53,13 +52,10 @@ set(BUILD_FLAGS
   "-O2"
 )
 
-target_compile_options(inference_engine PRIVATE ${BUILD_FLAGS})
 target_compile_options(aisrv_spi PRIVATE ${BUILD_FLAGS})
 
 target_link_options(aisrv_spi PRIVATE ${BUILD_FLAGS} -lquadspi -w)
 set_target_properties(aisrv_spi PROPERTIES OUTPUT_NAME aisrv_spi.xe)
-
-target_link_libraries(aisrv_spi PUBLIC inference_engine)
 
 #**********************
 # LIB sources
@@ -68,7 +64,7 @@ target_link_libraries(aisrv_spi PUBLIC inference_engine)
 include("${AI_TOOLS_DIR}/utils/cmake/xcore_interpreter.cmake")
 
 set(INFERENCE_ENGINE_SOURCE_DIR
-  "${PROJECT_SOURCE_DIR}/inference_engine/src"
+  "${PROJECT_SOURCE_DIR}/src"
 )
 
 set(INFERENCE_ENGINE_SOURCES
@@ -83,26 +79,24 @@ set(INFERENCE_ENGINE_INCLUDE_DIRS
   ${INFERENCE_ENGINE_SOURCE_DIR}
 )
 
-target_sources(inference_engine PRIVATE ${INFERENCE_ENGINE_SOURCES})
-target_include_directories(inference_engine PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS})
-
 #**********************
 # APP sources
 #**********************
 
 set(APP_SOURCES
-  "${PROJECT_SOURCE_DIR}/app/acquire.xc"
-  "${PROJECT_SOURCE_DIR}/app/aiengine.xc"
-  "${PROJECT_SOURCE_DIR}/app/main.xc"
-  "${PROJECT_SOURCE_DIR}/app/spi.xc"
-  "${PROJECT_SOURCE_DIR}/app/spibuffer.xc"
+  "${PROJECT_SOURCE_DIR}/src/acquire.xc"
+  "${PROJECT_SOURCE_DIR}/src/aiengine.xc"
+  "${PROJECT_SOURCE_DIR}/src/main.xc"
+  "${PROJECT_SOURCE_DIR}/src/spi.xc"
+  "${PROJECT_SOURCE_DIR}/src/spibuffer.xc"
+  ${INFERENCE_ENGINE_SOURCES}
 )
 
-set_source_files_properties("${PROJECT_SOURCE_DIR}/app/main.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/app/spibuffer.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/app/spi.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/app/aiengine.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/app/acquire.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/spibuffer.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/spi.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aiengine.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/acquire.xc" PROPERTIES LANGUAGE C)
 
 #**********************
 # targets
@@ -113,9 +107,7 @@ target_sources(aisrv_spi
 
 target_include_directories(aisrv_spi
   PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app/src"
-
-
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 #**********************
@@ -124,4 +116,3 @@ target_include_directories(aisrv_spi
 set(INSTALL_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
 set(INSTALL_BIN_DIR "${PROJECT_SOURCE_DIR}/bin")
 install(TARGETS aisrv_spi DESTINATION ${INSTALL_BIN_DIR})
-install(TARGETS inference_engine DESTINATION ${INSTALL_LIB_DIR})
