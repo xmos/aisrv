@@ -3,10 +3,7 @@ from abc import ABC, abstractmethod
 
 import sys
 
-import usb.core
-import usb.util
 import array
-# import spidev
 
 # Commands - TODO properly share with app code
 CMD_LENGTH_BYTES = 1
@@ -110,6 +107,7 @@ class xcore_ai_ie(ABC):
 class xcore_ai_ie_spi(xcore_ai_ie):
 
     def __init__(self, bus=0, device=0, speed=7800000):
+        import spidev
         self._dev = None
         self._bus = bus
         self._device = device
@@ -250,7 +248,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         super().__init__()
 
     def _read_int_from_device(self):
-
+        import usb
         try:
             buff = usb.util.create_buffer(MAX_PACKET_SIZE)
             read_len = self._dev.read(self._in_ep, buff, 10000)
@@ -273,7 +271,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             self._out_ep.write(bytearray([]), 1000)
 
     def connect(self):
-
+        import usb
         self._dev = None
         while self._dev is None:
 
