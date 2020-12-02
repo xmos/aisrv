@@ -9,11 +9,12 @@ import ctypes
 from math import sqrt
 
 import numpy as np
+from matplotlib import pyplot
 
 import usb.core
 import usb.util
 
-from xcore_ai_ie import xcore_ai_ie_spi
+from xcore_ai_ie import xcore_ai_ie_usb
 
 
 DRAW = False
@@ -54,7 +55,7 @@ def dequantize(arr, scale, zero_point):
     return np.float32((arr.astype(np.int32) - np.int32(zero_point)) * scale)
 
 
-ie = xcore_ai_ie_spi()
+ie = xcore_ai_ie_usb()
 
 ie.connect()
 
@@ -115,7 +116,6 @@ for arg in sys.argv[1:]:
 
         if DRAW: 
 
-            from matplotlib import pyplot
             np_img = np.frombuffer(raw_img, dtype=np.int8).reshape(INPUT_SHAPE)
             np_img = np.round(
                 (dequantize(np_img, INPUT_SCALE, INPUT_ZERO_POINT) + NORM_SHIFT) * NORM_SCALE
