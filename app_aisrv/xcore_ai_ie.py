@@ -180,8 +180,9 @@ class xcore_ai_ie_spi(xcore_ai_ie):
     
         r =  self._dev.xfer(to_send)
 
-        ls = [type(item) for item in r]
-        print(ls) 
+        for i in range(len(r)): 
+            if r[i] > 127:
+                r[i] = r[i] - 256
 
         return r[self._dummy_byte_count:]
 
