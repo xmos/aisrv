@@ -47,7 +47,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                 read_spec(to_engine, mem);
             }
             break;
-        case CMD_SET_TENSOR:
+        case CMD_SET_INPUT_TENSOR:
             from_spi :> N;
             to_engine <: cmd;
             master {
@@ -59,7 +59,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
             break;
         case CMD_START_INFER:
             to_engine <: CMD_START_INFER;
-            to_engine <: CMD_GET_TENSOR;
+            to_engine <: CMD_GET_OUTPUT_TENSOR;
             master {
                 to_engine <: mem->output_tensor_length;
                 for(int i = 0; i < 4*mem->output_tensor_length; i++) {
@@ -82,7 +82,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
         case CMD_START_ACQUIRE:
             to_sensor <: cmd;
             to_sensor :> int _;
-            to_engine <: CMD_SET_TENSOR;
+            to_engine <: CMD_SET_INPUT_TENSOR;
             master {
                 to_engine <: mem->input_tensor_length;
                 for(int i = 0; i < mem->input_tensor_length; i++) {

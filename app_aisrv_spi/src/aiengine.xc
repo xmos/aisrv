@@ -46,7 +46,7 @@ void aiengine(chanend x) {
                 }
             }
             break;
-        case CMD_GET_TENSOR:
+        case CMD_GET_OUTPUT_TENSOR:
             slave {
                 x :> N;
                 for(int i = 0; i < 4*N; i++) {
@@ -87,7 +87,7 @@ void aiengine(chanend x) {
 //            c <: status;
 
             break;
-        case CMD_SET_TENSOR:
+        case CMD_SET_INPUT_TENSOR:
             slave {
                 x :> N;
                 for(int i = 0; i < N; i++) {
