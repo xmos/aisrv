@@ -120,7 +120,10 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
         case CMD_GET_TENSOR:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
-                           mem->memory, mem->output_tensor_index, mem->output_tensor_length);
+                           mem->memory, mem->output_tensor_index,
+                           mem->tensor_is_sensor_output?
+                               mem->sensor_tensor_length :
+                               mem->output_tensor_length);
             break;
         case CMD_SET_MODEL:
             bytes = 4*data_word_in(p_data, p_cs, mem->memory, mem->model_index);
