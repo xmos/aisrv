@@ -79,6 +79,17 @@ int main(void)
     xcore_ie_send_model(&xIE, (uint8_t *)model,  909368);
     xcore_ie_read_spec(&xIE);
 
+    for(int j = 0; j < 20; j++) {
+        xcore_ie_start_acquisition(&xIE);
+        xcore_ie_wait_ready_timeout(&xIE, 1000000);
+    	xcore_ie_read_data(&xIE, rxdata, xIE.sensor_tensor_length);
+    	for(int i = 0; i < xIE.sensor_tensor_length/4; i++) {
+    		int oval = ((uint32_t *)(rxdata+3))[i];
+    		printf("%08x ", oval);
+    	}
+    	printf("\r\n");
+    }
+
     printf("Sending data\r\n");
     xcore_ie_send_data(&xIE, (uint8_t *)data, xIE.input_tensor_length);
 

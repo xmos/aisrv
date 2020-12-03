@@ -1,10 +1,11 @@
 #ifndef _AISRV_H_
 #define _AISRV_H_
 
-/* Used for USB mode only
- * TODO rm me */
 #define MAX_PACKET_SIZE (512)
-#define CMD_LENGTH_BYTES (1)
+#define MAX_PACKET_SIZE              (512)
+#define MAX_PACKET_SIZE_WORDS        (MAX_PACKET_SIZE / 4)
+#define INFERENCE_ENGINE_ID           0x12345678//0x633
+#define DUMMY_CLOCKS                  16
 
 typedef enum aisrv_cmd
 {   
@@ -31,6 +32,8 @@ typedef enum aisrv_cmd
     
 #define STATUS_BYTE_STATUS        0
 #define STATUS_BUSY            0x01
+#define STATUS_SENSING         0x02
+#define STATUS_FLASHING        0x04
 #define STATUS_NORMAL          0x80
 #define STATUS_BYTE_ERROR         1
 #define STATUS_ERROR           0x01
@@ -45,11 +48,6 @@ typedef enum aisrv_spec {
     SPEC_SENSOR_TENSOR_LENGTH     = 0x05, // From here it is acquistion
     SPEC_ALL_TOTAL           = 0x06       // All data words.
 } aisrv_spec_t;
-
-#define INFERENCE_ENGINE_ID          0x12345678//0x633
-
-
-#define DUMMY_CLOCKS                  16
 
 typedef enum aisrv_status
 {

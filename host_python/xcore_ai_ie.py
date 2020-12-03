@@ -23,9 +23,8 @@ CMD_GET_OUTPUT_LENGTH = 0x0B
 CMD_READ_SPEC = 0x07
 ###
 
-#TODO rm me and read from device
-MAX_PACKET_SIZE = 512 # USB
-XCORE_IE_MAX_BLOCK_SIZE = 256 # SPI
+# TODO read from (usb) device?
+XCORE_IE_MAX_BLOCK_SIZE = 512
 
 class xcore_ai_ie(ABC):
     
@@ -245,7 +244,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def _read_int_from_device(self):
         import usb
         try:
-            buff = usb.util.create_buffer(MAX_PACKET_SIZE)
+            buff = usb.util.create_buffer(XCORE_IE_MAX_BLOCK_SIZE)
             read_len = self._dev.read(self._in_ep, buff, 10000)
             assert read_len == 4
             return int.from_bytes(buff, byteorder = "little", signed=True)
@@ -262,7 +261,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
         self._out_ep.write(a, 1000)
 
-        if (len(a) % MAX_PACKET_SIZE) == 0:
+        if (len(a) % XCORE_IE_MAX_BLOCK_SIZE) == 0:
             self._out_ep.write(bytearray([]), 1000)
 
     def connect(self):
