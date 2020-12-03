@@ -154,9 +154,6 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
             break;
         }
         lastcmd = cmd;
-//        printintln(cmd);
-//        printf("Dispatched: %08x\n", cmd);
-//        led <: cmd;
         p_cs when pinsneq(0) :> void;
         if (isnull(p_miso)) {
             reset_port(p_data, clkblk);

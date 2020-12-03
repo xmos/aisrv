@@ -1,6 +1,11 @@
 #ifndef _AISRV_H_
 #define _AISRV_H_
 
+#define MAX_PACKET_SIZE              (512)
+#define MAX_PACKET_SIZE_WORDS        (MAX_PACKET_SIZE / 4)
+#define INFERENCE_ENGINE_ID           0x12345678//0x633
+#define DUMMY_CLOCKS                  16
+
 typedef enum aisrv_cmd
 {
     CMD_GET_STATUS        = 0x01,
@@ -36,11 +41,6 @@ typedef enum aisrv_spec {
     SPEC_SENSOR_TENSOR_LENGTH     = 0x05, // From here it is acquistion
     SPEC_ALL_TOTAL           = 0x06       // All data words.
 } aisrv_spec_t;
-
-#define INFERENCE_ENGINE_ID          0x12345678//0x633
-
-
-#define DUMMY_CLOCKS                  16
 
 typedef enum aisrv_status
 {

@@ -9,8 +9,8 @@
 #include "app_config.h"
 #include <stdio.h>
 
-#define XCORE_IE_MAX_BLOCK_SIZE   256
-#define DUMMY_BYTES                2
+#define XCORE_IE_MAX_BLOCK_SIZE    (512)
+#define DUMMY_BYTES                (2)
 #define STATUS_READ_BYTES          (DUMMY_BYTES + 1 + 4)
 
 typedef enum aisrv_cmd
@@ -26,7 +26,7 @@ typedef enum aisrv_cmd
     CMD_SET_TENSOR        = 0x06,
 
     CMD_START_INFER       = 0x08,
-    CMD_START_ACQUIRE     = 0x0A,
+    CMD_START_ACQUISITION = 0x0A,
     CMD_HELLO             = 0x55,
 } aisrv_cmd_t;
 
@@ -111,7 +111,7 @@ int xcore_ie_start_inference(xcore_ie_t *xIE) {
 }
 
 int xcore_ie_start_acquisition(xcore_ie_t *xIE) {
-	return xcore_ie_send_write_command(xIE, CMD_START_ACQUIRE, NULL, 0);
+	return xcore_ie_send_write_command(xIE, CMD_START_ACQUISITION, NULL, 0);
 }
 
 int xcore_ie_read_data(xcore_ie_t *xIE, uint8_t *model, uint32_t size) {
