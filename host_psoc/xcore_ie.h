@@ -12,6 +12,10 @@
 
 typedef struct xcore_ie {
     cyhal_spi_t mSPI;
+    int input_tensor_length;
+    int output_tensor_length;
+    int timings_length;
+    int sensor_tensor_length;
 } xcore_ie_t;
 
 /**
@@ -44,6 +48,8 @@ int xcore_ie_wait_ready(xcore_ie_t *xIE);
 /**
  * Function that sends a model to xcore.ai inferencing engine
  * Call this only on an initialised xcore_ie_t
+ * The model should be quantised (using for example TensorFlowLite)
+ * before sending it to xcore.ai
  *
  * @param xIE      pointer to the inferencing engine structure
  * @param data     pointer to the model
@@ -69,9 +75,26 @@ int xcore_ie_send_data(xcore_ie_t *xIE, uint8_t *data, uint32_t size);
  * After this function, call xcore_ie_wait_ready_timeout with an appropriate
  * time-out.
  *
+ * When completed, the output tensor can be read using xcore_ie_read_data()
+ *
  * @param xIE      pointer to the inferencing engine structure
  */
-int xcore_ie_inference(xcore_ie_t *xIE);
+int xcore_ie_start_inference(xcore_ie_t *xIE);
+
+/**
+ * Function that starts an acquisition cycle on the sensor. After completion
+ * (call xcore_ie_wait_ready_timeout with an appropriate time-out)
+ * frame of data will be stored in the data tensor. You can either use
+ * xcore_ie_start_inference() to run the inference engine over this frame, or
+ * xcore_ie_read_data() to read the frame of data out. The nature of the sensor
+ * is implementation dependent, and you must ensure that the sensor frame shape
+ * matches the expectations of the neural network.
+ *
+ * When completed, the output tensor can be read using xcore_ie_read_data()
+ *
+ * @param xIE      pointer to the inferencing engine structure
+ */
+int xcore_ie_start_acquisition(xcore_ie_t *xIE);
 
 /**
  * Function that reads the output tensor from the inferencing engine. This is
@@ -100,23 +123,19 @@ int xcore_ie_read_timings(xcore_ie_t *xIE, uint8_t *data, uint32_t size);
 /**
  * Function that reads metadata from the device. When the device does
  * not have a model, it will report 0 for the various sizes.
+ * The
  *
  * @param xIE      pointer to the inferencing engine structure
- * @param ilength  pointer to where to store the input tensor length (in bytes)
- * @param olength  pointer to where to store the output tensor length (in bytes)
- * @param tlength  pointer to where to store the timing vector length (in words[!])
  */
-int xcore_ie_read_spec(xcore_ie_t *xIE, uint32_t *ilength, uint32_t *olength, uint32_t *tlength);
+int xcore_ie_read_spec(xcore_ie_t *xIE);
 
 /**
  * Function that reads the ID of the device: 0x12345678.
  *
- * NOTE: at the moment the array should be 3 bytes too large, and the first three bytes are garbage
- *
  * @param xIE      pointer to the inferencing engine structure
- * @param data     pointer to where to store the data, this contains a word after the first three bytes
+ * @param id       pointer to where to store the identifier, a single word.
  */
-int xcore_ie_read_ID(xcore_ie_t *xIE, uint8_t *data);
+int xcore_ie_read_ID(xcore_ie_t *xIE, uint32_t *id);
 
 
 #endif /* XCORE_IE_H_ */
