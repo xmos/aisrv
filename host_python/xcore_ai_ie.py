@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 
 import sys
-
+import struct
 import array
 
 # Commands - TODO properly share with app code
@@ -174,10 +174,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         to_send = self._construct_packet(cmd, length)
     
         r =  self._dev.xfer(to_send)
-
-        for i in range(len(r)): 
-            if r[i] > 127:
-                r[i] = r[i] - 256
+        r = [x-256 if x > 127 else x for x in r]
 
         return r[self._dummy_byte_count:]
 
@@ -196,22 +193,24 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         self._wait_for_device()
         # TODO fix magic number
-        to_send = [CMD_READ_SPEC] + self._dummy_bytes + ([0] * 20)
-
+        to_send = self._construct_packet(CMD_READ_SPEC, 20)
+        
         r = self._dev.xfer2(to_send)
-        r = r[self._dummy_byte_count:]
-        # TODO tidy this
-        input_size = r[8] + (r[9]<<8) + (r[10] << 16) + (r[11] << 24)
-        output_size = r[12] + (r[13]<<8) + (r[14] << 16) + (r[15] << 24)
+        
+        r = bytearray(r[self._dummy_byte_count:])
+        
+        input_size = int.from_bytes(r[8:12], byteorder = 'little')
+        output_size = int.from_bytes(r[12:16], byteorder = 'little')
+        
         return input_size, output_size
 
     def _read_output_length(self):
-        # TODO this is quite inefficient..
+        # TODO this is quite inefficient since we we read the whole spec
         input_length, output_length = self._read_spec()
         return output_length
 
     def _read_input_length(self):
-        # TODO this is quite inefficient..
+        # TODO this is quite inefficient since we we read the whole spec
         input_length, output_length = self._read_spec()
         return input_length
 
