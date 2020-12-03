@@ -94,7 +94,7 @@ int interp_initialize(inference_engine *ie)
     TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
     if (allocate_tensors_status != kTfLiteOk)
     {
-        printf("AllocateTensors() failed");
+        TF_LITE_REPORT_ERROR(reporter, "AllocateTensors() failed");
         return 2;
     }
 
