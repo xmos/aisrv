@@ -1,3 +1,4 @@
+#include <xs1.h>
 #include <stdio.h>
 #include <stdint.h>
 #include "acquire.h"
@@ -8,10 +9,15 @@
 static int cnt = 0;
 
 static void acquire_data(chanend to_sensor, uint32_t buffer[], int length) {
+    // Example - provides data.
+    timer tmr;
+    int t;
     for(int i = 0; i < SENSOR_DATA_BYTES / 4; i++) {
         buffer[i] = i + cnt;
     }
     cnt += 256;
+    tmr :> t;
+    tmr when timerafter(t+100000000) :> void;
 }
 
 void acquire_init(chanend to_sensor, struct memory * unsafe mem) {

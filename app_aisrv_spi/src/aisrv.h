@@ -20,6 +20,8 @@ typedef enum aisrv_cmd
     
 #define STATUS_BYTE_STATUS        0
 #define STATUS_BUSY            0x01
+#define STATUS_SENSING         0x02
+#define STATUS_FLASHING        0x04
 #define STATUS_NORMAL          0x80
 #define STATUS_BYTE_ERROR         1
 #define STATUS_ERROR           0x01
