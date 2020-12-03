@@ -94,8 +94,12 @@ int xcore_ie_send_data(xcore_ie_t *xIE, uint8_t *model, uint32_t size) {
 	return xcore_ie_send_write_command(xIE, 6, model, size);
 }
 
-int xcore_ie_inference(xcore_ie_t *xIE) {
+int xcore_ie_start_inference(xcore_ie_t *xIE) {
 	return xcore_ie_send_write_command(xIE, 8, NULL, 0);
+}
+
+int xcore_ie_start_acquisition(xcore_ie_t *xIE) {
+	return xcore_ie_send_write_command(xIE, 10, NULL, 0);
 }
 
 int xcore_ie_read_data(xcore_ie_t *xIE, uint8_t *model, uint32_t size) {
@@ -106,24 +110,27 @@ int xcore_ie_read_timings(xcore_ie_t *xIE, uint8_t *model, uint32_t size) {
 	return xcore_ie_send_read_command(xIE, 9, model, size);
 }
 
-int xcore_ie_read_spec(xcore_ie_t *xIE, uint32_t *ilength, uint32_t *olength, uint32_t *tlength) {
-	uint32_t tmp[6];
-	int retval = xcore_ie_send_read_command(xIE, 5, (((uint8_t *)&tmp[1])-3), 20);
-	*ilength = tmp[3];
-	*olength = tmp[4];
-	*tlength = tmp[5];
+int xcore_ie_read_spec(xcore_ie_t *xIE) {
+	uint32_t tmp[7];
+	int retval = xcore_ie_send_read_command(xIE, 5, (((uint8_t *)&tmp[1])-3), 24);
+	xIE->input_tensor_length = tmp[3];
+	xIE->output_tensor_length = tmp[4];
+	xIE->timings_length = tmp[5];
+	xIE->sensor_tensor_length = tmp[6];
 	return retval;
 }
 
-int xcore_ie_read_ID(xcore_ie_t *xIE, uint8_t *model) {
-	return xcore_ie_send_read_command(xIE, 3, model, 4);
+int xcore_ie_read_ID(xcore_ie_t *xIE, uint32_t *ID) {
+	uint32_t tmp[2];
+	return xcore_ie_send_read_command(xIE, 3, (((uint8_t *)&tmp[1])-3), 4);
+	*ID = tmp[1];
 }
 
 int xcore_ie_init(xcore_ie_t *xIE, int frequency) {
 	cy_rslt_t result;
 	result = cyhal_spi_init(&xIE->mSPI,
     						mSPI_MOSI, mSPI_MISO, mSPI_SCLK, mSPI_SS,
-							NULL, 8, CYHAL_SPI_MODE_00_LSB, false);
+							NULL, 8, CYHAL_SPI_MODE_00_MSB, false);
     if (result != CY_RSLT_SUCCESS) {
     	return -1;
     }
