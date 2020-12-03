@@ -43,7 +43,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                     to_engine <: mem->memory[i];
                 }
             }
-            if (N != 256) {
+            if (N != MAX_PACKET_SIZE) {
                 read_spec(to_engine, mem);
             }
             break;
@@ -75,19 +75,30 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                     }
                 }
             }
+            mem->tensor_is_sensor_output = 0;
             break;
         case CMD_SET_SERVER:
             // DFU
             break;
         case CMD_START_ACQUIRE:
+            set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL | STATUS_SENSING | STATUS_BUSY);
             to_sensor <: cmd;
             to_sensor :> int _;
-            to_engine <: CMD_SET_TENSOR;
-            master {
-                to_engine <: mem->input_tensor_length;
-                for(int i = 0; i < mem->input_tensor_length; i++) {
-                    to_engine <: mem->memory[i];
+            set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL | STATUS_BUSY);
+            // watch out: <= not < to force a zero block at the end
+            for(int block = 0; block <= mem->input_tensor_length; block += MAX_PACKET_SIZE_WORDS) {
+                to_engine <: CMD_SET_TENSOR;
+                master {
+                    int len = mem->input_tensor_length - block;
+                    if (len > MAX_PACKET_SIZE_WORDS) {
+                        len = MAX_PACKET_SIZE_WORDS;
+                    }
+                    to_engine <: len;
+                    for(int i = 0; i < len; i++) {
+                        to_engine <: mem->memory[block+i];
+                    }
                 }
+                mem->tensor_is_sensor_output = 1;
             }
             break;
         }
