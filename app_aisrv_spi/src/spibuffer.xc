@@ -43,7 +43,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                     to_engine <: mem->memory[i];
                 }
             }
-            if (N != 256) {
+            if (N != MAX_PACKET_SIZE) {
                 read_spec(to_engine, mem);
             }
             break;
@@ -86,12 +86,12 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
             to_sensor :> int _;
             set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL | STATUS_BUSY);
             // watch out: <= not < to force a zero block at the end
-            for(int block = 0; block <= mem->input_tensor_length; block += 64) {
+            for(int block = 0; block <= mem->input_tensor_length; block += MAX_PACKET_SIZE_WORDS) {
                 to_engine <: CMD_SET_TENSOR;
                 master {
                     int len = mem->input_tensor_length - block;
-                    if (len > 64) {
-                        len = 64;
+                    if (len > MAX_PACKET_SIZE_WORDS) {
+                        len = MAX_PACKET_SIZE_WORDS;
                     }
                     to_engine <: len;
                     for(int i = 0; i < len; i++) {
