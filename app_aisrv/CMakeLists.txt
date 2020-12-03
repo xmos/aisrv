@@ -131,7 +131,6 @@ set(LIB_XUD_INCLUDE_DIRS
 
 set(APP_SOURCES
   "${PROJECT_SOURCE_DIR}/src/main.xc"
-  "${PROJECT_SOURCE_DIR}/src/main_c.c"
   "${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc"
   ${INFERENCE_ENGINE_SOURCES}
 )

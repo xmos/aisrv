@@ -193,7 +193,8 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         self._wait_for_device()
         # TODO fix magic number
-        to_send = self._construct_packet(CMD_READ_SPEC, 20)
+
+        to_send = self._construct_packet(CMD_READ_SPEC, 24)
         
         r = self._dev.xfer2(to_send)
         
@@ -201,7 +202,8 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         
         input_size = int.from_bytes(r[8:12], byteorder = 'little')
         output_size = int.from_bytes(r[12:16], byteorder = 'little')
-        
+
+        # TODO: add sensor tensor size
         return input_size, output_size
 
     def _read_output_length(self):
