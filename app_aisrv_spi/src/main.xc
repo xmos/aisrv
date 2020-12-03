@@ -13,7 +13,7 @@
 #include "spi.h"
 #include "spibuffer.h"
 #include "aiengine.h"
-#include "inference_commands.h"
+#include "aisrv.h"
 
 on tile[0]: port p_led = XS1_PORT_4C;
 
@@ -39,9 +39,24 @@ on tile[1]: out port reset1 = XS1_PORT_4A;
 on tile[1]: clock clkblk_s = XS1_CLKBLK_4;
 #endif
 
+#if defined(I2C_REQUIRED)
+on tile[0]: port p_scl = XS1_PORT_1N;
+on tile[0]: port p_sda = XS1_PORT_1O;
+#endif
+
 int main(void) {
     chan c_led, c_spi_to_buffer, c_buffer_to_engine, c_acquire_to_buffer;
+    chan c_acquire_to_sensor;
+#if defined(I2C_INTEGRATION)
+    i2c_master_if i2c[1];
+#endif
     par {
+#if defined(I2C_INTEGRATION)
+        on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
+#endif
+#if defined(MIPI_INTEGRATION)
+        on tile[1]: mipi_main(i2c[0], c_acquire_to_sensor);
+#endif
 #if defined(PSOC_INTEGRATION)
         on tile[0]: {
             aiengine(c_buffer_to_engine);
@@ -70,7 +85,7 @@ int main(void) {
                                        mem);
                     spi_buffer(c_spi_to_buffer, c_buffer_to_engine,
                                c_acquire_to_buffer, mem);
-                    acquire(c_acquire_to_buffer, mem);
+                    acquire(c_acquire_to_buffer, c_acquire_to_sensor, mem);
                 }
             }
         }

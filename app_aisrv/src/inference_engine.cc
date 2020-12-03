@@ -32,7 +32,6 @@ unsigned char model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
 aisrv_status_t interp_invoke() 
 {
     // Run inference, and report any error
-    printf("Running inference...\n");
     TfLiteStatus invoke_status = interpreter->Invoke();
 
     if (invoke_status != kTfLiteOk) 
@@ -44,7 +43,12 @@ aisrv_status_t interp_invoke()
     return STATUS_OKAY;
 }
 
-int interp_initialize(unsigned char **input, int *input_size, unsigned char **output, int *output_size) 
+void inference_engine_initialize(inference_engine *ie)
+{
+    ie->model_data = model_data;    
+}
+
+int interp_initialize(inference_engine *ie) 
 {
     // Set up logging
     static tflite::MicroErrorReporter error_reporter;
@@ -57,13 +61,11 @@ int interp_initialize(unsigned char **input, int *input_size, unsigned char **ou
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
     model = tflite::GetModel(model_data);
-
     if (model->version() != TFLITE_SCHEMA_VERSION)
     {
-        TF_LITE_REPORT_ERROR(reporter,
-                         "Model provided is schema version %d not equal "
-                         "to supported version %d.",
-                         model->version(), TFLITE_SCHEMA_VERSION);
+        printf("Model provided is schema version %u not equal "
+               "to supported version %d.",
+               model->version(), TFLITE_SCHEMA_VERSION);
         return 1;
     }
 
@@ -97,10 +99,17 @@ int interp_initialize(unsigned char **input, int *input_size, unsigned char **ou
     }
 
     // Obtain pointers to the model's input and output tensors.
-    *input = (unsigned char *)(interpreter->input(0)->data.raw);
-    *input_size = interpreter->input(0)->bytes;
-    *output = (unsigned char *)(interpreter->output(0)->data.raw);
-    *output_size = interpreter->output(0)->bytes;
-
+    ie->input_buffer = (unsigned char *)(interpreter->input(0)->data.raw);
+    ie->input_size = interpreter->input(0)->bytes;
+    ie->output_buffer = (unsigned char *)(interpreter->output(0)->data.raw);
+    ie->output_size = interpreter->output(0)->bytes;
+#if defined(XCORE_PROFILER_MAX_LEVELS)
+    ie->output_times = (unsigned int *) xcore_profiler.times;
+    ie->output_times_size = interpreter->operators_size();
+#else
+    ie->output_times = NULL;
+    ie->output_times_size = 0;
+#endif
+    
     return 0;
 }

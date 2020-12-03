@@ -17,17 +17,6 @@
 #define EP_COUNT_OUT 2
 #define EP_COUNT_IN 2
 
-extern "C" 
-{
-    int interp_init();
-    void print_output(); 
-    extern unsigned char model_data[MAX_MODEL_SIZE_BYTES];
-    extern unsigned char * unsafe output_buffer;
-    extern unsigned char * unsafe input_buffer;
-    extern int input_size;
-    extern int output_size;
-}
-
 XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 
@@ -62,6 +51,8 @@ static inline void receive_array_(chanend c, unsigned char * unsafe array, unsig
     }
 }
 
+static inference_engine_t ie;
+
 void interp_runner(chanend c)
 {
     aisrv_cmd_t cmd = CMD_NONE;
@@ -70,6 +61,8 @@ void interp_runner(chanend c)
 
     unsigned haveModel = 0;
     unsigned model_size;
+
+    unsafe { inference_engine_initialize(&ie); }
 
     while(1)
     {
@@ -87,9 +80,9 @@ void interp_runner(chanend c)
                 #endif
                 
                 // TODO reinstate checks for witing out of bounds
-                receive_array_(c, model_data, model_size);
+                     receive_array_(c, ie.model_data, model_size);
 
-                haveModel = !interp_init();
+                haveModel = !interp_initialize(&ie);
                 outuint(c, haveModel);
                 outct(c, XS1_CT_END);
 
@@ -103,7 +96,7 @@ void interp_runner(chanend c)
                 {
                     /* TODO bad status if no model */
                     c <: (unsigned) STATUS_OKAY;
-                    send_array(c, model_data, model_size);
+                    send_array(c, ie.model_data, model_size);
                 }
                 break;
 
@@ -122,7 +115,7 @@ void interp_runner(chanend c)
                     
                         /* If no valid model throw away data */
                         if(haveModel)
-                            input_buffer[i++] = x;
+                            ie.input_buffer[i++] = x;
                     }
                     else
                     {
@@ -172,7 +165,7 @@ void interp_runner(chanend c)
                     if(haveModel)
                     {
                         c <: (unsigned) STATUS_OKAY;
-                        send_int(c, output_size);
+                        send_int(c, ie.output_size);
                     }
                     else
                     {
@@ -190,7 +183,7 @@ void interp_runner(chanend c)
                     if(haveModel)
                     {
                         c <: (unsigned) STATUS_OKAY;
-                        send_int(c, input_size);
+                        send_int(c, ie.input_size);
                     }
                     else
                     {
@@ -204,7 +197,7 @@ void interp_runner(chanend c)
                 slave
                 {
                     c <: (unsigned) STATUS_OKAY;
-                    send_array(c, output_buffer, output_size);
+                    send_array(c, ie.output_buffer, ie.output_size);
                 }
                 break;
 

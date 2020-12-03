@@ -1,5 +1,4 @@
-
-// Copyright (c) 2019, XMOS Ltd, All rights reserved
+// Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 #include "inference_engine.h"
 
@@ -8,7 +7,6 @@
 #include <cstdio>
 #include <iostream>
 
-//#include "mobilenet_v1.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
@@ -45,7 +43,12 @@ aisrv_status_t interp_invoke()
     return STATUS_OKAY;
 }
 
-int interp_initialize(unsigned char **input, int *input_size, unsigned char **output, int *output_size, unsigned int **times, unsigned int *times_size) 
+void inference_engine_initialize(inference_engine *ie)
+{
+    ie->model_data = model_data;
+}
+
+int interp_initialize(inference_engine *ie)
 {
     // Set up logging
     static tflite::MicroErrorReporter error_reporter;
@@ -96,12 +99,17 @@ int interp_initialize(unsigned char **input, int *input_size, unsigned char **ou
     }
 
     // Obtain pointers to the model's input and output tensors.
-    *input = (unsigned char *)(interpreter->input(0)->data.raw);
-    *input_size = interpreter->input(0)->bytes;
-    *output = (unsigned char *)(interpreter->output(0)->data.raw);
-    *output_size = interpreter->output(0)->bytes;
-    //*times = (unsigned int *) xcore_profiler.times;
-    //*times_size = interpreter->operators_size();
-    
+    ie->input_buffer = (unsigned char *)(interpreter->input(0)->data.raw);
+    ie->input_size = interpreter->input(0)->bytes;
+    ie->output_buffer = (unsigned char *)(interpreter->output(0)->data.raw);
+    ie->output_size = interpreter->output(0)->bytes;
+#if defined(XCORE_PROFILER_MAX_LEVELS)
+    ie->output_times = (unsigned int *) xcore_profiler.times;
+    ie->output_times_size = interpreter->operators_size();
+#else
+    ie->output_times = NULL;
+    ie->output_times_size = 0;
+#endif
+
     return 0;
 }
