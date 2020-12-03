@@ -76,7 +76,7 @@ void aiengine(chanend x) {
                     model_offset ++;
                 }
             }
-            if (N != 64) {
+            if (N != MAX_PACKET_SIZE_WORDS) {
                 unsafe {
                     status = interp_initialize(&ie);
                 }
@@ -97,7 +97,7 @@ void aiengine(chanend x) {
                     input_tensor_offset ++;
                 }
             }
-            if (N != 256/4) {
+            if (N != MAX_PACKET_SIZE_WORDS) {
                 input_tensor_offset = 0;
             }
             break;
