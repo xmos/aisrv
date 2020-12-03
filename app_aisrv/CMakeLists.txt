@@ -111,7 +111,6 @@ set(INFERENCE_ENGINE_SOURCES
   ${XCORE_INTERPRETER_SOURCES}
   "$ENV{XMOS_AISRV_PATH}/submodules/tensorflow_support/qspi_flash/xcore_device_memory.c"
   "${INFERENCE_ENGINE_SOURCE_DIR}/inference_engine.cc"
-  "${INFERENCE_ENGINE_SOURCE_DIR}/mobilenet_v1.c"
 )
 
 set(INFERENCE_ENGINE_INCLUDE_DIRS
