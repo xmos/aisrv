@@ -9,19 +9,17 @@ import array
 CMD_LENGTH_BYTES = 1
 
 CMD_NONE = 0
-CMD_GET_INPUT_LENGTH = 1
-CMD_GET_OUTPUT_LENGTH = 2
+CMD_READ_STATUS = 0x01
 CMD_SET_INPUT_TENSOR = 0x83
 CMD_START_INFER = 0x84
 CMD_GET_OUTPUT_TENSOR = 5
 
-# TODO Unify
 CMD_SET_MODEL = 0x86 
-CMD_SET_MODEL_SPI = 0x2
-
 CMD_GET_MODEL = 0x06
 
-CMD_READ_STATUS = 0x01
+CMD_GET_INPUT_LENGTH = 0x0A
+CMD_GET_OUTPUT_LENGTH = 0x0B
+
 CMD_READ_SPEC = 0x07
 ###
 
@@ -181,7 +179,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
     def download_model(self, model_bytes):
         
         # Download model to device
-        self._download_data(CMD_SET_MODEL_SPI, model_bytes)
+        self._download_data(CMD_SET_MODEL, model_bytes)
 
         # Update lengths
         self._input_size, self._output_size = self._read_spec()
