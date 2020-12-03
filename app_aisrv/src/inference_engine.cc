@@ -36,7 +36,7 @@ aisrv_status_t interp_invoke()
 
     if (invoke_status != kTfLiteOk) 
     {
-        printf("Invoke failed\n");
+        TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
         return STATUS_ERROR_INFER;
     }
 
