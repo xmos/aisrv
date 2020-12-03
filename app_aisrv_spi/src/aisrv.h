@@ -1,21 +1,32 @@
 #ifndef _AISRV_H_
 #define _AISRV_H_
 
+/* Used for USB mode only
+ * TODO rm me */
+#define MAX_PACKET_SIZE (512)
+#define CMD_LENGTH_BYTES (1)
+
 typedef enum aisrv_cmd
-{
-    CMD_GET_STATUS        = 0x01,
-    CMD_GET_ID            = 0x03,
-    CMD_GET_SPEC          = 0x07,
-    CMD_GET_TENSOR        = 0x05,
-    CMD_GET_TIMINGS       = 0x09,
+{   
+    CMD_NONE                        = 0x00,
+    CMD_GET_STATUS                  = 0x01,
+    CMD_GET_ID                      = 0x03,
+    CMD_GET_OUTPUT_TENSOR           = 0x05,
 
-    CMD_SET_MODEL         = 0x02,
-    CMD_SET_SERVER        = 0x04,
-    CMD_SET_TENSOR        = 0x83,
+    CMD_GET_TIMINGS                 = 0x09,
 
-    CMD_START_INFER       = 0x84,
-    CMD_START_ACQUIRE     = 0x0A,
-    CMD_HELLO             = 0x55,
+    CMD_GET_MODEL                   = 0x06,     // TODO remove for production
+    CMD_SET_MODEL                   = 0x86,
+    CMD_SET_SERVER                  = 0x04,
+    CMD_SET_INPUT_TENSOR            = 0x83,
+    
+    CMD_GET_SPEC                    = 0x07,
+    CMD_GET_INPUT_TENSOR_LENGTH     = 0x0A,     // Note, currently unsed by SPI mode (used GET_SPEC)
+    CMD_GET_OUTPUT_TENSOR_LENGTH    = 0x0B,     // Note, currently unsed by SPI mode (used GET_SPEC)
+
+    CMD_START_INFER                 = 0x84,
+    CMD_START_ACQUIRE               = 0x0C,   
+    CMD_HELLO                       = 0x55,
 } aisrv_cmd_t;
     
 #define STATUS_BYTE_STATUS        0
@@ -47,5 +58,6 @@ typedef enum aisrv_status
     STATUS_ERROR_NO_MODEL,
     STATUS_ERROR_INFER,
 } aisrv_status_t;
+
 
 #endif

@@ -2,7 +2,7 @@
 #ifndef INFERENCE_ENGINE_H_
 #define INFERENCE_ENGINE_H_
 
-#include "aisrv.h"
+#include "../../app_aisrv_spi/src/aisrv.h"
 
 #ifdef __cplusplus
 #define UNSAFE /**/
