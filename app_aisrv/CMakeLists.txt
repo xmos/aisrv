@@ -150,8 +150,6 @@ target_include_directories(aisrv_usb
   PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/src"
   PRIVATE ${LIB_XUD_INCLUDE_DIRS}
-
-
 )
 
 #**********************

@@ -9,25 +9,22 @@ import array
 CMD_LENGTH_BYTES = 1
 
 CMD_NONE = 0
-CMD_GET_INPUT_LENGTH = 1
-CMD_GET_OUTPUT_LENGTH = 2
+CMD_READ_STATUS = 0x01
 CMD_SET_INPUT_TENSOR = 0x83
 CMD_START_INFER = 0x84
 CMD_GET_OUTPUT_TENSOR = 5
 
-# TODO Unify
 CMD_SET_MODEL = 0x86 
-CMD_SET_MODEL_SPI = 0x2
-
 CMD_GET_MODEL = 0x06
 
-CMD_READ_STATUS = 0x01
+CMD_GET_INPUT_LENGTH = 0x0A
+CMD_GET_OUTPUT_LENGTH = 0x0B
+
 CMD_READ_SPEC = 0x07
 ###
 
-#TODO rm me and read from device
-MAX_PACKET_SIZE = 512 # USB
-XCORE_IE_MAX_BLOCK_SIZE = 256 # SPI
+# TODO read from (usb) device?
+XCORE_IE_MAX_BLOCK_SIZE = 512
 
 class xcore_ai_ie(ABC):
     
@@ -181,7 +178,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
     def download_model(self, model_bytes):
         
         # Download model to device
-        self._download_data(CMD_SET_MODEL_SPI, model_bytes)
+        self._download_data(CMD_SET_MODEL, model_bytes)
 
         # Update lengths
         self._input_size, self._output_size = self._read_spec()
@@ -247,7 +244,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def _read_int_from_device(self):
         import usb
         try:
-            buff = usb.util.create_buffer(MAX_PACKET_SIZE)
+            buff = usb.util.create_buffer(XCORE_IE_MAX_BLOCK_SIZE)
             read_len = self._dev.read(self._in_ep, buff, 10000)
             assert read_len == 4
             return int.from_bytes(buff, byteorder = "little", signed=True)
@@ -264,7 +261,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
         self._out_ep.write(a, 1000)
 
-        if (len(a) % MAX_PACKET_SIZE) == 0:
+        if (len(a) % XCORE_IE_MAX_BLOCK_SIZE) == 0:
             self._out_ep.write(bytearray([]), 1000)
 
     def connect(self):

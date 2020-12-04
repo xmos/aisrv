@@ -7,7 +7,7 @@
 #include <xscope.h>
 #include <stdio.h>
 
-#include "aisrv.h"
+#include "../../app_aisrv_spi/src/aisrv.h"
 
 #include "xud_device.h"
 
@@ -235,12 +235,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
             printf("Bad cmd length: %d\n", length);
             continue;
         }
-        if((cmd & 0x7f) > CMD_END_MARKER)
-        {
-            printf("Bad cmd: %d\n", cmd);
-        }
-             
-      
 
         /* Pass on command */
         c <: cmd;
