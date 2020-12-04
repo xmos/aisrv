@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "xud_device.h"
-#include "aisrv.h"
+#include "../../app_aisrv_spi/src/aisrv.h"
 
 #define BCD_DEVICE   0x1000
 #define VENDOR_ID    0x20B1
@@ -77,20 +77,17 @@ static unsigned char cfgDesc[] =
 };
 
 
-
-
-unsafe{
-/* String table */
-static char * unsafe stringDescriptors[]=
+unsafe
 {
-    "\x09\x04",             // Language ID string (US English)
-    "XMOS",                 // iManufacturer
-    "xAISRV",               // iProduct
-    "Config",               // iConfiguration
-};
+    /* String table */
+    static char * unsafe stringDescriptors[]=
+    {      
+        "\x09\x04",             // Language ID string (US English)
+        "XMOS",                 // iManufacturer
+        "xAISRV",               // iProduct
+        "Config",               // iConfiguration
+    };
 }
-
-
 
 
 void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in)
@@ -113,8 +110,7 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in)
         {
             /* Set result to ERR, we expect it to get set to OKAY if a request is handled */
             result = XUD_RES_ERR;
-
-
+            // TODO 
             //result = AisrvClassRequests(ep0_out, ep0_in, sp);
         }
 
