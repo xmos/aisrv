@@ -1,7 +1,7 @@
 #ifndef _AISRV_H_
 #define _AISRV_H_
 
-#define MAX_PACKET_SIZE (512)
+#define CMD_LENGTH_BYTES             (1)
 #define MAX_PACKET_SIZE              (512)
 #define MAX_PACKET_SIZE_WORDS        (MAX_PACKET_SIZE / 4)
 #define INFERENCE_ENGINE_ID           0x12345678//0x633
