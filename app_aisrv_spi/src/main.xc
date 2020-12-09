@@ -45,7 +45,7 @@ unsafe
 // TODO Move to USB file
 void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 {
-    unsigned char data[512];
+    int32_t data[MAX_PACKET_SIZE_WORDS];
 
     XUD_ep ep_out = XUD_InitEp(c_ep_out);
     XUD_ep ep_in  = XUD_InitEp(c_ep_in);
@@ -62,9 +62,9 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
         unsigned length = 0;
         
         /* Get command */
-        XUD_GetBuffer(ep_out, data, length);
+        XUD_GetBuffer(ep_out, (data, uint8_t[]), length);
                 
-        cmd = data[0];
+        cmd = (uint8_t) data[0];
 
         if(length != CMD_LENGTH_BYTES)
         {
@@ -81,7 +81,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
             while(1)
             {
                 unsigned pktLength;
-                XUD_GetBuffer(ep_out, data, pktLength);
+                XUD_GetBuffer(ep_out, (data, uint8_t[]), pktLength);
        
                 printf("Received: %d bytes\n", pktLength);
 
@@ -89,7 +89,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                 {
                     /* TODO transfer words */
                     for(int i = 0; i < pktLength; i++)
-                        outuchar(c, data[i]);
+                        outuchar(c, (data, uint8_t[])[i]);
                 }
 
                 if(pktLength != MAX_PACKET_SIZE)
@@ -124,7 +124,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                             c :> data[i];
                         }
                        
-                        XUD_SetBuffer(ep_in, data, MAX_PACKET_SIZE);
+                        XUD_SetBuffer(ep_in, (data, uint8_t[]), MAX_PACKET_SIZE);
 
                         size = size - MAX_PACKET_SIZE;
                     }
@@ -134,9 +134,9 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                     {
                         for(int i = 0; i < size; i++)
                         {
-                            c :> data[i];
+                            c :> (data, uint8_t[])[i];
                         }
-                        XUD_SetBuffer(ep_in, data, size);
+                        XUD_SetBuffer(ep_in, (data, uint8_t[]), size);
                     }
                 }
                 else
