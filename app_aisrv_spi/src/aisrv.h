@@ -1,7 +1,9 @@
 #ifndef _AISRV_H_
 #define _AISRV_H_
 
-#define AISRV_CMD_WRITE_BIT_MASK  (0x80)
+#include <stdint.h>
+
+#define AISRV_CMD_WRITE_BIT_MASK     (0x80)
 #define CMD_LENGTH_BYTES             (1)
 #define MAX_PACKET_SIZE              (512)
 #define MAX_PACKET_SIZE_WORDS        (MAX_PACKET_SIZE / 4)
@@ -58,6 +60,9 @@ typedef enum aisrv_status
     STATUS_ERROR_INFER,
 } aisrv_status_t;
 
-//void send_array_(chanend c, uint32_t * unsafe array, unsigned size);
+#ifdef __XC__
+void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c);
+void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in);
+#endif
 
 #endif
