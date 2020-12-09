@@ -57,43 +57,32 @@ static inline transaction send_array(chanend c, unsigned char * unsafe array, un
         c <: array[i];
 }
 
-static inline size_t receive_array_(chanend c, unsigned * unsafe array, unsigned size, unsigned ignore)
+//static inline void send_array(chanend c, unsigned * unsafe array, unsigned size)
+
+/* TODO add bounds checking */
+static inline size_t receive_array_(chanend c, unsigned * unsafe array, unsigned ignore)
 {
     unsigned i = 0;
     
-    while(1)
+    while(!testct(c))
     {
-        if(!testct(c))
-        {
-            uint32_t x = inuint(c);
-            if(!ignore)
-                array[i++] = x;
-        }
-        else
-        {
-            chkct(c, XS1_CT_END);
-            break;
-        }
+        uint32_t x = inuint(c);
+        if(!ignore) // TODO check hoisted
+            array[i++] = x;
     }
+    
+    chkct(c, XS1_CT_END);
 
     i *= sizeof(uint32_t);
     uint8_t * unsafe arrayc = (uint8_t * unsafe) array;
 
-    while(1)
+    while(!testct(c))
     {
-        if(!testct(c))
-        {
-            uint8_t x = inuchar(c);
-
-            if(!ignore)
-                arrayc[i++] = x;
-        }
-        else
-        {
-            chkct(c, XS1_CT_END);
-            break;
-        }
+        uint8_t x = inuchar(c);
+        if(!ignore) // TODO check hoisted
+            arrayc[i++] = x;
     }
+    chkct(c, XS1_CT_END);
 
     return i;
 }
@@ -104,7 +93,7 @@ void interp_runner(chanend c)
 {
     aisrv_cmd_t cmd = CMD_NONE;
     size_t length = 0;
-    unsigned char data[512];
+    unsigned data[MAX_PACKET_SIZE_WORDS]; // TODO rm me
 
     unsigned haveModel = 0;
     unsigned model_size;
@@ -126,8 +115,7 @@ void interp_runner(chanend c)
                         printf("Model size: %d\n", model_size);
                 #endif
                 
-                // TODO reinstate checks for witing out of bounds
-                receive_array_(c, ie.model_data, model_size, 0);
+                receive_array_(c, ie.model_data, 0);
                 
                 haveModel = !interp_initialize(&ie);
                 outuint(c, haveModel);
@@ -150,7 +138,7 @@ void interp_runner(chanend c)
             case CMD_SET_INPUT_TENSOR:
 
                  // TODO check size vs input_size
-                size_t size = receive_array_(c, ie.input_buffer, model_size, !haveModel);
+                size_t size = receive_array_(c, ie.input_buffer, !haveModel);
             
                 if(haveModel)
                 {
@@ -168,10 +156,9 @@ void interp_runner(chanend c)
 
                 aisrv_status_t status = STATUS_OKAY;
 
-                // TODO use receive_array()
-                inct(c);
-                inuchar(c); // dummy byte
-                inct(c);
+                /* Note currently receive one dummy byte */
+                size_t size = receive_array_(c, data, 0);
+
                     
                 if(haveModel)
                 {
