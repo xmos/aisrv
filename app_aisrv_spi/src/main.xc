@@ -84,16 +84,21 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                 XUD_GetBuffer(ep_out, (data, uint8_t[]), pktLength);
        
                 printf("Received: %d bytes\n", pktLength);
-
-                if(pktLength)
+                
+                size_t i = 0;
+                for(i = 0; i < (pktLength/4); i++)
                 {
-                    /* TODO transfer words */
-                    for(int i = 0; i < pktLength; i++)
-                        outuchar(c, (data, uint8_t[])[i]);
+                    outuint(c, data[i]);
                 }
-
+              
                 if(pktLength != MAX_PACKET_SIZE)
                 {
+                    i *= 4;
+                    outct(c, XS1_CT_END);
+                    while(i < pktLength)
+                    {
+                        outuchar(c, (data, uint8_t[])[i++]);
+                    }
                     outct(c, XS1_CT_END);
                     break;
                 }
@@ -168,20 +173,45 @@ static inline transaction send_array(chanend c, unsigned char * unsafe array, un
         c <: array[i];
 }
 
-static inline void receive_array_(chanend c, unsigned char * unsafe array, unsigned size)
+static inline size_t receive_array_(chanend c, unsigned * unsafe array, unsigned size, unsigned ignore)
 {
     unsigned i = 0;
+    
     while(1)
     {
-        /* TODO transfer words */
         if(!testct(c))
-            array[i++] = inuchar(c);
+        {
+            uint32_t x = inuint(c);
+            if(!ignore)
+                array[i++] = x;
+        }
         else
-        {    
+        {
             chkct(c, XS1_CT_END);
             break;
         }
     }
+
+    i *= sizeof(uint32_t);
+    uint8_t * unsafe arrayc = (uint8_t * unsafe) array;
+
+    while(1)
+    {
+        if(!testct(c))
+        {
+            uint8_t x = inuchar(c);
+
+            if(!ignore)
+                arrayc[i++] = x;
+        }
+        else
+        {
+            chkct(c, XS1_CT_END);
+            break;
+        }
+    }
+
+    return i;
 }
 
 static inference_engine_t ie;
@@ -213,8 +243,8 @@ void interp_runner(chanend c)
                 #endif
                 
                 // TODO reinstate checks for witing out of bounds
-                     receive_array_(c, ie.model_data, model_size);
-
+                receive_array_(c, ie.model_data, model_size, 0);
+                
                 haveModel = !interp_initialize(&ie);
                 outuint(c, haveModel);
                 outct(c, XS1_CT_END);
@@ -236,26 +266,7 @@ void interp_runner(chanend c)
             case CMD_SET_INPUT_TENSOR:
 
                  // TODO check size vs input_size
-               
-                unsigned i = 0; 
-                
-                while(1)
-                {
-                    if(!testct(c))
-                    {
-                        unsigned char x;
-                        x = inuchar(c);
-                    
-                        /* If no valid model throw away data */
-                        if(haveModel)
-                            ie.input_buffer[i++] = x;
-                    }
-                    else
-                    {
-                        chkct(c, XS1_CT_END);
-                        break;
-                    }
-                }
+                size_t size = receive_array_(c, ie.input_buffer, model_size, !haveModel);
             
                 if(haveModel)
                 {
@@ -272,7 +283,9 @@ void interp_runner(chanend c)
             case CMD_START_INFER:
 
                 aisrv_status_t status = STATUS_OKAY;
-                
+
+                // TODO use receive_array()
+                inct(c);
                 inuchar(c); // dummy byte
                 inct(c);
                     
@@ -340,9 +353,6 @@ void interp_runner(chanend c)
     }
 }
 } // unsafe
-
-
-
 #endif
 
 #define PSOC_INTEGRATION
