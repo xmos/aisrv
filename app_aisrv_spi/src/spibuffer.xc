@@ -5,14 +5,20 @@
 #include "shared_memory.h"
 #include "spibuffer.h"
 
-static void read_spec(chanend to_engine, struct memory * unsafe mem) {
+static void read_spec(chanend to_engine, struct memory * unsafe mem) 
+{
+    int status;
+
     to_engine <: CMD_GET_SPEC;
-    unsafe {
-        master {
-            for(int i = 0; i < SPEC_MODEL_TOTAL; i++) {
-                to_engine :> mem->spec[i];
-            }
-        }
+
+    to_engine :> status; 
+
+    unsafe 
+    {
+        for(int i = 0; i < SPEC_MODEL_TOTAL; i++)
+            mem->spec[i] = inuint(to_engine);
+        inct(to_engine); inct(to_engine);
+
         mem->input_tensor_length = (mem->spec[SPEC_INPUT_TENSOR_LENGTH]+3) / 4;
         mem->output_tensor_length = (mem->spec[SPEC_OUTPUT_TENSOR_LENGTH]+3) / 4;
         mem->timings_length = mem->spec[SPEC_TIMINGS_LENGTH];
@@ -25,47 +31,104 @@ static inline void set_mem_status(uint32_t status[1], uint32_t byte, uint32_t va
 }
 //         = STATUS_NORMAL;
 
-void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct memory * unsafe mem) {
+void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct memory * unsafe mem) 
+{
+    unsigned cmd_in_flight = 0;
+   
     unsafe {
+    
     while(1) {
         int cmd;
         int N;
+
         set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL);
         from_spi :> cmd;
         set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL | STATUS_BUSY);
+        
         switch(cmd) {
         case CMD_SET_MODEL:
+        
             from_spi :> N;
-            to_engine <: cmd;
-            master {
-                to_engine <: N/4;
-                for(int i = 0; i < N/4; i++) {
-                    to_engine <: mem->memory[i];
-                }
+            
+            if(!cmd_in_flight)
+            {
+                to_engine <: cmd;
+                cmd_in_flight = 1;
             }
-            if (N != MAX_PACKET_SIZE) {
+            
+            for(int i = 0; i < N/4; i++) {
+                outuint(to_engine, mem->memory[i]);
+            }
+            
+            if (N != MAX_PACKET_SIZE)
+            {
+                cmd_in_flight = 0;
+                outct(to_engine, XS1_CT_END); outct(to_engine,XS1_CT_END);
+              
+                /* TODO check or pass on status */ 
+                aisrv_status_t status;
+                status = inuint(to_engine);
+                chkct(to_engine, XS1_CT_END);
+               
                 read_spec(to_engine, mem);
             }
+
             break;
         case CMD_SET_INPUT_TENSOR:
             from_spi :> N;
-            to_engine <: cmd;
-            master {
-                to_engine <: N/4;
-                for(int i = 0; i < N/4; i++) {
-                    to_engine <: mem->memory[mem->input_tensor_index + i];
-                }
+            
+            if(!cmd_in_flight)
+            {
+                to_engine <: cmd;
+                cmd_in_flight = 1;
+            }
+
+            for(int i = 0; i < N/4; i++)
+                outuint(to_engine, mem->memory[mem->input_tensor_index + i]);
+            
+            if(N != MAX_PACKET_SIZE)
+            {
+                cmd_in_flight = 0;
+                outct(to_engine, XS1_CT_END); outct(to_engine,XS1_CT_END);
+            
+                /* TODO check or pass on status */ 
+                aisrv_status_t status;
+                status = inuint(to_engine);
+                chkct(to_engine, XS1_CT_END);
             }
             break;
+
         case CMD_START_INFER:
+            
+            /* TODO check or pass on status */   
+            aisrv_status_t status;
+            
             to_engine <: CMD_START_INFER;
+            outct(to_engine, XS1_CT_END);
+            outct(to_engine, XS1_CT_END);
+            status = inuint(to_engine);
+            chkct(to_engine, XS1_CT_END);
+
             to_engine <: CMD_GET_OUTPUT_TENSOR;
-            master {
-                to_engine <: mem->output_tensor_length;
-                for(int i = 0; i < 4*mem->output_tensor_length; i++) {
-                to_engine :> (mem->memory, uint8_t[])[mem->output_tensor_index + i];
-                }
+            to_engine :> status;
+
+            size_t i = 0;
+            while(!testct(to_engine))
+            {
+                mem->memory[mem->output_tensor_index + i] = inuint(to_engine);
+                i++;
             }
+            chkct(to_engine, XS1_CT_END);
+            i *= 4;
+            while(!testct(to_engine))
+            {
+                (mem->memory, uint8_t[])[mem->output_tensor_index + i] = inuchar(to_engine);
+                i++;
+            }
+            chkct(to_engine, XS1_CT_END);
+           
+            #if 0 
+            // TODO
             to_engine <: CMD_GET_TIMINGS;
             master {
                 to_engine <: mem->timings_length;
@@ -75,6 +138,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                     }
                 }
             }
+            #endif 
             mem->tensor_is_sensor_output = 0;
             break;
         case CMD_SET_SERVER:
