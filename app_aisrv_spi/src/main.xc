@@ -39,191 +39,7 @@ void leds(chanend led) {
     }
 }
 
-
-
-
-unsafe{
-static inline transaction send_int(chanend c, unsigned x)
-{
-    c <: (unsigned) 4;
-    for(int i = 0; i < 4; i++)
-        c <: (unsigned char) (x, unsigned char[])[i]; 
-}
-
-static inline transaction send_array(chanend c, unsigned char * unsafe array, unsigned size)
-{
-    c <: (unsigned)size;
-    for(int i = 0; i < size; i++)
-        c <: array[i];
-}
-
-//static inline void send_array(chanend c, unsigned * unsafe array, unsigned size)
-
-/* TODO add bounds checking */
-static inline size_t receive_array_(chanend c, unsigned * unsafe array, unsigned ignore)
-{
-    unsigned i = 0;
-    
-    while(!testct(c))
-    {
-        uint32_t x = inuint(c);
-        if(!ignore) // TODO check hoisted
-            array[i++] = x;
-    }
-    
-    chkct(c, XS1_CT_END);
-
-    i *= sizeof(uint32_t);
-    uint8_t * unsafe arrayc = (uint8_t * unsafe) array;
-
-    while(!testct(c))
-    {
-        uint8_t x = inuchar(c);
-        if(!ignore) // TODO check hoisted
-            arrayc[i++] = x;
-    }
-    chkct(c, XS1_CT_END);
-
-    return i;
-}
-
-static inference_engine_t ie;
-
-void interp_runner(chanend c)
-{
-    aisrv_cmd_t cmd = CMD_NONE;
-    size_t length = 0;
-    unsigned data[MAX_PACKET_SIZE_WORDS]; // TODO rm me
-
-    unsigned haveModel = 0;
-    unsigned model_size;
-
-    unsafe { inference_engine_initialize(&ie); }
-
-    while(1)
-    {
-        c :> cmd;
-
-        switch(cmd)
-        {
-            case CMD_SET_MODEL:
-                
-                #if 0
-                     if(model_size > MAX_MODEL_SIZE_BYTES)
-                        printf("Warning not enough space allocated for model %d %d\n", model_size, MAX_MODEL_SIZE_BYTES);
-                    else
-                        printf("Model size: %d\n", model_size);
-                #endif
-                
-                receive_array_(c, ie.model_data, 0);
-                
-                haveModel = !interp_initialize(&ie);
-                outuint(c, haveModel);
-                outct(c, XS1_CT_END);
-
-                printf("Model written %d\n", haveModel);
-
-                break;
-
-            case CMD_GET_MODEL:
-                
-                slave
-                {
-                    /* TODO bad status if no model */
-                    c <: (unsigned) STATUS_OKAY;
-                    send_array(c, ie.model_data, model_size);
-                }
-                break;
-
-            case CMD_SET_INPUT_TENSOR:
-
-                 // TODO check size vs input_size
-                size_t size = receive_array_(c, ie.input_buffer, !haveModel);
-            
-                if(haveModel)
-                {
-                    outuint(c, STATUS_OKAY);
-                    outct(c, XS1_CT_END);
-                }
-                else
-                {
-                    outuint(c, STATUS_ERROR_NO_MODEL);
-                    outct(c, XS1_CT_END);
-                }
-                break;
-
-            case CMD_START_INFER:
-
-                aisrv_status_t status = STATUS_OKAY;
-
-                /* Note currently receive one dummy byte */
-                size_t size = receive_array_(c, data, 0);
-
-                    
-                if(haveModel)
-                {
-                    status = interp_invoke();
-                    //print_output();
-                }
-                else
-                {
-                    status = STATUS_ERROR_NO_MODEL;
-                }
-
-                outuint(c, status);
-                outct(c, XS1_CT_END);
-                break;
-            
-            case CMD_GET_OUTPUT_TENSOR_LENGTH:
-    
-                // TODO use a send array function 
-                slave
-                {
-                    if(haveModel)
-                    {
-                        c <: (unsigned) STATUS_OKAY;
-                        send_int(c, ie.output_size);
-                    }
-                    else
-                    {
-                        c <: STATUS_ERROR_NO_MODEL;
-                    }
-                }
-
-                break;
-
-             case CMD_GET_INPUT_TENSOR_LENGTH:
-                
-                // TODO use a send array function 
-                slave
-                {
-                    if(haveModel)
-                    {
-                        c <: (unsigned) STATUS_OKAY;
-                        send_int(c, ie.input_size);
-                    }
-                    else
-                    {
-                        c <: STATUS_ERROR_NO_MODEL;
-                    }
-                }
-
-                break;
-
-            case CMD_GET_OUTPUT_TENSOR:
-                slave
-                {
-                    c <: (unsigned) STATUS_OKAY;
-                    send_array(c, ie.output_buffer, ie.output_size);
-                }
-                break;
-
-            default:
-                break;
-        }
-    }
-}
-} // unsafe
+void interp_runner(chanend c);
 
 #define PSOC_INTEGRATION
 
@@ -251,7 +67,6 @@ int main(void)
 
 #ifdef ENABLE_USB
     chan c_ep_out[EP_COUNT_OUT], c_ep_in[EP_COUNT_IN];
-    chan c;
 #endif
 
     par 
@@ -266,7 +81,7 @@ int main(void)
         on tile[0]: {
             par{
                 //aiengine(c_buffer_to_engine);
-                interp_runner(c);
+                interp_runner(c_buffer_to_engine);
             }
         }
         on tile[0]: {
@@ -316,7 +131,7 @@ int main(void)
           
             par
             {
-                aisrv_usb_data(c_ep_out[1], c_ep_in[1], c);
+                //aisrv_usb_data(c_ep_out[1], c_ep_in[1], c_buffer_to_engine);
                 aisrv_usb_ep0(c_ep_out[0], c_ep_in[0]);
                 XUD_Main(c_ep_out, EP_COUNT_OUT, c_ep_in, EP_COUNT_IN, null, epTypeTableOut, epTypeTableIn, XUD_SPEED_HS, XUD_PWR_BUS);
             

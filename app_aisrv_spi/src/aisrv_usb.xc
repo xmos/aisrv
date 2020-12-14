@@ -208,7 +208,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
         else
         {
             /* Read command */
-            master
+            //master
             {
                 aisrv_status_t status = STATUS_OKAY;
                
@@ -216,30 +216,31 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 
                 if(status == STATUS_OKAY)
                 {
-                    unsigned size;
-                    c :> size;
-                
-                    while(size >= MAX_PACKET_SIZE)
+                    size_t i = 0;
+                    while(!testct(c))
                     {
-                        for(int i = 0; i < MAX_PACKET_SIZE; i++)
-                        {
-                            c :> data[i];
-                        }
-                       
-                        XUD_SetBuffer(ep_in, (data, uint8_t[]), MAX_PACKET_SIZE);
+                        data[i++] = inuint(c); 
 
-                        size = size - MAX_PACKET_SIZE;
+                        if(i == MAX_PACKET_SIZE)
+                        {
+                            XUD_SetBuffer(ep_in, (data, uint8_t[]), MAX_PACKET_SIZE);
+                            i = 0;
+                        } 
                     }
 
-                    // Send tail packet 
-                    if(size)
+                    chkct(c, XS1_CT_END);
+                    i *= 4;
+
+                    while(!testct(c))
                     {
-                        for(int i = 0; i < size; i++)
-                        {
-                            c :> (data, uint8_t[])[i];
-                        }
-                        XUD_SetBuffer(ep_in, (data, uint8_t[]), size);
+                        (data, uint8_t[])[i++] = inuchar(c);
                     }
+                    
+                    chkct(c, XS1_CT_END);
+                    
+                    XUD_SetBuffer(ep_in, (data, uint8_t[]), i);
+
+
                 }
                 else
                 {
