@@ -39,8 +39,6 @@ void leds(chanend led) {
     }
 }
 
-void interp_runner(chanend c);
-
 #define PSOC_INTEGRATION
 
 #if defined(PSOC_INTEGRATION)
@@ -59,7 +57,7 @@ on tile[0]: port p_sda = XS1_PORT_1O;
 
 int main(void) 
 {
-    chan c_led, c_spi_to_buffer, c_buffer_to_engine, c_acquire_to_buffer;
+    chan c_led, c_spi_to_buffer, c_spi_to_engine, c_usb_to_engine, c_acquire_to_buffer;
     chan c_acquire_to_sensor;
 #if defined(I2C_INTEGRATION)
     i2c_master_if i2c[1];
@@ -78,12 +76,8 @@ int main(void)
         on tile[1]: mipi_main(i2c[0], c_acquire_to_sensor);
 #endif
 #if defined(PSOC_INTEGRATION)
-        on tile[0]: {
-            par{
-                //aiengine(c_buffer_to_engine);
-                interp_runner(c_buffer_to_engine);
-            }
-        }
+        on tile[0]: aiengine(c_spi_to_engine, c_usb_to_engine);
+        
         on tile[0]: {
             leds(c_led);
         }
@@ -106,7 +100,7 @@ int main(void)
                                        p_miso_s, p_mosi_s,
                                        clkblk_s, c_led, c_spi_to_buffer,
                                        mem);
-                    spi_buffer(c_spi_to_buffer, c_buffer_to_engine,
+                    spi_buffer(c_spi_to_buffer, c_spi_to_engine,
                                c_acquire_to_buffer, mem);
                     acquire(c_acquire_to_buffer, c_acquire_to_sensor, mem);
                 }
@@ -122,16 +116,12 @@ int main(void)
 #endif
 
 #ifdef ENABLE_USB
-        on tile[0]: 
-        {
-            //interp_runner(c);
-        }
          on tile[1] : 
         {
           
             par
             {
-                //aisrv_usb_data(c_ep_out[1], c_ep_in[1], c_buffer_to_engine);
+                aisrv_usb_data(c_ep_out[1], c_ep_in[1], c_usb_to_engine);
                 aisrv_usb_ep0(c_ep_out[0], c_ep_in[0]);
                 XUD_Main(c_ep_out, EP_COUNT_OUT, c_ep_in, EP_COUNT_IN, null, epTypeTableOut, epTypeTableIn, XUD_SPEED_HS, XUD_PWR_BUS);
             
