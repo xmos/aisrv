@@ -57,7 +57,9 @@ static inference_engine_t ie;
 
 void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
 {
-    unsigned data[MAX_PACKET_SIZE_WORDS]; // TODO rm me
+    unsigned data[MAX_PACKET_SIZE_WORDS]; 
+
+    static size_t modelSize = 0;
     
     switch(cmd)
     {
@@ -83,22 +85,23 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
                     printf("Model size: %d\n", model_size);
             #endif
             
-            receive_array_(c, ie.model_data, 0);
+            modelSize = receive_array_(c, ie.model_data, 0);
             
             haveModel = !interp_initialize(&ie);
             outuint(c, haveModel);
             outct(c, XS1_CT_END);
 
-            printf("Model written %d\n", haveModel);
+            printf("Model written %d (%d bytes)\n", haveModel, modelSize);
 
             break;
 
         /* TODO debug only = remove for production */
         case CMD_GET_MODEL:
-            
+           
+            printf("Sending model length: %d\n", modelSize); 
             /* TODO bad status if no model */
-            //c <: (unsigned) STATUS_OKAY;
-            //send_array(c, ie.model_data, model_size);
+            c <: (unsigned) STATUS_OKAY;
+            send_array(c, ie.model_data, modelSize);
             break;
 
         case CMD_SET_INPUT_TENSOR:
