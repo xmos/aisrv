@@ -36,7 +36,7 @@ aisrv_status_t interp_invoke()
 
     if (invoke_status != kTfLiteOk) 
     {
-        printf("Invoke failed\n");
+        TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
         return STATUS_ERROR_INFER;
     }
 
@@ -45,10 +45,10 @@ aisrv_status_t interp_invoke()
 
 void inference_engine_initialize(inference_engine *ie)
 {
-    ie->model_data = model_data;
+    ie->model_data = model_data;    
 }
 
-int interp_initialize(inference_engine *ie)
+int interp_initialize(inference_engine *ie) 
 {
     // Set up logging
     static tflite::MicroErrorReporter error_reporter;
@@ -94,7 +94,7 @@ int interp_initialize(inference_engine *ie)
     TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
     if (allocate_tensors_status != kTfLiteOk)
     {
-        printf("AllocateTensors() failed");
+        TF_LITE_REPORT_ERROR(reporter, "AllocateTensors() failed");
         return 2;
     }
 
@@ -110,6 +110,6 @@ int interp_initialize(inference_engine *ie)
     ie->output_times = NULL;
     ie->output_times_size = 0;
 #endif
-
+    
     return 0;
 }
