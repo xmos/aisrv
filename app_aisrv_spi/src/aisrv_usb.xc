@@ -208,45 +208,42 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
         else
         {
             /* Read command */
-            //master
+            aisrv_status_t status = STATUS_OKAY;
+           
+            c :> status;
+
+            if(status == STATUS_OKAY)
             {
-                aisrv_status_t status = STATUS_OKAY;
-               
-                c :> status;
-
-                if(status == STATUS_OKAY)
+                size_t i = 0;
+                while(!testct(c))
                 {
-                    size_t i = 0;
-                    while(!testct(c))
+                    data[i++] = inuint(c); 
+
+                    if(i == MAX_PACKET_SIZE_WORDS)
                     {
-                        data[i++] = inuint(c); 
-
-                        if(i == MAX_PACKET_SIZE)
-                        {
-                            XUD_SetBuffer(ep_in, (data, uint8_t[]), MAX_PACKET_SIZE);
-                            i = 0;
-                        } 
-                    }
-
-                    chkct(c, XS1_CT_END);
-                    i *= 4;
-
-                    while(!testct(c))
-                    {
-                        (data, uint8_t[])[i++] = inuchar(c);
-                    }
-                    
-                    chkct(c, XS1_CT_END);
-                    
-                    XUD_SetBuffer(ep_in, (data, uint8_t[]), i);
-
-
+                        XUD_SetBuffer(ep_in, (data, uint8_t[]), MAX_PACKET_SIZE);
+                        i = 0;
+                    } 
                 }
-                else
+
+                chkct(c, XS1_CT_END);
+                i *= 4;
+
+                while(!testct(c))
                 {
-                    XUD_SetStall(ep_in);
-                    XUD_SetStall(ep_out);
+                    (data, uint8_t[])[i++] = inuchar(c);
                 }
+                
+                chkct(c, XS1_CT_END);
+                
+                XUD_SetBuffer(ep_in, (data, uint8_t[]), i);
+
+
+            }
+            else
+            {
+                XUD_SetStall(ep_in);
+                XUD_SetStall(ep_out);
             }
         }
     } // while(1)
