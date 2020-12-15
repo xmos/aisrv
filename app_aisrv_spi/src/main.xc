@@ -45,7 +45,7 @@ void leds(chanend led) {
 on tile[1]: in port p_cs_s = XS1_PORT_1A;//DAC_DATA
 on tile[1]: in port p_clk_s = XS1_PORT_1B;//LRCLK
 on tile[1]: buffered port:32  p_mosi_s = XS1_PORT_1C; //BCLK
-on tile[1]: buffered port:32 p_miso_s = XS1_PORT_1P; // 39
+on tile[1]: buffered port:32 p_miso_s = XS1_PORT_1N; // 39
 on tile[1]: out port reset1 = XS1_PORT_4A;
 on tile[1]: clock clkblk_s = XS1_CLKBLK_4;
 #endif
