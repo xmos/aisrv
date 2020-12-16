@@ -127,3 +127,8 @@ for arg in sys.argv[2:]:
 
             pyplot.imshow(np_img)
             pyplot.show()
+
+
+        times = ie.read_times()
+        
+        print("Time per layer: "+ str(times))

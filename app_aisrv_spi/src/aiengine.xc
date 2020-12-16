@@ -174,8 +174,15 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             break;
 
         case CMD_GET_OUTPUT_TENSOR:
+
             c <: (unsigned) STATUS_OKAY;
             send_array(c, ie.output_buffer, ie.output_size);
+            break;
+            
+        case CMD_GET_TIMINGS: 
+
+            c <: (unsigned) STATUS_OKAY;
+            send_array(c, ie.output_times, ie.output_times_size);
             break;
 
         default:
