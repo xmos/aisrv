@@ -105,7 +105,7 @@ set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_std_requests.xc
 # LIB sources
 #**********************
 
-include("${AI_TOOLS_DIR}/utils/cmake/xcore_interpreter.cmake")
+include("${AI_TOOLS_DIR}/xcore_interpreters/cmake/xcore_interpreter.cmake")
 
 set(INFERENCE_ENGINE_SOURCES
   ${XCORE_INTERPRETER_SOURCES}
