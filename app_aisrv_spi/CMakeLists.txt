@@ -109,22 +109,16 @@ set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_std_requests.xc
 # LIB sources
 #**********************
 
-include("${AI_TOOLS_DIR}/utils/cmake/xcore_interpreter.cmake")
-
-set(INFERENCE_ENGINE_SOURCE_DIR
-  "${PROJECT_SOURCE_DIR}/src"
-)
+include("${AI_TOOLS_DIR}/xcore_interpreters/cmake/xcore_interpreter.cmake")
 
 set(INFERENCE_ENGINE_SOURCES
   ${XCORE_INTERPRETER_SOURCES}
   "$ENV{XMOS_AISRV_PATH}/submodules/tensorflow_support/qspi_flash/xcore_device_memory.c"
-  "${INFERENCE_ENGINE_SOURCE_DIR}/inference_engine.cc"
 )
 
 set(INFERENCE_ENGINE_INCLUDE_DIRS
   ${XCORE_INTERPRETER_INCLUDE_DIRS}
   "$ENV{XMOS_AISRV_PATH}/submodules/tensorflow_support/qspi_flash"
-  ${INFERENCE_ENGINE_SOURCE_DIR}
 )
 
 set(LIB_XUD_INCLUDE_DIRS
@@ -139,13 +133,14 @@ set(LIB_XUD_INCLUDE_DIRS
 #**********************
 
 set(APP_SOURCES
+  ${INFERENCE_ENGINE_SOURCES}
   "${PROJECT_SOURCE_DIR}/src/acquire.xc"
   "${PROJECT_SOURCE_DIR}/src/aiengine.xc"
   "${PROJECT_SOURCE_DIR}/src/main.xc"
   "${PROJECT_SOURCE_DIR}/src/spi.xc"
   "${PROJECT_SOURCE_DIR}/src/spibuffer.xc"
+  "${PROJECT_SOURCE_DIR}/src/inference_engine.cc"
   "${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc"
-  ${INFERENCE_ENGINE_SOURCES}
 )
 
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
