@@ -55,7 +55,7 @@ int interp_initialize(inference_engine *ie)
     reporter = &error_reporter;
 
     // Set up profiling.
-    static tflite::micro::xcore::XCoreProfiler xcore_profiler(reporter);
+    static tflite::micro::xcore::XCoreProfiler xcore_profiler;
     profiler = &xcore_profiler;
 
     // Map the model into a usable data structure. This doesn't involve any
@@ -70,9 +70,28 @@ int interp_initialize(inference_engine *ie)
     }
 
     // This pulls in all the operation implementations we need.
-    static tflite::MicroMutableOpResolver<7> resolver;
+    static tflite::MicroMutableOpResolver<17> resolver;
     resolver.AddSoftmax();
     resolver.AddPad();
+    resolver.AddMean();
+    resolver.AddConcatenation();
+    resolver.AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
+                     tflite::ops::micro::xcore::Register_Add_8());
+    resolver.AddCustom(tflite::ops::micro::xcore::MaxPool2D_OpCode,
+                     tflite::ops::micro::xcore::Register_MaxPool2D());
+    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
+                     tflite::ops::micro::xcore::Register_Conv2D_Shallow());
+    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
+                     tflite::ops::micro::xcore::Register_Conv2D_Shallow());
+    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
+                     tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
+    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
+                     tflite::ops::micro::xcore::Register_Conv2D_1x1());
+    resolver.AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
+                     tflite::ops::micro::xcore::Register_AvgPool2D_Global());
+    resolver.AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
+                     tflite::ops::micro::xcore::Register_FullyConnected_8());
+
     resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Shallow());
     resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
@@ -104,8 +123,8 @@ int interp_initialize(inference_engine *ie)
     ie->output_buffer = (unsigned char *)(interpreter->output(0)->data.raw);
     ie->output_size = interpreter->output(0)->bytes;
 #if defined(XCORE_PROFILER_MAX_LEVELS)
-    ie->output_times = (unsigned int *) xcore_profiler.times;
-    ie->output_times_size = interpreter->operators_size();
+    //ie->output_times = (unsigned int *) xcore_profiler.times;
+    //ie->output_times_size = interpreter->operators_size();
 #else
     ie->output_times = NULL;
     ie->output_times_size = 0;

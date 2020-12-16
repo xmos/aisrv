@@ -4,7 +4,7 @@ app_aisrv
 Env/Dependancies etc
 ---------------------
 
-- clone the aisrv repo with submodules (git clone --recursive git@github0.xmos.com:xmos-int/aisrv.git)
+- clone the aisrv repo with submodules (git clone --recursive --shallow-submodules git@github.com:xmos/aisrv.git)
 - cd aisrv
 - pip install --upgrade pip
 - pyenv install 3.7.7
