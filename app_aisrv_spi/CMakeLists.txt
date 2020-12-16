@@ -26,6 +26,10 @@ enable_language(CXX C ASM)
 
 set(AI_TOOLS_DIR "$ENV{XMOS_AISRV_PATH}/submodules/ai_tools")
 
+set(LIB_XUD_DIR "$ENV{XMOS_LIB_XUD_PATH}")
+
+set(LIB_XUD_SRC_DIR "${LIB_XUD_DIR}/lib_xud/src/")
+
 #**********************
 # Build flags
 #**********************
@@ -50,12 +54,52 @@ set(BUILD_FLAGS
   "-DUSE_EXTMEM"
   "-g"
   "-O2"
+  "-DENABLE_USB"
+  "-DUSB_TILE=tile[1]"
 )
 
 target_compile_options(aisrv_spi PRIVATE ${BUILD_FLAGS})
 
 target_link_options(aisrv_spi PRIVATE ${BUILD_FLAGS} -lquadspi -w)
 set_target_properties(aisrv_spi PROPERTIES OUTPUT_NAME aisrv_spi.xe)
+
+#***
+#lib_xud sources
+#***
+set(LIB_XUD_SOURCES
+    "${LIB_XUD_SRC_DIR}/core/XUD_Main.xc"
+    "${LIB_XUD_SRC_DIR}/core/XUD_HAL.xc"
+    "${LIB_XUD_SRC_DIR}/core/XUD_IoLoop.S"
+    "${LIB_XUD_SRC_DIR}/core/XUD_IOLoopCall.xc"
+    "${LIB_XUD_SRC_DIR}/core/XUD_PowerSig.xc"
+    "${LIB_XUD_SRC_DIR}/core/XUD_User.xc"
+    "${LIB_XUD_SRC_DIR}/core/XUD_TestMode.xc"
+    "${LIB_XUD_SRC_DIR}/core/XUD_TestMode.S"
+    "${LIB_XUD_SRC_DIR}/core/XUD_UserResume.xc"
+    "${LIB_XUD_SRC_DIR}/core/XUD_DeviceAttach.xc"
+    "${LIB_XUD_SRC_DIR}/core/XUD_USBTIle_Support.S"
+    "${LIB_XUD_SRC_DIR}/core/XUD_CRC5_Table.S"
+    "${LIB_XUD_SRC_DIR}/core/XUD_SetCrcTableAddr.c"
+    "${LIB_XUD_SRC_DIR}/user/client/XUD_SetDevAddr.xc"
+    "${LIB_XUD_SRC_DIR}/user/client/XUD_EpFunctions.xc"
+    "${LIB_XUD_SRC_DIR}/user/client/XUD_EpFuncs.S"
+    "${LIB_XUD_SRC_DIR}/user/control/xud_device.xc"
+    "${LIB_XUD_SRC_DIR}/user/control/xud_std_requests.xc"
+)
+
+set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_Main.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_User.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_UserResume.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_PowerSig.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_IOLoopCall.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_HAL.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_TestMode.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/core/XUD_DeviceAttach.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/user/client/XUD_SetDevAddr.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/user/client/XUD_EpFunctions.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_device.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_std_requests.xc" PROPERTIES LANGUAGE C)
+
 
 #**********************
 # LIB sources
@@ -73,6 +117,13 @@ set(INFERENCE_ENGINE_INCLUDE_DIRS
   "$ENV{XMOS_AISRV_PATH}/submodules/tensorflow_support/qspi_flash"
 )
 
+set(LIB_XUD_INCLUDE_DIRS
+    "${LIB_XUD_DIR}/lib_xud/api"
+    "${LIB_XUD_SRC_DIR}/core"
+    "${LIB_XUD_SRC_DIR}/user"
+)
+
+
 #**********************
 # APP sources
 #**********************
@@ -85,6 +136,7 @@ set(APP_SOURCES
   "${PROJECT_SOURCE_DIR}/src/spi.xc"
   "${PROJECT_SOURCE_DIR}/src/spibuffer.xc"
   "${PROJECT_SOURCE_DIR}/src/inference_engine.cc"
+  "${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc"
 )
 
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
@@ -92,18 +144,23 @@ set_source_files_properties("${PROJECT_SOURCE_DIR}/src/spibuffer.xc" PROPERTIES 
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/spi.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aiengine.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/acquire.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc" PROPERTIES LANGUAGE C)
+
 
 #**********************
 # targets
 #**********************
 target_sources(aisrv_spi
   PRIVATE ${APP_SOURCES}
+  PRIVATE ${LIB_XUD_SOURCES}
 )
 
 target_include_directories(aisrv_spi
   PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  PRIVATE ${LIB_XUD_INCLUDE_DIRS}
 )
+
 
 #**********************
 # install

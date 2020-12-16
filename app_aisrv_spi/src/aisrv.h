@@ -1,7 +1,10 @@
 #ifndef _AISRV_H_
 #define _AISRV_H_
 
-#define MAX_PACKET_SIZE (512)
+#include <stdint.h>
+
+#define AISRV_CMD_WRITE_BIT_MASK     (0x80)
+#define CMD_LENGTH_BYTES             (1)
 #define MAX_PACKET_SIZE              (512)
 #define MAX_PACKET_SIZE_WORDS        (MAX_PACKET_SIZE / 4)
 #define INFERENCE_ENGINE_ID           0x12345678//0x633
@@ -17,15 +20,15 @@ typedef enum aisrv_cmd
     CMD_GET_TIMINGS                 = 0x09,
 
     CMD_GET_MODEL                   = 0x06,     // TODO remove for production
-    CMD_SET_MODEL                   = 0x86,
+    CMD_SET_MODEL                   = 0x06 | AISRV_CMD_WRITE_BIT_MASK,
     CMD_SET_SERVER                  = 0x04,
-    CMD_SET_INPUT_TENSOR            = 0x83,
+    CMD_SET_INPUT_TENSOR            = 0x03 | AISRV_CMD_WRITE_BIT_MASK,
     
     CMD_GET_SPEC                    = 0x07,
     CMD_GET_INPUT_TENSOR_LENGTH     = 0x0A,     // Note, currently unsed by SPI mode (used GET_SPEC)
     CMD_GET_OUTPUT_TENSOR_LENGTH    = 0x0B,     // Note, currently unsed by SPI mode (used GET_SPEC)
 
-    CMD_START_INFER                 = 0x84,
+    CMD_START_INFER                 = 0x04 | AISRV_CMD_WRITE_BIT_MASK,
     CMD_START_ACQUIRE               = 0x0C,   
     CMD_HELLO                       = 0x55,
 } aisrv_cmd_t;
@@ -44,9 +47,9 @@ typedef enum aisrv_spec {
     SPEC_INPUT_TENSOR_LENGTH      = 0x02,
     SPEC_OUTPUT_TENSOR_LENGTH     = 0x03,
     SPEC_TIMINGS_LENGTH           = 0x04,
-    SPEC_MODEL_TOTAL         = 0x05,      // Up to this one it is the model
-    SPEC_SENSOR_TENSOR_LENGTH     = 0x05, // From here it is acquistion
-    SPEC_ALL_TOTAL           = 0x06       // All data words.
+    SPEC_MODEL_TOTAL              = 0x05,      // Up to this one it is the model
+    SPEC_SENSOR_TENSOR_LENGTH     = 0x05,      // From here it is acquistion
+    SPEC_ALL_TOTAL                = 0x06       // All data words.
 } aisrv_spec_t;
 
 typedef enum aisrv_status
@@ -57,5 +60,9 @@ typedef enum aisrv_status
     STATUS_ERROR_INFER,
 } aisrv_status_t;
 
+#ifdef __XC__
+void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c);
+void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in);
+#endif
 
 #endif
