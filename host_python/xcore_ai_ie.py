@@ -17,6 +17,8 @@ CMD_GET_OUTPUT_TENSOR = 5
 CMD_SET_MODEL = 0x86 
 CMD_GET_MODEL = 0x06
 
+CMD_GET_SPEC = 0x07
+
 CMD_GET_INPUT_LENGTH = 0x0A
 CMD_GET_OUTPUT_LENGTH = 0x0B
 
@@ -239,6 +241,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self.__in_ep = None
         self._dev = None
         self._timeout = timeout
+        self._spec_length = 32
         super().__init__()
 
     def _read_int_from_device(self):
@@ -322,6 +325,24 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         print("input_length: " + str(self._input_length))
         self._model_length = len(model_bytes)
         print("model_length: " + str(self._model_length))
+
+        self._read_spec()
+
+    # TODO decide if want to keep read spec or not
+    def _read_spec(self):
+        
+        self._out_ep.write(bytes([CMD_GET_SPEC]), 50000)
+
+        # TODO use proper read protocol
+        spec = self._dev.read(self._in_ep, self._spec_length, self._timeout)
+        
+        # TODO rm magic numbers
+        input_length = int.from_bytes(spec[8:12], byteorder = 'little')
+        output_length = int.from_bytes(spec[12:16], byteorder = 'little')
+        timings_length = int.from_bytes(spec[16:20], byteorder = 'little')
+        
+        assert(input_length == self._input_length)
+        assert(output_length == self._output_length)
 
     def _read_output_length(self):
 

@@ -14,6 +14,17 @@
 #include "spibuffer.h"
 #include "aiengine.h"
 #include "aisrv.h"
+#include "inference_engine.h"
+
+#ifdef ENABLE_USB
+#include "xud.h"
+
+#define EP_COUNT_OUT 2
+#define EP_COUNT_IN 2
+
+XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
+XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
+#endif
 
 on tile[0]: port p_led = XS1_PORT_4C;
 
@@ -31,9 +42,9 @@ void leds(chanend led) {
 #define PSOC_INTEGRATION
 
 #if defined(PSOC_INTEGRATION)
-on tile[1]: in port p_cs_s = XS1_PORT_1A;
-on tile[1]: in port p_clk_s = XS1_PORT_1B;
-on tile[1]: buffered port:32  p_mosi_s = XS1_PORT_1C;
+on tile[1]: in port p_cs_s = XS1_PORT_1A;//DAC_DATA
+on tile[1]: in port p_clk_s = XS1_PORT_1B;//LRCLK
+on tile[1]: buffered port:32  p_mosi_s = XS1_PORT_1C; //BCLK
 on tile[1]: buffered port:32 p_miso_s = XS1_PORT_1N;
 on tile[1]: out port reset1 = XS1_PORT_4A;
 on tile[1]: clock clkblk_s = XS1_CLKBLK_4;
@@ -44,13 +55,20 @@ on tile[0]: port p_scl = XS1_PORT_1N;
 on tile[0]: port p_sda = XS1_PORT_1O;
 #endif
 
-int main(void) {
-    chan c_led, c_spi_to_buffer, c_buffer_to_engine, c_acquire_to_buffer;
+int main(void) 
+{
+    chan c_led, c_spi_to_buffer, c_spi_to_engine, c_usb_to_engine, c_acquire_to_buffer;
     chan c_acquire_to_sensor;
 #if defined(I2C_INTEGRATION)
     i2c_master_if i2c[1];
 #endif
-    par {
+
+#ifdef ENABLE_USB
+    chan c_ep_out[EP_COUNT_OUT], c_ep_in[EP_COUNT_IN];
+#endif
+
+    par 
+    {
 #if defined(I2C_INTEGRATION)
         on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
 #endif
@@ -58,9 +76,8 @@ int main(void) {
         on tile[1]: mipi_main(i2c[0], c_acquire_to_sensor);
 #endif
 #if defined(PSOC_INTEGRATION)
-        on tile[0]: {
-            aiengine(c_buffer_to_engine);
-        }
+        on tile[0]: aiengine(c_spi_to_engine, c_usb_to_engine);
+        
         on tile[0]: {
             leds(c_led);
         }
@@ -83,7 +100,7 @@ int main(void) {
                                        p_miso_s, p_mosi_s,
                                        clkblk_s, c_led, c_spi_to_buffer,
                                        mem);
-                    spi_buffer(c_spi_to_buffer, c_buffer_to_engine,
+                    spi_buffer(c_spi_to_buffer, c_spi_to_engine,
                                c_acquire_to_buffer, mem);
                     acquire(c_acquire_to_buffer, c_acquire_to_sensor, mem);
                 }
@@ -96,6 +113,20 @@ int main(void) {
             c_led <: -1;
         }
         leds(c_led);
+#endif
+
+#ifdef ENABLE_USB
+         on tile[1] : 
+        {
+          
+            par
+            {
+                aisrv_usb_data(c_ep_out[1], c_ep_in[1], c_usb_to_engine);
+                aisrv_usb_ep0(c_ep_out[0], c_ep_in[0]);
+                XUD_Main(c_ep_out, EP_COUNT_OUT, c_ep_in, EP_COUNT_IN, null, epTypeTableOut, epTypeTableIn, XUD_SPEED_HS, XUD_PWR_BUS);
+            
+            }
+        }
 #endif
     }
     return 0;

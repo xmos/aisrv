@@ -136,6 +136,121 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in)
     }
 }
 
+#ifdef ENABLE_USB
+unsafe
+{
+// TODO Move to USB file
+void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
+{
+    int32_t data[MAX_PACKET_SIZE_WORDS];
+
+    XUD_ep ep_out = XUD_InitEp(c_ep_out);
+    XUD_ep ep_in  = XUD_InitEp(c_ep_in);
+
+    aisrv_cmd_t cmd = CMD_NONE;
+
+    int result_requested = 0;
+
+    int output_size = 0;
+    int input_size = 0;
+
+    while(1)
+    {
+        unsigned length = 0;
+        
+        /* Get command */
+        XUD_GetBuffer(ep_out, (data, uint8_t[]), length);
+                
+        cmd = (uint8_t) data[0];
+
+        if(length != CMD_LENGTH_BYTES)
+        {
+            printf("Bad cmd length: %d\n", length);
+            continue;
+        }
+
+        /* Pass on command */
+        c <: cmd;
+       
+        /* Check cmd write bit */
+        if(cmd & 0x80)
+        {
+            while(1)
+            {
+                unsigned pktLength;
+                XUD_GetBuffer(ep_out, (data, uint8_t[]), pktLength);
+       
+                printf("Received: %d bytes\n", pktLength);
+                
+                size_t i = 0;
+                for(i = 0; i < (pktLength/4); i++)
+                {
+                    outuint(c, data[i]);
+                }
+              
+                if(pktLength != MAX_PACKET_SIZE)
+                {
+                    i *= 4;
+                    outct(c, XS1_CT_END);
+                    while(i < pktLength)
+                    {
+                        outuchar(c, (data, uint8_t[])[i++]);
+                    }
+                    outct(c, XS1_CT_END);
+                    break;
+                }
+            }
+
+            aisrv_status_t status;
+            status = inuint(c);
+            chkct(c, XS1_CT_END);
+        }
+        else
+        {
+            /* Read command */
+            aisrv_status_t status = STATUS_OKAY;
+           
+            c :> status;
+
+            if(status == STATUS_OKAY)
+            {
+                size_t i = 0;
+                while(!testct(c))
+                {
+                    data[i++] = inuint(c); 
+
+                    if(i == MAX_PACKET_SIZE_WORDS)
+                    {
+                        XUD_SetBuffer(ep_in, (data, uint8_t[]), MAX_PACKET_SIZE);
+                        i = 0;
+                    } 
+                }
+
+                chkct(c, XS1_CT_END);
+                i *= 4;
+
+                while(!testct(c))
+                {
+                    (data, uint8_t[])[i++] = inuchar(c);
+                }
+                
+                chkct(c, XS1_CT_END);
+                
+                XUD_SetBuffer(ep_in, (data, uint8_t[]), i);
+
+
+            }
+            else
+            {
+                XUD_SetStall(ep_in);
+                XUD_SetStall(ep_out);
+            }
+        }
+    } // while(1)
+}
+} // unsafe
+
+#endif
 
 
 
