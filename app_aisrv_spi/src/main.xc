@@ -39,8 +39,6 @@ void leds(chanend led) {
     }
 }
 
-#define PSOC_INTEGRATION
-
 #if defined(PSOC_INTEGRATION)
 on tile[1]: in port p_cs_s = XS1_PORT_1A;//DAC_DATA
 on tile[1]: in port p_clk_s = XS1_PORT_1B;//LRCLK
@@ -75,9 +73,8 @@ int main(void)
 #if defined(MIPI_INTEGRATION)
         on tile[1]: mipi_main(i2c[0], c_acquire_to_sensor);
 #endif
-#if defined(PSOC_INTEGRATION)
         on tile[0]: aiengine(c_spi_to_engine, c_usb_to_engine);
-        
+#if defined(PSOC_INTEGRATION)
         on tile[0]: {
             leds(c_led);
         }
@@ -106,13 +103,6 @@ int main(void)
                 }
             }
         }
-#else
-        {
-            spi_main(c_led);
-            qpi_main(c_led);
-            c_led <: -1;
-        }
-        leds(c_led);
 #endif
 
 #ifdef ENABLE_USB
