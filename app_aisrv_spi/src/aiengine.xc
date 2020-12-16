@@ -133,6 +133,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             {
                 status = interp_invoke();
                 //print_output();
+                print_profiler_summary();
             }
             else
             {
