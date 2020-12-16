@@ -34,7 +34,8 @@ set(LIB_XUD_SRC_DIR "${LIB_XUD_DIR}/lib_xud/src/")
 # Build flags
 #**********************
 
-add_executable(aisrv_spi)
+add_executable(aisrv_usb_spi)
+add_executable(aisrv_usb)
 
 # Optimization
 # -DNDEBUG                        # define this to remove debug and profiling
@@ -58,10 +59,13 @@ set(BUILD_FLAGS
   "-DUSB_TILE=tile[1]"
 )
 
-target_compile_options(aisrv_spi PRIVATE ${BUILD_FLAGS})
+target_compile_options(aisrv_usb_spi PRIVATE ${BUILD_FLAGS} -DPSOC_INTEGRATION)
+target_link_options(aisrv_usb_spi PRIVATE ${BUILD_FLAGS} -lquadspi -w)
+set_target_properties(aisrv_usb_spi PROPERTIES OUTPUT_NAME aisrv_usb_spi.xe)
 
-target_link_options(aisrv_spi PRIVATE ${BUILD_FLAGS} -lquadspi -w)
-set_target_properties(aisrv_spi PROPERTIES OUTPUT_NAME aisrv_spi.xe)
+target_compile_options(aisrv_usb PRIVATE ${BUILD_FLAGS})
+target_link_options(aisrv_usb PRIVATE ${BUILD_FLAGS} -lquadspi -w)
+set_target_properties(aisrv_usb PROPERTIES OUTPUT_NAME aisrv_usb.xe)
 
 #***
 #lib_xud sources
@@ -150,21 +154,32 @@ set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc" PROPERTIES 
 #**********************
 # targets
 #**********************
-target_sources(aisrv_spi
+target_sources(aisrv_usb_spi
   PRIVATE ${APP_SOURCES}
   PRIVATE ${LIB_XUD_SOURCES}
 )
 
-target_include_directories(aisrv_spi
+target_sources(aisrv_usb
+  PRIVATE ${APP_SOURCES}
+  PRIVATE ${LIB_XUD_SOURCES}
+)
+
+target_include_directories(aisrv_usb_spi
   PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
   PRIVATE ${LIB_XUD_INCLUDE_DIRS}
 )
 
+target_include_directories(aisrv_usb
+  PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  PRIVATE ${LIB_XUD_INCLUDE_DIRS}
+)
 
 #**********************
 # install
 #**********************
 set(INSTALL_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
 set(INSTALL_BIN_DIR "${PROJECT_SOURCE_DIR}/bin")
-install(TARGETS aisrv_spi DESTINATION ${INSTALL_BIN_DIR})
+install(TARGETS aisrv_usb_spi DESTINATION ${INSTALL_BIN_DIR})
+install(TARGETS aisrv_usb DESTINATION ${INSTALL_BIN_DIR})

@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-# TODO fix sys hack
-import sys
-sys.path.append('../../../host_python/')
-
 from xcore_ai_ie import xcore_ai_ie_usb
 
 ie = xcore_ai_ie_usb()
