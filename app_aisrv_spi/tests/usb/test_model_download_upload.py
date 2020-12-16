@@ -22,7 +22,8 @@ for x in range(CYCLE_COUNT):
 
     # Read back model and check
     model_read = ie.upload_model()
-    assert model_read == bytearray(model_data1)
+
+    assert model_read == list(model_data1)
 
 
 
