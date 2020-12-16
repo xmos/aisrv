@@ -182,7 +182,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
         case CMD_GET_TIMINGS: 
 
             c <: (unsigned) STATUS_OKAY;
-            send_array(c, ie.output_times, ie.output_times_size);
+            send_array(c, ie.output_times, ie.output_times_size * sizeof(uint32_t));
             break;
 
         default:

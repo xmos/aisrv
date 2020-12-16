@@ -413,6 +413,16 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def read_times(self):
        
         # TODO bytes to ints
-        times  = self._upload_data(CMD_GET_TIMINGS)
+        times_bytes  = self._upload_data(CMD_GET_TIMINGS)
 
-        return times
+        print(str(len(times_bytes)))
+
+        times_int = []
+
+        # TODO better way of doing this?
+        for i in range(0, len(times_bytes), 4):
+            x = times_bytes[i:i+4]
+            y =  int.from_bytes(x, byteorder = "little", signed=True)
+            times_int.append(y)
+        
+        return times_int
