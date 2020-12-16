@@ -6,3 +6,8 @@
 */build/*
 venv/*
 *.pyc
+host_python/xcore_ai_ie.egg-info/PKG-INFO
+host_python/xcore_ai_ie.egg-info/SOURCES.txt
+host_python/xcore_ai_ie.egg-info/dependency_links.txt
+host_python/xcore_ai_ie.egg-info/requires.txt
+host_python/xcore_ai_ie.egg-info/top_level.txt
