@@ -123,8 +123,8 @@ int interp_initialize(inference_engine *ie)
     ie->output_buffer = (unsigned char *)(interpreter->output(0)->data.raw);
     ie->output_size = interpreter->output(0)->bytes;
 #if defined(XCORE_PROFILER_MAX_LEVELS)
-    //ie->output_times = (unsigned int *) xcore_profiler.times;
-    //ie->output_times_size = interpreter->operators_size();
+    ie->output_times = (unsigned int *) xcore_profiler.GetTimes();
+    ie->output_times_size = interpreter->operators_size();
 #else
     ie->output_times = NULL;
     ie->output_times_size = 0;
