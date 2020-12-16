@@ -1,11 +1,18 @@
 app_aisrv
 =========
 
-Env/Dependancies etc
+Env/Dependencies etc
 ---------------------
 
-- clone the aisrv repo with submodules (git clone --recursive --shallow-submodules git@github.com:xmos/aisrv.git)
-- cd aisrv
+- clone the aisrv repo::
+
+       git clone  git@github.com:xmos/aisrv.git
+       cd aisrv/
+       git submodule update --init --depth 1
+       cd submodules/ai_tools/
+       git submodule update --init --depth 1
+       cd ../..
+
 - pip install --upgrade pip
 - pyenv install 3.7.7
 - virtualenv -p /Users/<username>/.pyenv/versions/3.7.7/bin/python3.7 venv
