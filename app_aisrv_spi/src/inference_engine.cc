@@ -16,7 +16,7 @@
 #include "xcore_device_memory.h"
 
 tflite::ErrorReporter *reporter = nullptr;
-tflite::Profiler *profiler = nullptr;
+tflite::micro::xcore::XCoreProfiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
 tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 constexpr int kTensorArenaSize = 286000;
@@ -81,8 +81,6 @@ int interp_initialize(inference_engine *ie)
                      tflite::ops::micro::xcore::Register_MaxPool2D());
     resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Shallow());
-    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_Shallow());
     resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
     resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
@@ -126,4 +124,33 @@ int interp_initialize(inference_engine *ie)
     ie->output_times_size = interpreter->operators_size();
     
     return 0;
+}
+
+void print_profiler_summary() {
+  uint32_t count = 0;
+  uint32_t const *times = nullptr;
+  const char *op_name;
+  uint32_t total = 0;
+
+  if (profiler) {
+    count = profiler->GetNumTimes();
+    times = profiler->GetTimes();
+  }
+
+  for (size_t i = 0; i < interpreter->operators_size(); ++i) {
+    if (i < count) {
+      tflite::NodeAndRegistration node_and_reg =
+          interpreter->node_and_registration(static_cast<int>(i));
+      const TfLiteRegistration *registration = node_and_reg.registration;
+      if (registration->builtin_code == tflite::BuiltinOperator_CUSTOM) {
+        op_name = registration->custom_name;
+      } else {
+        op_name = tflite::EnumNameBuiltinOperator(
+            tflite::BuiltinOperator(registration->builtin_code));
+      }
+      total += times[i];
+      printf("Operator %d, %s took %lu microseconds\n", i, op_name, times[i]);
+    }
+  }
+  printf("TOTAL %lu microseconds\n", total);
 }
