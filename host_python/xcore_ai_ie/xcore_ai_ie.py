@@ -97,14 +97,15 @@ class xcore_ai_ie(ABC):
             model_data = input_fd.read()
             self.download_model(bytearray(model_data))
 
-    def bytes_to_int(self, data_bytes):
+    def bytes_to_ints(self, data_bytes, bpi=1):
 
         output_data_int = []
 
         # TODO better way of doing this?
-        for i in data_bytes:
-            x =  int.from_bytes([i], byteorder = "little", signed=True)
-            output_data_int.append(x)
+        for i in range(0, len(data_bytes), bpi):
+            x = data_bytes[i:i+bpi]
+            y =  int.from_bytes(x, byteorder = "little", signed=True)
+            output_data_int.append(y)
 
         return output_data_int
     
@@ -151,7 +152,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         
         data_index = 0
 
-        data_ints = self.bytes_to_int(data_bytes)
+        data_ints = self.bytes_to_ints(data_bytes)
         
         while data_len >= XCORE_IE_MAX_BLOCK_SIZE:
             
@@ -400,7 +401,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         # Retrieve result from device
         data_read = self._upload_data(CMD_GET_OUTPUT_TENSOR)
 
-        return self.bytes_to_int(data_read)
+        return self.bytes_to_ints(data_read)
 
     def upload_model(self):
 
@@ -415,14 +416,6 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         # TODO bytes to ints
         times_bytes  = self._upload_data(CMD_GET_TIMINGS)
 
-        print(str(len(times_bytes)))
+        times_ints = self.bytes_to_ints(times_bytes, bpi=4)
 
-        times_int = []
-
-        # TODO better way of doing this?
-        for i in range(0, len(times_bytes), 4):
-            x = times_bytes[i:i+4]
-            y =  int.from_bytes(x, byteorder = "little", signed=True)
-            times_int.append(y)
-        
-        return times_int
+        return times_ints
