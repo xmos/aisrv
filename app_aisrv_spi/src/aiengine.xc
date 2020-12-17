@@ -125,7 +125,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
 
             aisrv_status_t status = STATUS_OKAY;
 
-            /* Note currently receive one dummy byte */
+            /* Note currently receive extra 0 length */
             /* TODO remove the need for this */
             size_t size = receive_array_(c, data, 0);
                 

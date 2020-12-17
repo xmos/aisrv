@@ -16,6 +16,7 @@ class xcore_ai_ie(ABC):
         self._input_length = None
         self._model_length = None
         self._max_block_size = XCORE_IE_MAX_BLOCK_SIZE # TODO read from (usb) device?
+        self._spec_length = 20 # TODO fix magic number
         super().__init__()
    
     @abstractmethod
@@ -177,9 +178,8 @@ class xcore_ai_ie_spi(xcore_ai_ie):
     def _read_spec(self):
 
         self._wait_for_device()
-        # TODO fix magic number
 
-        to_send = self._construct_packet(aisrv_cmd.CMD_READ_SPEC, 24)
+        to_send = self._construct_packet(aisrv_cmd.CMD_READ_SPEC, self._spec_length)
         
         r = self._dev.xfer2(to_send)
         
@@ -231,21 +231,23 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self.__in_ep = None
         self._dev = None
         self._timeout = timeout
-        self._spec_length = 20 # TODO fix magic number
         super().__init__()
 
     def _download_data(self, cmd, data_bytes):
 
-        self._out_ep.write(bytes([cmd]))
-        
+        # TODO rm this extra CMD packet
+        #self._out_ep.write(bytes([cmd]))
+       
+        data_bytes = bytes([cmd]) + data_bytes
+
         self._out_ep.write(data_bytes, 1000)
 
         if (len(data_bytes) % self._max_block_size) == 0:
             self._out_ep.write(bytearray([]), 1000)
    
     def _upload_data(self, cmd):
+        
         import usb
-                
         read_data = []
 
         try:  
@@ -342,7 +344,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
       
         assert len(spec) == self._spec_length
 
-        # TODO rm magic numbers
+        # TODO ideally remove magic indexing numbers
         input_length = int.from_bytes(spec[8:12], byteorder = 'little')
         output_length = int.from_bytes(spec[12:16], byteorder = 'little')
         timings_length = int.from_bytes(spec[16:20], byteorder = 'little')
@@ -369,9 +371,8 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         # Send cmd
         self._out_ep.write(bytes([aisrv_cmd.CMD_START_INFER]), 1000)
 
-        # TOOD rm me
-        # Send out a single byte packet 
-        self._out_ep.write(bytes([1]), 1000)
+        # Send out a 0 length packet 
+        self._out_ep.write(bytes([]), 1000)
 
     def read_output_tensor(self, timeout = 50000):
 
