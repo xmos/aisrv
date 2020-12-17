@@ -393,9 +393,6 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
     def read_times(self):
        
-        # TODO bytes to ints
         times_bytes  = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS)
-
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
-
         return times_ints
