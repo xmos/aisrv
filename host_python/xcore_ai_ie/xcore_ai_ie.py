@@ -27,8 +27,8 @@ CMD_READ_SPEC = 0x07
 CMD_GET_TIMINGS = 0x09
 ###
 
-# TODO read from (usb) device?
-XCORE_IE_MAX_BLOCK_SIZE = 512
+XCORE_IE_MAX_BLOCK_SIZE = 512 
+
 
 class xcore_ai_ie(ABC):
     
@@ -36,6 +36,7 @@ class xcore_ai_ie(ABC):
         self._output_length = None
         self._input_length = None
         self._model_length = None
+        self._max_block_size = XCORE_IE_MAX_BLOCK_SIZE # TODO read from (usb) device?
         super().__init__()
    
     @abstractmethod
@@ -154,15 +155,15 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         data_ints = self.bytes_to_ints(data_bytes)
         
-        while data_len >= XCORE_IE_MAX_BLOCK_SIZE:
+        while data_len >= self._max_block_size:
             
             self._wait_for_device()
 
             to_send = [cmd]
-            to_send.extend(data_ints[data_index:data_index+XCORE_IE_MAX_BLOCK_SIZE])
+            to_send.extend(data_ints[data_index:data_index+self._max_block_size])
 
-            data_len = data_len - XCORE_IE_MAX_BLOCK_SIZE
-            data_index = data_index  + XCORE_IE_MAX_BLOCK_SIZE
+            data_len = data_len - self._max_block_size
+            data_index = data_index  + self._max_block_size
 
             self._dev.xfer(to_send)
         
@@ -260,7 +261,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         
         self._out_ep.write(data_bytes, 1000)
 
-        if (len(data_bytes) % XCORE_IE_MAX_BLOCK_SIZE) == 0:
+        if (len(data_bytes) % self._max_block_size) == 0:
             self._out_ep.write(bytearray([]), 1000)
    
     def _upload_data(self, cmd):
@@ -270,7 +271,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
         try:  
             self._out_ep.write(bytes([cmd]), self._timeout)
-            buff = usb.util.create_buffer(XCORE_IE_MAX_BLOCK_SIZE)
+            buff = usb.util.create_buffer(self._max_block_size)
            
             while True:
 
@@ -278,7 +279,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
                 read_data.extend(buff[:read_len])
 
-                if read_len != XCORE_IE_MAX_BLOCK_SIZE:
+                if read_len != self._max_block_size:
                     break;
 
             return read_data
