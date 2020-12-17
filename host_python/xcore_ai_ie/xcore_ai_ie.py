@@ -5,30 +5,9 @@ import sys
 import struct
 import array
 
-# Commands - TODO properly share with app code
-CMD_LENGTH_BYTES = 1
-
-CMD_NONE = 0
-CMD_READ_STATUS = 0x01
-CMD_SET_INPUT_TENSOR = 0x83
-CMD_START_INFER = 0x84
-CMD_GET_OUTPUT_TENSOR = 5
-
-CMD_SET_MODEL = 0x86 
-CMD_GET_MODEL = 0x06
-
-CMD_GET_SPEC = 0x07
-
-CMD_GET_INPUT_LENGTH = 0x0A
-CMD_GET_OUTPUT_LENGTH = 0x0B
-
-CMD_READ_SPEC = 0x07
-
-CMD_GET_TIMINGS = 0x09
-###
+from xcore_ai_ie import aisrv_cmd
 
 XCORE_IE_MAX_BLOCK_SIZE = 512 
-
 
 class xcore_ai_ie(ABC):
     
@@ -136,7 +115,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
     def _read_status(self):
 
-        to_send = [CMD_READ_STATUS] + self._dummy_bytes + (4 * [0])
+        to_send = [aisrv_cmd.CMD_READ_STATUS] + self._dummy_bytes + (4 * [0])
         r =  self._dev.xfer(to_send)
         return r
 
@@ -187,7 +166,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
     def download_model(self, model_bytes):
         
         # Download model to device
-        self._download_data(CMD_SET_MODEL, model_bytes)
+        self._download_data(aisrv_cmd.CMD_SET_MODEL, model_bytes)
 
         # Update lengths
         self._input_size, self._output_size = self._read_spec()
@@ -200,7 +179,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         self._wait_for_device()
         # TODO fix magic number
 
-        to_send = self._construct_packet(CMD_READ_SPEC, 24)
+        to_send = self._construct_packet(aisrv_cmd.CMD_READ_SPEC, 24)
         
         r = self._dev.xfer2(to_send)
         
@@ -224,16 +203,16 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
     def write_input_tensor(self, raw_img):
         
-        self._download_data(CMD_SET_INPUT_TENSOR, raw_img)
+        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img)
     
     def start_inference(self):
 
-        to_send = self._construct_packet(CMD_START_INFER, 0)
+        to_send = self._construct_packet(aisrv_cmd.CMD_START_INFER, 0)
         r =  self._dev.xfer(to_send)
     
     def read_output_tensor(self):
 
-        output_tensor = self._upload_data(CMD_GET_OUTPUT_TENSOR, self.output_length)
+        output_tensor = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
         output_tensor = output_tensor[:self.output_length+1]
         return output_tensor
 
@@ -344,7 +323,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         print("Model length (bytes): " + str(len(model_bytes)))
         
         # Send model to device 
-        self._download_data(CMD_SET_MODEL, model_bytes) 
+        self._download_data(aisrv_cmd.CMD_SET_MODEL, model_bytes) 
 
         # Update input/output tensor lengths
         self._output_length = self._read_output_length() 
@@ -359,7 +338,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     # TODO decide if want to keep read spec or not
     def _read_spec(self):
         
-        spec = self._upload_data(CMD_GET_SPEC)
+        spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC)
       
         assert len(spec) == self._spec_length
 
@@ -374,21 +353,21 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def _read_output_length(self):
 
         # Get output tensor length from device
-        return self._read_int_from_device(CMD_GET_OUTPUT_LENGTH)
+        return self._read_int_from_device(aisrv_cmd.CMD_GET_OUTPUT_TENSOR_LENGTH)
 
     def _read_input_length(self):
     
         # Get input tensor length from device
-        return self._read_int_from_device(CMD_GET_INPUT_LENGTH)
+        return self._read_int_from_device(aisrv_cmd.CMD_GET_INPUT_TENSOR_LENGTH)
 
     def write_input_tensor(self, raw_img):
         
-        self._download_data(CMD_SET_INPUT_TENSOR, raw_img)
+        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img)
 
     def start_inference(self):
 
         # Send cmd
-        self._out_ep.write(bytes([CMD_START_INFER]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_INFER]), 1000)
 
         # TOOD rm me
         # Send out a single byte packet 
@@ -400,13 +379,13 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             self._output_length = self._read_output_length()
             
         # Retrieve result from device
-        data_read = self._upload_data(CMD_GET_OUTPUT_TENSOR)
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR)
 
         return self.bytes_to_ints(data_read)
 
     def upload_model(self):
 
-        read_data = self._upload_data(CMD_GET_MODEL)
+        read_data = self._upload_data(aisrv_cmd.CMD_GET_MODEL)
 
         assert len(read_data) == self._model_length
 
@@ -415,7 +394,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def read_times(self):
        
         # TODO bytes to ints
-        times_bytes  = self._upload_data(CMD_GET_TIMINGS)
+        times_bytes  = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS)
 
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
 
