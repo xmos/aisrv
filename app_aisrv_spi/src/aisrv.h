@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define AISRV_CMD_WRITE_BIT_MASK     (0x80)
+#define AISRV_CMD_WRITE_BIT_MASK     (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
 #define CMD_LENGTH_BYTES             (1)
 #define MAX_PACKET_SIZE              (512)
 #define MAX_PACKET_SIZE_WORDS        (MAX_PACKET_SIZE / 4)
@@ -11,26 +11,10 @@
 #define DUMMY_CLOCKS                  16
 
 typedef enum aisrv_cmd
-{   
-    CMD_NONE                        = 0x00,
-    CMD_GET_STATUS                  = 0x01,
-    CMD_GET_ID                      = 0x03,
-    CMD_GET_OUTPUT_TENSOR           = 0x05,
-
-    CMD_GET_TIMINGS                 = 0x09,
-
-    CMD_GET_MODEL                   = 0x06,     // TODO remove for production
-    CMD_SET_MODEL                   = 0x06 | AISRV_CMD_WRITE_BIT_MASK,
-    CMD_SET_SERVER                  = 0x04,
-    CMD_SET_INPUT_TENSOR            = 0x03 | AISRV_CMD_WRITE_BIT_MASK,
-    
-    CMD_GET_SPEC                    = 0x07,
-    CMD_GET_INPUT_TENSOR_LENGTH     = 0x0A,     // Note, currently unsed by SPI mode (used GET_SPEC)
-    CMD_GET_OUTPUT_TENSOR_LENGTH    = 0x0B,     // Note, currently unsed by SPI mode (used GET_SPEC)
-
-    CMD_START_INFER                 = 0x04 | AISRV_CMD_WRITE_BIT_MASK,
-    CMD_START_ACQUIRE               = 0x0C,   
-    CMD_HELLO                       = 0x55,
+{
+    #define int(x) x,
+    #include "../../host_python/xcore_ai_ie/aisrv_cmd.py"
+    #undef int
 } aisrv_cmd_t;
     
 #define STATUS_BYTE_STATUS        0
