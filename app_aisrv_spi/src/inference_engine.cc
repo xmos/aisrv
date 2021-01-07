@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <iostream>
 
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
@@ -15,12 +14,30 @@
 #include "tensorflow/lite/version.h"
 #include "xcore_device_memory.h"
 
-tflite::ErrorReporter *reporter = nullptr;
-tflite::micro::xcore::XCoreProfiler *profiler = nullptr;
-const tflite::Model *model = nullptr;
-tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 constexpr int kTensorArenaSize = 286000;
-uint8_t tensor_arena[kTensorArenaSize];
+uint8_t kTensorArena[kTensorArenaSize];
+
+// shorthand typedefs
+typedef tflite::MicroAllocator micro_allocator_t;
+typedef tflite::MicroErrorReporter error_reporter_t;
+typedef tflite::micro::xcore::XCoreInterpreter interpreter_t;
+typedef tflite::micro::xcore::XCoreProfiler profiler_t;
+typedef tflite::MicroMutableOpResolver<17> resolver_t;
+typedef tflite::Model model_t;
+
+// static buffer for interpreter_t class allocation
+uint8_t interpreter_buffer[sizeof(interpreter_t)];
+
+// static variables
+static error_reporter_t error_reporter_s;
+static error_reporter_t *reporter = nullptr;
+
+static resolver_t resolver_s;
+static resolver_t *resolver = nullptr;
+static profiler_t profiler_s;
+static profiler_t *profiler = nullptr;
+static interpreter_t *interpreter = nullptr;
+static const model_t *model = nullptr;
 
 #ifdef USE_SWMEM
 __attribute__((section(".SwMem_data")))
@@ -54,6 +71,11 @@ int interp_initialize(inference_engine *ie)
     static tflite::MicroErrorReporter error_reporter;
     reporter = &error_reporter;
 
+    if (resolver == nullptr) 
+    {
+        resolver = &resolver_s;
+    }
+
     // Set up profiling.
     static tflite::micro::xcore::XCoreProfiler xcore_profiler;
     profiler = &xcore_profiler;
@@ -70,44 +92,51 @@ int interp_initialize(inference_engine *ie)
     }
 
     // This pulls in all the operation implementations we need.
-    static tflite::MicroMutableOpResolver<17> resolver;
-    resolver.AddSoftmax();
-    resolver.AddPad();
-    resolver.AddMean();
-    resolver.AddConcatenation();
-    resolver.AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
+    resolver->AddSoftmax();
+    resolver->AddPad();
+    resolver->AddMean();
+    resolver->AddConcatenation();
+    resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
                      tflite::ops::micro::xcore::Register_Add_8());
-    resolver.AddCustom(tflite::ops::micro::xcore::MaxPool2D_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::MaxPool2D_OpCode,
                      tflite::ops::micro::xcore::Register_MaxPool2D());
-    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Shallow());
-    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
-    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_1x1());
-    resolver.AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
                      tflite::ops::micro::xcore::Register_AvgPool2D_Global());
-    resolver.AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
                      tflite::ops::micro::xcore::Register_FullyConnected_8());
 
-    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Shallow());
-    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
-    resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_1x1());
-    resolver.AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
                      tflite::ops::micro::xcore::Register_AvgPool2D_Global());
-    resolver.AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
+    resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
                      tflite::ops::micro::xcore::Register_FullyConnected_8());
+
+    if (interpreter) 
+    {
+        // Delete existing interpreter
+        delete interpreter;  // NOTE: interpreter must be deleted before resolver and reporter
+        
+        // Need to memset the arena to 0 otherwise assertion in xcore_planning.cc 
+        memset(kTensorArena, 0, kTensorArenaSize);
+    }
 
     // Build an interpreter to run the model with
-    static tflite::micro::xcore::XCoreInterpreter static_interpreter(
-      model, resolver, tensor_arena, kTensorArenaSize, reporter, true,
-      profiler);
-    interpreter = &static_interpreter;
+     interpreter = new (interpreter_buffer)
+      interpreter_t(model, *resolver, kTensorArena, kTensorArenaSize, reporter,
+                    true, profiler);
 
-    // Allocate memory from the tensor_arena for the model's tensors.
+    // Allocate memory from the kTensorArena for the model's tensors.
     TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
     if (allocate_tensors_status != kTfLiteOk)
     {
@@ -126,31 +155,34 @@ int interp_initialize(inference_engine *ie)
     return 0;
 }
 
-void print_profiler_summary() {
-  uint32_t count = 0;
-  uint32_t const *times = nullptr;
-  const char *op_name;
-  uint32_t total = 0;
+void print_profiler_summary() 
+{
+    uint32_t count = 0;
+    uint32_t const *times = nullptr;
+    const char *op_name;
+    uint32_t total = 0;
 
-  if (profiler) {
-    count = profiler->GetNumTimes();
-    times = profiler->GetTimes();
-  }
-
-  for (size_t i = 0; i < interpreter->operators_size(); ++i) {
-    if (i < count) {
-      tflite::NodeAndRegistration node_and_reg =
-          interpreter->node_and_registration(static_cast<int>(i));
-      const TfLiteRegistration *registration = node_and_reg.registration;
-      if (registration->builtin_code == tflite::BuiltinOperator_CUSTOM) {
-        op_name = registration->custom_name;
-      } else {
-        op_name = tflite::EnumNameBuiltinOperator(
-            tflite::BuiltinOperator(registration->builtin_code));
-      }
-      total += times[i];
-      printf("Operator %d, %s took %lu microseconds\n", i, op_name, times[i]);
+    if (profiler) {
+        count = profiler->GetNumTimes();
+        times = profiler->GetTimes();
     }
-  }
-  printf("TOTAL %lu microseconds\n", total);
+
+    for (size_t i = 0; i < interpreter->operators_size(); ++i) 
+    {
+        if (i < count) 
+        {
+            tflite::NodeAndRegistration node_and_reg =
+                interpreter->node_and_registration(static_cast<int>(i));
+            const TfLiteRegistration *registration = node_and_reg.registration;
+            if (registration->builtin_code == tflite::BuiltinOperator_CUSTOM) {
+                op_name = registration->custom_name;
+            } else {
+                op_name = tflite::EnumNameBuiltinOperator(
+                        tflite::BuiltinOperator(registration->builtin_code));
+            }
+            total += times[i];
+            printf("Operator %d, %s took %lu microseconds\n", i, op_name, times[i]);
+        }
+    }
+    printf("TOTAL %lu microseconds\n", total);
 }

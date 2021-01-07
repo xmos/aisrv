@@ -236,9 +236,9 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def _download_data(self, cmd, data_bytes):
 
         # TODO rm this extra CMD packet
-        #self._out_ep.write(bytes([cmd]))
+        self._out_ep.write(bytes([cmd]))
        
-        data_bytes = bytes([cmd]) + data_bytes
+        #data_bytes = bytes([cmd]) + data_bytes
 
         self._out_ep.write(data_bytes, 1000)
 
