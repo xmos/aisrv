@@ -216,7 +216,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
     def _read_status(self):
 
-        to_send = [aisrv_cmd.CMD_READ_STATUS] + self._dummy_bytes + (4 * [0])
+        to_send = [aisrv_cmd.CMD_GET_STATUS] + self._dummy_bytes + (4 * [0])
         r =  self._dev.xfer(to_send)
         return r
 
@@ -268,7 +268,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         self._wait_for_device()
 
-        to_send = self._construct_packet(aisrv_cmd.CMD_READ_SPEC, self._spec_length)
+        to_send = self._construct_packet(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
         
         r = self._dev.xfer2(to_send)
         
@@ -276,20 +276,20 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         
         input_size = int.from_bytes(r[8:12], byteorder = 'little')
         output_size = int.from_bytes(r[12:16], byteorder = 'little')
+        timings_size = int.from_bytes(r[16:20], byteorder = 'little')
 
-        # TODO: add sensor tensor size
-        return input_size, output_size
+        return input_size, output_size, timings_size
 
     def _read_output_length(self):
         
         # TODO this is quite inefficient since we we read the whole spec
-        input_length, output_length = self._read_spec()
+        input_length, output_length, timing_length  = self._read_spec()
         return output_length
 
     def _read_input_length(self):
         
         # TODO this is quite inefficient since we we read the whole spec
-        input_length, output_length = self._read_spec()
+        input_length, output_length, timing_length  = self._read_spec()
         return input_length
 
     def write_input_tensor(self, raw_img):
@@ -312,6 +312,10 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         pass
 
     def read_times(self):
+        # TODO
+        pass
+
+    def _clear_error(self):
         # TODO
         pass
 
