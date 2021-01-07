@@ -2,7 +2,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import sys
-from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi
+from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi, IOError
 
 if sys.argv[1] == 'usb':
     ie = xcore_ai_ie_usb()
@@ -14,9 +14,12 @@ else:
 
 ie.connect()
 
-ie.download_model_file(sys.argv[2])
-
-
+try:
+    ie.download_model_file(sys.argv[2])
+except IOError:
+    print("Device reported an error")
+    debug_string = ie.read_debug_log()
+    print("Error string: " +  str(debug_string))
 
 
 
