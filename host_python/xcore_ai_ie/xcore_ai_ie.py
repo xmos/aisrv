@@ -146,8 +146,8 @@ class xcore_ai_ie(ABC):
     # TODO decide if want to keep read spec or not
     def _read_spec(self):
         
-        spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC)
-      
+        spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
+     
         assert len(spec) == self._spec_length
 
         # TODO ideally remove magic indexing numbers
@@ -157,11 +157,11 @@ class xcore_ai_ie(ABC):
 
         # Sanity check old length reading vs spec
         # TODO this won't work with SPI at the moment
-        output_length1 = self._read_output_length()   
-        input_length1 = self._read_input_length()   
+        #output_length1 = self._read_output_length()   
+        #input_length1 = self._read_input_length()   
 
-        assert(input_length == input_length)
-        assert(output_length == output_length1)
+        #assert(input_length == input_length)
+        #assert(output_length == output_length1)
 
         return input_length, output_length, timings_length
 
@@ -178,8 +178,11 @@ class xcore_ai_ie(ABC):
             self._output_length = self._read_output_length()
             
         # Retrieve result from device
-        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR)
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self._output_length, sign = True)
 
+        return data_read
+
+        #TODO required for USB
         return self.bytes_to_ints(data_read)
 
     def read_debug_log(self):
@@ -253,32 +256,19 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         to_send.extend(data_ints[data_index:data_index+data_len])
         self._dev.xfer(to_send)
 
-    def _upload_data(self, cmd, length):
+    def _upload_data(self, cmd, length, sign = False):
 
         self._wait_for_device()
 
         to_send = self._construct_packet(cmd, length)
     
-        r =  self._dev.xfer(to_send)
-        r = [x-256 if x > 127 else x for x in r]
-
-        return r[self._dummy_byte_count:]
-
-    def _read_spec(self):
-
-        self._wait_for_device()
-
-        to_send = self._construct_packet(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
+        r = self._dev.xfer(to_send)
         
-        r = self._dev.xfer2(to_send)
-        
-        r = bytearray(r[self._dummy_byte_count:])
-        
-        input_size = int.from_bytes(r[8:12], byteorder = 'little')
-        output_size = int.from_bytes(r[12:16], byteorder = 'little')
-        timings_size = int.from_bytes(r[16:20], byteorder = 'little')
+        if sign:
+            r = [x-256 if x > 127 else x for x in r]
 
-        return input_size, output_size, timings_size
+        r = r[self._dummy_byte_count:]
+        return r[:length]
 
     def _read_output_length(self):
         
@@ -301,11 +291,11 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         to_send = self._construct_packet(aisrv_cmd.CMD_START_INFER, 0)
         r =  self._dev.xfer(to_send)
     
-    def read_output_tensor(self):
+    #def read_output_tensor(self):
 
-        output_tensor = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
-        output_tensor = output_tensor[:self.output_length+1]
-        return output_tensor
+       # output_tensor = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
+       # output_tensor = output_tensor[:self.output_length+1]
+       # return output_tensor
 
     def upload_model(self):
         # TODO
@@ -340,7 +330,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         if (len(data_bytes) % self._max_block_size) == 0:
             self._out_ep.write(bytearray([]), 1000)
    
-    def _upload_data(self, cmd):
+    def _upload_data(self, cmd, length):
         
         import usb
         read_data = []
