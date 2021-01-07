@@ -54,6 +54,10 @@ static inline size_t receive_array_(chanend c, unsigned * unsafe array, unsigned
     return i;
 }
 static inference_engine_t ie;
+extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
+extern size_t debug_log_length;
+
+
 
 void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
 {
@@ -86,12 +90,17 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             #endif
             
             modelSize = receive_array_(c, ie.model_data, 0);
-            
+           
+            printf("Model received: %d bytes\n", modelSize); 
             haveModel = !interp_initialize(&ie);
+
+            if(haveModel)
+                printf("Model written sucessfully\n");
+            else
+                printf("Model update failed\n");
+
             outuint(c, haveModel);
             outct(c, XS1_CT_END);
-
-            printf("Model written %d (%d bytes)\n", haveModel, modelSize);
 
             break;
 
@@ -175,7 +184,6 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             break;
 
         case CMD_GET_OUTPUT_TENSOR:
-
             c <: (unsigned) STATUS_OKAY;
             send_array(c, ie.output_buffer, ie.output_size);
             break;
@@ -186,8 +194,14 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             send_array(c, ie.output_times, ie.output_times_size * sizeof(uint32_t));
             break;
 
+        case CMD_GET_DEBUG_LOG:
+            c <: (unsigned) STATUS_OKAY;
+            send_array(c, (unsigned * unsafe) debug_log_buffer,  MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
+            break; 
+
         default:
-            printf("Unknown command: %d\n", cmd);
+            c <: (unsigned) STATUS_ERROR_BADCMD;
+            printf("Unknown command (aiengine): %d\n", cmd);
             break;
     }
 }
