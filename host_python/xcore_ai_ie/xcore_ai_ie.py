@@ -272,7 +272,6 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         self._wait_for_device()
 
-        print(str(length))
         to_send = self._construct_packet(cmd, length)
     
         r = self._dev.xfer(to_send)
