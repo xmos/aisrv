@@ -3,12 +3,14 @@
 
 #include <stdint.h>
 
-#define AISRV_CMD_WRITE_BIT_MASK     (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
-#define CMD_LENGTH_BYTES             (1)
-#define MAX_PACKET_SIZE              (512)
-#define MAX_PACKET_SIZE_WORDS        (MAX_PACKET_SIZE / 4)
-#define INFERENCE_ENGINE_ID           0x12345678//0x633
-#define DUMMY_CLOCKS                  16
+#define AISRV_CMD_WRITE_BIT_MASK    (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
+#define CMD_LENGTH_BYTES            (1)
+#define MAX_PACKET_SIZE             (512)
+#define MAX_PACKET_SIZE_WORDS       (MAX_PACKET_SIZE / 4)
+#define INFERENCE_ENGINE_ID         (0x12345678)//0x633
+#define DUMMY_CLOCKS                (16)
+#define MAX_DEBUG_LOG_LENGTH        (100)
+#define MAX_DEBUG_LOG_ENTRIES       (3)
 
 typedef enum aisrv_cmd
 {
@@ -39,9 +41,9 @@ typedef enum aisrv_spec {
 typedef enum aisrv_status
 {
     STATUS_OKAY = 0,
-    STATUS_BUFFER_FULL,
     STATUS_ERROR_NO_MODEL,
     STATUS_ERROR_INFER,
+    STATUS_ERROR_BADCMD,
 } aisrv_status_t;
 
 #ifdef __XC__

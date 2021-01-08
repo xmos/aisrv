@@ -9,12 +9,17 @@ from xcore_ai_ie import aisrv_cmd
 
 XCORE_IE_MAX_BLOCK_SIZE = 512 
 
+class IOError(Exception):
+    """IO Error from device"""
+    pass
+
 class xcore_ai_ie(ABC):
     
     def __init__(self):
         self._output_length = None
         self._input_length = None
         self._model_length = None
+        self._timings_length = None
         self._max_block_size = XCORE_IE_MAX_BLOCK_SIZE # TODO read from (usb) device?
         self._spec_length = 20 # TODO fix magic number
         super().__init__()
@@ -23,13 +28,40 @@ class xcore_ai_ie(ABC):
     def connect(self):
         pass
 
-    @abstractmethod
-    def download_model(self, model):
-        pass
+    def download_model(self, model_bytes):
+        
+        assert type(model_bytes) == bytearray
+        
+        print("Model length (bytes): " + str(len(model_bytes)))
+        
+        try:
+            # Download model to device
+            self._download_data(aisrv_cmd.CMD_SET_MODEL, model_bytes)
+        except IOError:
+            print("Error from device during model download (likely issue with model)")
+            self._clear_error()
+            raise IOError
 
-    @abstractmethod
-    def upload_model(self, model):
-        pass
+        try:
+            # Update lengths
+            self._input_length, self._output_length, self._timings_length = self._read_spec()
+        
+        except IOError:
+            print("Error from device during spec upload (likely issue with model)")
+            self._clear_error()
+            raise IOError
+       
+        print("input_size: " + str(self._input_length))
+        print("output_size: " + str(self._output_length))
+        self._model_length = len(model_bytes)
+
+    def upload_model(self):
+
+        read_data = self._upload_data(aisrv_cmd.CMD_GET_MODEL)
+
+        assert len(read_data) == self._model_length
+
+        return read_data
 
     @property
     def input_length(self):
@@ -68,12 +100,19 @@ class xcore_ai_ie(ABC):
     @abstractmethod
     def start_inference(self):
         pass
-
+    
     @abstractmethod
-    def read_times(self):
+    def _clear_error(self):
         pass
 
+    def read_times(self):
+       
+        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self._timings_length)
+        times_ints = self.bytes_to_ints(times_bytes, bpi=4)
+        return times_ints
+
     def download_model_file(self, model_file):
+    
         with open(model_file, "rb") as input_fd:
             model_data = input_fd.read()
             self.download_model(bytearray(model_data))
@@ -89,7 +128,83 @@ class xcore_ai_ie(ABC):
             output_data_int.append(y)
 
         return output_data_int
+
+    #def _read_output_length(self):
+
+        # Get output tensor length from device
+    #    return self._read_int_from_device(aisrv_cmd.CMD_GET_OUTPUT_TENSOR_LENGTH)
+
+    #def _read_input_length(self):
     
+        # Get input tensor length from device
+    #    return self._read_int_from_device(aisrv_cmd.CMD_GET_INPUT_TENSOR_LENGTH)
+
+    def _read_output_length(self):
+        
+        # TODO this is quite inefficient since we we read the whole spec
+        input_length, output_length, timing_length  = self._read_spec()
+        return output_length
+
+    def _read_input_length(self):
+        
+        # TODO this is quite inefficient since we we read the whole spec
+       input_length, output_length, timing_length  = self._read_spec()
+       return input_length
+
+    def write_input_tensor(self, raw_img):
+        
+        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img)
+
+    # TODO decide if want to keep read spec or not
+    def _read_spec(self):
+        
+        spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
+     
+        #assert len(spec) == self._spec_length
+
+        # TODO ideally remove magic indexing numbers
+        input_length = int.from_bytes(spec[8:12], byteorder = 'little')
+        output_length = int.from_bytes(spec[12:16], byteorder = 'little')
+        timings_length = int.from_bytes(spec[16:20], byteorder = 'little')
+
+        # Sanity check old length reading vs spec
+        # TODO this won't work with SPI at the moment
+        #output_length1 = self._read_output_length()   
+        #input_length1 = self._read_input_length()   
+
+        #assert(input_length == input_length)
+        #assert(output_length == output_length1)
+
+        return input_length, output_length, timings_length
+
+    def _read_int_from_device(self, cmd):
+            
+        read_data = self._upload_data(cmd, 4)
+        assert len(read_data) == 4    
+        
+        return int.from_bytes(read_data, byteorder = "little", signed=True)
+   
+    def read_output_tensor(self):
+
+        if self._output_length == None:
+            self._output_length = self._read_output_length()
+            
+        # Retrieve result from device
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self._output_length)
+
+        assert type(data_read) == list
+        assert type(data_read[0]) == int
+
+        return self.bytes_to_ints(data_read)
+
+    def read_debug_log(self):
+
+        debug_string = self._upload_data(aisrv_cmd.CMD_GET_DEBUG_LOG)
+
+        r = bytearray(debug_string).decode("ascii")
+        return r
+
+
 class xcore_ai_ie_spi(xcore_ai_ie):
 
     def __init__(self, bus=0, device=0, speed=7800000):
@@ -116,7 +231,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
     def _read_status(self):
 
-        to_send = [aisrv_cmd.CMD_READ_STATUS] + self._dummy_bytes + (4 * [0])
+        to_send = [aisrv_cmd.CMD_GET_STATUS] + self._dummy_bytes + (4 * [0])
         r =  self._dev.xfer(to_send)
         return r
 
@@ -159,68 +274,23 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         to_send = self._construct_packet(cmd, length)
     
-        r =  self._dev.xfer(to_send)
-        r = [x-256 if x > 127 else x for x in r]
-
-        return r[self._dummy_byte_count:]
-
-    def download_model(self, model_bytes):
+        r = self._dev.xfer(to_send)
         
-        # Download model to device
-        self._download_data(aisrv_cmd.CMD_SET_MODEL, model_bytes)
+        #r = [x-256 if x > 127 else x for x in r]
+        r = r[self._dummy_byte_count:]
+        return r
 
-        # Update lengths
-        self._input_size, self._output_size = self._read_spec()
-        
-        print("input_size: " + str(self._input_size))
-        print("output_size: " + str(self._output_size))
-
-    def _read_spec(self):
-
-        self._wait_for_device()
-
-        to_send = self._construct_packet(aisrv_cmd.CMD_READ_SPEC, self._spec_length)
-        
-        r = self._dev.xfer2(to_send)
-        
-        r = bytearray(r[self._dummy_byte_count:])
-        
-        input_size = int.from_bytes(r[8:12], byteorder = 'little')
-        output_size = int.from_bytes(r[12:16], byteorder = 'little')
-
-        # TODO: add sensor tensor size
-        return input_size, output_size
-
-    def _read_output_length(self):
-        # TODO this is quite inefficient since we we read the whole spec
-        input_length, output_length = self._read_spec()
-        return output_length
-
-    def _read_input_length(self):
-        # TODO this is quite inefficient since we we read the whole spec
-        input_length, output_length = self._read_spec()
-        return input_length
-
-    def write_input_tensor(self, raw_img):
-        
-        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img)
-    
+    # TODO move to super()
     def start_inference(self):
 
         to_send = self._construct_packet(aisrv_cmd.CMD_START_INFER, 0)
         r =  self._dev.xfer(to_send)
-    
-    def read_output_tensor(self):
 
-        output_tensor = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
-        output_tensor = output_tensor[:self.output_length+1]
-        return output_tensor
-
-    def upload_model(self):
-        # TODO
+    def read_times(self):
+        # TODO
         pass
 
-    def read_times(seld):
+    def _clear_error(self):
         # TODO
         pass
 
@@ -245,7 +315,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         if (len(data_bytes) % self._max_block_size) == 0:
             self._out_ep.write(bytearray([]), 1000)
    
-    def _upload_data(self, cmd):
+    def _upload_data(self, cmd, length, sign = False):
         
         import usb
         read_data = []
@@ -267,15 +337,12 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         
         except usb.core.USBError as e:
             if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
-                print("Device error, IN pipe halted (issue with model?)")
-                sys.exit(1)
+                #print("USB error, IN/OUT pipe halted")
+                raise IOError()
 
-    def _read_int_from_device(self, cmd):
-            
-        read_data = self._upload_data(cmd)
-        assert len(read_data) == 4    
-        
-        return int.from_bytes(read_data, byteorder = "little", signed=True)
+    def _clear_error(self):
+        self._dev.clear_halt(self._out_ep)
+        self._dev.clear_halt(self._in_ep)
 
     def connect(self):
 
@@ -317,55 +384,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
             print("Connected")
 
-    
-    def download_model(self, model_bytes):
-
-        assert type(model_bytes) == bytearray
-        
-        print("Model length (bytes): " + str(len(model_bytes)))
-        
-        # Send model to device 
-        self._download_data(aisrv_cmd.CMD_SET_MODEL, model_bytes) 
-
-        # Update input/output tensor lengths
-        self._output_length = self._read_output_length() 
-        print("output_length: " + str(self._output_length))
-        self._input_length = self._read_input_length() 
-        print("input_length: " + str(self._input_length))
-        self._model_length = len(model_bytes)
-        print("model_length: " + str(self._model_length))
-
-        self._read_spec()
-
-    # TODO decide if want to keep read spec or not
-    def _read_spec(self):
-        
-        spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC)
-      
-        assert len(spec) == self._spec_length
-
-        # TODO ideally remove magic indexing numbers
-        input_length = int.from_bytes(spec[8:12], byteorder = 'little')
-        output_length = int.from_bytes(spec[12:16], byteorder = 'little')
-        timings_length = int.from_bytes(spec[16:20], byteorder = 'little')
-        
-        assert(input_length == self._input_length)
-        assert(output_length == self._output_length)
-
-    def _read_output_length(self):
-
-        # Get output tensor length from device
-        return self._read_int_from_device(aisrv_cmd.CMD_GET_OUTPUT_TENSOR_LENGTH)
-
-    def _read_input_length(self):
-    
-        # Get input tensor length from device
-        return self._read_int_from_device(aisrv_cmd.CMD_GET_INPUT_TENSOR_LENGTH)
-
-    def write_input_tensor(self, raw_img):
-        
-        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img)
-
+    # TODO move to super()
     def start_inference(self):
 
         # Send cmd
@@ -374,26 +393,5 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
 
-    def read_output_tensor(self, timeout = 50000):
-
-        if self._output_length == None:
-            self._output_length = self._read_output_length()
-            
-        # Retrieve result from device
-        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR)
-
-        return self.bytes_to_ints(data_read)
-
-    def upload_model(self):
-
-        read_data = self._upload_data(aisrv_cmd.CMD_GET_MODEL)
-
-        assert len(read_data) == self._model_length
-
-        return read_data
-
-    def read_times(self):
-       
-        times_bytes  = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS)
-        times_ints = self.bytes_to_ints(times_bytes, bpi=4)
-        return times_ints
+    
+  
