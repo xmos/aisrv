@@ -12,7 +12,8 @@ CMD_SET_INPUT_TENSOR            = int(0x83)
 
 CMD_GET_SPEC                    = int(0x07)
 CMD_GET_INPUT_TENSOR_LENGTH     = int(0x0A)     
-CMD_GET_OUTPUT_TENSOR_LENGTH    = int(0x0B)     
+CMD_GET_OUTPUT_TENSOR_LENGTH    = int(0x0B)   
+CMD_GET_DEBUG_LOG               = int(0x0D)
 
 CMD_START_INFER                 = int(0x84)
 CMD_START_ACQUIRE               = int(0x0C)
