@@ -79,6 +79,14 @@ class xcore_ai_ie(ABC):
         
         return self._output_length
 
+    @property
+    def timings_length(self):
+        
+        if self._timings_length == None:
+            self._timings_length = self._read_timings_length()
+        
+        return self._timings_length
+
     @abstractmethod
     def write_input_tensor(self, input_tensor):
         pass
@@ -106,8 +114,9 @@ class xcore_ai_ie(ABC):
         pass
 
     def read_times(self):
-       
-        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self._timings_length)
+      
+        print("timings length: " + str(self._timings_length))
+        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length)
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
@@ -142,14 +151,20 @@ class xcore_ai_ie(ABC):
     def _read_output_length(self):
         
         # TODO this is quite inefficient since we we read the whole spec
-        input_length, output_length, timing_length  = self._read_spec()
+        input_length, output_length, timings_length  = self._read_spec()
         return output_length
 
     def _read_input_length(self):
         
         # TODO this is quite inefficient since we we read the whole spec
-       input_length, output_length, timing_length  = self._read_spec()
+       input_length, output_length, timings_length  = self._read_spec()
        return input_length
+
+    def _read_timings_length(self):
+        
+        # TODO this is quite inefficient since we we read the whole spec
+       input_length, output_length, timings_length  = self._read_spec()
+       return timings_length
 
     def write_input_tensor(self, raw_img):
         
@@ -186,11 +201,8 @@ class xcore_ai_ie(ABC):
    
     def read_output_tensor(self):
 
-        if self._output_length == None:
-            self._output_length = self._read_output_length()
-            
         # Retrieve result from device
-        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self._output_length)
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
@@ -285,10 +297,6 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         to_send = self._construct_packet(aisrv_cmd.CMD_START_INFER, 0)
         r =  self._dev.xfer(to_send)
-
-    def read_times(self):
-        # TODO
-        pass
 
     def _clear_error(self):
         # TODO
