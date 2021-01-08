@@ -79,7 +79,7 @@ raw_img = None
 
 # Send image to device
 for arg in sys.argv[2:]:
-        print("SETTING INPUT TENSOR VIA USB\n")
+        print("SETTING INPUT TENSOR VIA " + sys.argv[1] + "\n")
         try:
             if not arg.endswith('.raw'):
                 import cv2
