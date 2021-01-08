@@ -107,7 +107,7 @@ class xcore_ai_ie(ABC):
 
     def read_times(self):
        
-        times_bytes  = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS)
+        times_bytes  = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self._timings_length)
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
@@ -129,15 +129,27 @@ class xcore_ai_ie(ABC):
 
         return output_data_int
 
-    def _read_output_length(self):
+    #def _read_output_length(self):
 
         # Get output tensor length from device
-        return self._read_int_from_device(aisrv_cmd.CMD_GET_OUTPUT_TENSOR_LENGTH)
+    #    return self._read_int_from_device(aisrv_cmd.CMD_GET_OUTPUT_TENSOR_LENGTH)
 
-    def _read_input_length(self):
+    #def _read_input_length(self):
     
         # Get input tensor length from device
-        return self._read_int_from_device(aisrv_cmd.CMD_GET_INPUT_TENSOR_LENGTH)
+    #    return self._read_int_from_device(aisrv_cmd.CMD_GET_INPUT_TENSOR_LENGTH)
+
+    #def _read_output_length(self):
+        
+        # TODO this is quite inefficient since we we read the whole spec
+    #    input_length, output_length, timing_length  = self._read_spec()
+    #    return output_length
+
+    #def _read_input_length(self):
+        
+        # TODO this is quite inefficient since we we read the whole spec
+    #   input_length, output_length, timing_length  = self._read_spec()
+    #   return input_length
 
     def write_input_tensor(self, raw_img):
         
@@ -167,7 +179,7 @@ class xcore_ai_ie(ABC):
 
     def _read_int_from_device(self, cmd):
             
-        read_data = self._upload_data(cmd)
+        read_data = self._upload_data(cmd, 4)
         assert len(read_data) == 4    
         
         return int.from_bytes(read_data, byteorder = "little", signed=True)
@@ -180,7 +192,11 @@ class xcore_ai_ie(ABC):
         # Retrieve result from device
         data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self._output_length, sign = True)
 
-        return data_read
+        #return data_read
+
+        print(str(type(data_read)))
+        print(str(type(data_read[0])))
+        assert type(data_read) == list
 
         #TODO required for USB
         return self.bytes_to_ints(data_read)
@@ -330,7 +346,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         if (len(data_bytes) % self._max_block_size) == 0:
             self._out_ep.write(bytearray([]), 1000)
    
-    def _upload_data(self, cmd, length):
+    def _upload_data(self, cmd, length, sign = False):
         
         import usb
         read_data = []
