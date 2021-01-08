@@ -159,8 +159,8 @@ class xcore_ai_ie(ABC):
     def _read_spec(self):
         
         spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
-     
-        #assert len(spec) == self._spec_length
+
+        assert len(spec) == self._spec_length
 
         # TODO ideally remove magic indexing numbers
         input_length = int.from_bytes(spec[8:12], byteorder = 'little')
@@ -272,13 +272,13 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         self._wait_for_device()
 
-        to_send = self._construct_packet(cmd, length)
+        to_send = self._construct_packet(cmd, length+1)
     
         r = self._dev.xfer(to_send)
-        
+
         #r = [x-256 if x > 127 else x for x in r]
         r = r[self._dummy_byte_count:]
-        return r
+        return r[:length]
 
     # TODO move to super()
     def start_inference(self):
