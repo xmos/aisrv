@@ -107,7 +107,7 @@ class xcore_ai_ie(ABC):
 
     def read_times(self):
        
-        times_bytes  = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self._timings_length)
+        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self._timings_length)
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
@@ -160,7 +160,7 @@ class xcore_ai_ie(ABC):
         
         spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
      
-        assert len(spec) == self._spec_length
+        #assert len(spec) == self._spec_length
 
         # TODO ideally remove magic indexing numbers
         input_length = int.from_bytes(spec[8:12], byteorder = 'little')
@@ -190,15 +190,11 @@ class xcore_ai_ie(ABC):
             self._output_length = self._read_output_length()
             
         # Retrieve result from device
-        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self._output_length, sign = True)
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self._output_length)
 
-        #return data_read
-
-        print(str(type(data_read)))
-        print(str(type(data_read[0])))
         assert type(data_read) == list
+        assert type(data_read[0]) == int
 
-        #TODO required for USB
         return self.bytes_to_ints(data_read)
 
     def read_debug_log(self):
@@ -272,50 +268,24 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         to_send.extend(data_ints[data_index:data_index+data_len])
         self._dev.xfer(to_send)
 
-    def _upload_data(self, cmd, length, sign = False):
+    def _upload_data(self, cmd, length):
 
         self._wait_for_device()
 
+        print(str(length))
         to_send = self._construct_packet(cmd, length)
     
         r = self._dev.xfer(to_send)
         
-        if sign:
-            r = [x-256 if x > 127 else x for x in r]
-
+        #r = [x-256 if x > 127 else x for x in r]
         r = r[self._dummy_byte_count:]
-        return r[:length]
+        return r
 
-    def _read_output_length(self):
-        
-        # TODO this is quite inefficient since we we read the whole spec
-        input_length, output_length, timing_length  = self._read_spec()
-        return output_length
-
-    def _read_input_length(self):
-        
-        # TODO this is quite inefficient since we we read the whole spec
-        input_length, output_length, timing_length  = self._read_spec()
-        return input_length
-
-    def write_input_tensor(self, raw_img):
-        
-        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img)
-    
+    # TODO move to super()
     def start_inference(self):
 
         to_send = self._construct_packet(aisrv_cmd.CMD_START_INFER, 0)
         r =  self._dev.xfer(to_send)
-    
-    #def read_output_tensor(self):
-
-       # output_tensor = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
-       # output_tensor = output_tensor[:self.output_length+1]
-       # return output_tensor
-
-    def upload_model(self):
-        # TODO
-        pass
 
     def read_times(self):
         # TODO
