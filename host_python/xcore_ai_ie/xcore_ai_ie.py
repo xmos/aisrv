@@ -139,17 +139,17 @@ class xcore_ai_ie(ABC):
         # Get input tensor length from device
     #    return self._read_int_from_device(aisrv_cmd.CMD_GET_INPUT_TENSOR_LENGTH)
 
-    #def _read_output_length(self):
+    def _read_output_length(self):
         
         # TODO this is quite inefficient since we we read the whole spec
-    #    input_length, output_length, timing_length  = self._read_spec()
-    #    return output_length
+        input_length, output_length, timing_length  = self._read_spec()
+        return output_length
 
-    #def _read_input_length(self):
+    def _read_input_length(self):
         
         # TODO this is quite inefficient since we we read the whole spec
-    #   input_length, output_length, timing_length  = self._read_spec()
-    #   return input_length
+       input_length, output_length, timing_length  = self._read_spec()
+       return input_length
 
     def write_input_tensor(self, raw_img):
         
