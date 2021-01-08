@@ -46,6 +46,18 @@ __attribute__((section(".ExtMem_data")))
 #endif
 unsigned char model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
 
+size_t debug_log_index = 0;
+char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
+
+extern "C" void DebugLog(const char* s) 
+{ 
+    strcpy(&debug_log_buffer[debug_log_index*MAX_DEBUG_LOG_LENGTH], s);
+    printf("%s", &debug_log_buffer[debug_log_index*MAX_DEBUG_LOG_LENGTH]);
+    debug_log_index++; 
+    if(debug_log_index == MAX_DEBUG_LOG_ENTRIES) 
+        debug_log_index = 0;
+}
+
 aisrv_status_t interp_invoke() 
 {
     // Run inference, and report any error
