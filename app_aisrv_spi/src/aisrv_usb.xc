@@ -90,7 +90,7 @@ unsafe
 }
 
 
-void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in)
+void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_data)
 {
 
     USB_SetupPacket_t sp;
@@ -127,6 +127,18 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in)
                         sp, usbBusSpeed);
              }
         }
+        
+        unsigned bmRequestType = (sp.bmRequestType.Direction<<7) | (sp.bmRequestType.Type<<5) | (sp.bmRequestType.Recipient);
+
+        if((bmRequestType == USB_BMREQ_H2D_STANDARD_EP)
+            && (sp.bRequest == USB_CLEAR_FEATURE)
+            && (sp.wLength == 0)
+            /* The only Endpoint feature selector is HALT (bit 0) see figure 9-6 */
+            && (sp.wValue == USB_ENDPOINT_HALT)
+            && ((sp.wIndex & 0x7F) == 1)) // EP 1 IN or OUT
+        {
+            c_data <: (unsigned) 0;
+        }
 
         /* USB bus reset detected, reset EP and get new bus speed */
         if(result == XUD_RES_RST)
@@ -140,7 +152,7 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in)
 unsafe
 {
 // TODO Move to USB file
-void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
+void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
 {
     int32_t data[MAX_PACKET_SIZE_WORDS];
 
@@ -153,11 +165,18 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
 
     int output_size = 0;
     int input_size = 0;
+    int stalled = 0;
 
     while(1)
     {
         unsigned length = 0;
-        
+       
+        if(stalled)
+        {
+            c_ep0 :> unsigned x;
+            stalled = 0;
+        }
+
         /* Get command */
         XUD_GetBuffer(ep_out, (data, uint8_t[]), length);
                 
@@ -204,6 +223,14 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
             aisrv_status_t status;
             status = inuint(c);
             chkct(c, XS1_CT_END);
+
+            if(status != STATUS_OKAY)
+            {
+                printf("Write Error, setting stall\n");
+                stalled = 1;
+                XUD_SetStallByAddr(0x81);
+                XUD_SetStallByAddr(0x01);
+            }
         }
         else
         {
@@ -237,11 +264,11 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c)
                 chkct(c, XS1_CT_END);
                 
                 XUD_SetBuffer(ep_in, (data, uint8_t[]), i);
-
-
             }
             else
             {
+                printf("Read Error, setting stall\n");
+                stalled = 1;
                 XUD_SetStall(ep_in);
                 XUD_SetStall(ep_out);
             }
