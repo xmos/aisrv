@@ -14,7 +14,8 @@
 #include "tensorflow/lite/version.h"
 #include "xcore_device_memory.h"
 
-constexpr int kTensorArenaSize = 286000;
+constexpr int kTensorArenaSize = 300000;
+
 uint8_t kTensorArena[kTensorArenaSize];
 
 // shorthand typedefs
