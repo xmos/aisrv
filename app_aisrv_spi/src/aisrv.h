@@ -47,8 +47,8 @@ typedef enum aisrv_status
 } aisrv_status_t;
 
 #ifdef __XC__
-void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c);
-void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in);
+void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0);
+void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_dat);
 #endif
 
 #endif
