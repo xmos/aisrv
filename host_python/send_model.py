@@ -19,7 +19,7 @@ try:
 except IOError:
     print("Device reported an error")
     debug_string = ie.read_debug_log()
-    print("Error string: " +  str(debug_string))
+    print("Debug log from device: " +  str(debug_string))
 
 
 

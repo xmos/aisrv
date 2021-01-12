@@ -43,7 +43,7 @@ void leds(chanend led) {
 on tile[1]: in port p_cs_s = XS1_PORT_1A;//DAC_DATA
 on tile[1]: in port p_clk_s = XS1_PORT_1B;//LRCLK
 on tile[1]: buffered port:32  p_mosi_s = XS1_PORT_1C; //BCLK
-on tile[1]: buffered port:32 p_miso_s = XS1_PORT_1N;
+on tile[1]: buffered port:32 p_miso_s = XS1_PORT_1P;
 on tile[1]: out port reset1 = XS1_PORT_4A;
 on tile[1]: clock clkblk_s = XS1_CLKBLK_4;
 #endif
@@ -56,6 +56,7 @@ on tile[0]: port p_sda = XS1_PORT_1O;
 int main(void) 
 {
     chan c_led, c_spi_to_buffer, c_spi_to_engine, c_usb_to_engine, c_acquire_to_buffer;
+    chan c_usb_ep0_dat;
     chan c_acquire_to_sensor;
 #if defined(I2C_INTEGRATION)
     i2c_master_if i2c[1];
@@ -111,8 +112,8 @@ int main(void)
           
             par
             {
-                aisrv_usb_data(c_ep_out[1], c_ep_in[1], c_usb_to_engine);
-                aisrv_usb_ep0(c_ep_out[0], c_ep_in[0]);
+                aisrv_usb_data(c_ep_out[1], c_ep_in[1], c_usb_to_engine, c_usb_ep0_dat);
+                aisrv_usb_ep0(c_ep_out[0], c_ep_in[0], c_usb_ep0_dat);
                 XUD_Main(c_ep_out, EP_COUNT_OUT, c_ep_in, EP_COUNT_IN, null, epTypeTableOut, epTypeTableIn, XUD_SPEED_HS, XUD_PWR_BUS);
             
             }

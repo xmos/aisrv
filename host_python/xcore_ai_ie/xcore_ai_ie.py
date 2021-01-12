@@ -38,7 +38,7 @@ class xcore_ai_ie(ABC):
             # Download model to device
             self._download_data(aisrv_cmd.CMD_SET_MODEL, model_bytes)
         except IOError:
-            print("Error from device during model download (likely issue with model)")
+            #print("Error from device during model download (likely issue with model)")
             self._clear_error()
             raise IOError
 
@@ -47,7 +47,7 @@ class xcore_ai_ie(ABC):
             self._input_length, self._output_length, self._timings_length = self._read_spec()
         
         except IOError:
-            print("Error from device during spec upload (likely issue with model)")
+            #print("Error from device during spec upload (likely issue with model)")
             self._clear_error()
             raise IOError
        
@@ -79,6 +79,14 @@ class xcore_ai_ie(ABC):
         
         return self._output_length
 
+    @property
+    def timings_length(self):
+        
+        if self._timings_length == None:
+            self._timings_length = self._read_timings_length()
+        
+        return self._timings_length
+
     @abstractmethod
     def write_input_tensor(self, input_tensor):
         pass
@@ -106,8 +114,9 @@ class xcore_ai_ie(ABC):
         pass
 
     def read_times(self):
-       
-        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self._timings_length)
+      
+        print("timings length: " + str(self._timings_length))
+        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length)
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
@@ -142,14 +151,20 @@ class xcore_ai_ie(ABC):
     def _read_output_length(self):
         
         # TODO this is quite inefficient since we we read the whole spec
-        input_length, output_length, timing_length  = self._read_spec()
+        input_length, output_length, timings_length  = self._read_spec()
         return output_length
 
     def _read_input_length(self):
         
         # TODO this is quite inefficient since we we read the whole spec
-       input_length, output_length, timing_length  = self._read_spec()
+       input_length, output_length, timings_length  = self._read_spec()
        return input_length
+
+    def _read_timings_length(self):
+        
+        # TODO this is quite inefficient since we we read the whole spec
+       input_length, output_length, timings_length  = self._read_spec()
+       return timings_length
 
     def write_input_tensor(self, raw_img):
         
@@ -159,8 +174,8 @@ class xcore_ai_ie(ABC):
     def _read_spec(self):
         
         spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
-     
-        #assert len(spec) == self._spec_length
+
+        assert len(spec) == self._spec_length
 
         # TODO ideally remove magic indexing numbers
         input_length = int.from_bytes(spec[8:12], byteorder = 'little')
@@ -186,11 +201,8 @@ class xcore_ai_ie(ABC):
    
     def read_output_tensor(self):
 
-        if self._output_length == None:
-            self._output_length = self._read_output_length()
-            
         # Retrieve result from device
-        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self._output_length)
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
@@ -199,7 +211,7 @@ class xcore_ai_ie(ABC):
 
     def read_debug_log(self):
 
-        debug_string = self._upload_data(aisrv_cmd.CMD_GET_DEBUG_LOG)
+        debug_string = self._upload_data(aisrv_cmd.CMD_GET_DEBUG_LOG, 300) #TODO rm magic number
 
         r = bytearray(debug_string).decode("ascii")
         return r
@@ -272,13 +284,13 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         self._wait_for_device()
 
-        to_send = self._construct_packet(cmd, length)
+        to_send = self._construct_packet(cmd, length+1)
     
         r = self._dev.xfer(to_send)
-        
+
         #r = [x-256 if x > 127 else x for x in r]
         r = r[self._dummy_byte_count:]
-        return r
+        return r[:length]
 
     # TODO move to super()
     def start_inference(self):
@@ -286,17 +298,13 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         to_send = self._construct_packet(aisrv_cmd.CMD_START_INFER, 0)
         r =  self._dev.xfer(to_send)
 
-    def read_times(self):
-        # TODO
-        pass
-
     def _clear_error(self):
         # TODO
         pass
 
 class xcore_ai_ie_usb(xcore_ai_ie):
 
-    def __init__(self, timeout = 50000):
+    def __init__(self, timeout = 5000):
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None
@@ -304,16 +312,24 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         super().__init__()
 
     def _download_data(self, cmd, data_bytes):
-
-        # TODO rm this extra CMD packet
-        self._out_ep.write(bytes([cmd]))
+    
+        import usb
+        
+        try:
+            # TODO rm this extra CMD packet
+            self._out_ep.write(bytes([cmd]))
        
-        #data_bytes = bytes([cmd]) + data_bytes
+            #data_bytes = bytes([cmd]) + data_bytes
 
-        self._out_ep.write(data_bytes, 1000)
+            self._out_ep.write(data_bytes, 1000)
 
-        if (len(data_bytes) % self._max_block_size) == 0:
-            self._out_ep.write(bytearray([]), 1000)
+            if (len(data_bytes) % self._max_block_size) == 0:
+                self._out_ep.write(bytearray([]), 1000)
+
+        except usb.core.USBError as e:
+            if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
+                #print("USB error, IN/OUT pipe halted")
+                raise IOError()
    
     def _upload_data(self, cmd, length, sign = False):
         
@@ -323,7 +339,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         try:  
             self._out_ep.write(bytes([cmd]), self._timeout)
             buff = usb.util.create_buffer(self._max_block_size)
-           
+        
             while True:
 
                 read_len = self._dev.read(self._in_ep, buff, 10000)
