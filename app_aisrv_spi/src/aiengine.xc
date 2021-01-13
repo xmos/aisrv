@@ -99,7 +99,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             else
                 printf("Model update failed\n");
 
-            outuint(c, haveModel);
+            outuint(c, !haveModel);
             outct(c, XS1_CT_END);
 
             break;

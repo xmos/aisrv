@@ -38,7 +38,7 @@ class xcore_ai_ie(ABC):
             # Download model to device
             self._download_data(aisrv_cmd.CMD_SET_MODEL, model_bytes)
         except IOError:
-            print("Error from device during model download (likely issue with model)")
+            #print("Error from device during model download (likely issue with model)")
             self._clear_error()
             raise IOError
 
@@ -47,7 +47,7 @@ class xcore_ai_ie(ABC):
             self._input_length, self._output_length, self._timings_length = self._read_spec()
         
         except IOError:
-            print("Error from device during spec upload (likely issue with model)")
+            #print("Error from device during spec upload (likely issue with model)")
             self._clear_error()
             raise IOError
        
@@ -210,7 +210,7 @@ class xcore_ai_ie(ABC):
 
     def read_debug_log(self):
 
-        debug_string = self._upload_data(aisrv_cmd.CMD_GET_DEBUG_LOG)
+        debug_string = self._upload_data(aisrv_cmd.CMD_GET_DEBUG_LOG, 300) #TODO rm magic number
 
         r = bytearray(debug_string).decode("ascii")
         return r
@@ -303,7 +303,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
 class xcore_ai_ie_usb(xcore_ai_ie):
 
-    def __init__(self, timeout = 50000):
+    def __init__(self, timeout = 5000):
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None
@@ -311,16 +311,24 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         super().__init__()
 
     def _download_data(self, cmd, data_bytes):
-
-        # TODO rm this extra CMD packet
-        self._out_ep.write(bytes([cmd]))
+    
+        import usb
+        
+        try:
+            # TODO rm this extra CMD packet
+            self._out_ep.write(bytes([cmd]))
        
-        #data_bytes = bytes([cmd]) + data_bytes
+            #data_bytes = bytes([cmd]) + data_bytes
 
-        self._out_ep.write(data_bytes, 1000)
+            self._out_ep.write(data_bytes, 1000)
 
-        if (len(data_bytes) % self._max_block_size) == 0:
-            self._out_ep.write(bytearray([]), 1000)
+            if (len(data_bytes) % self._max_block_size) == 0:
+                self._out_ep.write(bytearray([]), 1000)
+
+        except usb.core.USBError as e:
+            if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
+                #print("USB error, IN/OUT pipe halted")
+                raise IOError()
    
     def _upload_data(self, cmd, length, sign = False):
         
@@ -330,7 +338,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         try:  
             self._out_ep.write(bytes([cmd]), self._timeout)
             buff = usb.util.create_buffer(self._max_block_size)
-           
+        
             while True:
 
                 read_len = self._dev.read(self._in_ep, buff, 10000)

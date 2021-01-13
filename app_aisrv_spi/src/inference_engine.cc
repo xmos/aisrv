@@ -14,7 +14,8 @@
 #include "tensorflow/lite/version.h"
 #include "xcore_device_memory.h"
 
-constexpr int kTensorArenaSize = 286000;
+constexpr int kTensorArenaSize = 300000;
+
 uint8_t kTensorArena[kTensorArenaSize];
 
 // shorthand typedefs
@@ -106,6 +107,7 @@ int interp_initialize(inference_engine *ie)
     // This pulls in all the operation implementations we need.
     resolver->AddSoftmax();
     resolver->AddPad();
+    resolver->AddAdd();
     resolver->AddMean();
     resolver->AddConcatenation();
     resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
@@ -114,6 +116,8 @@ int interp_initialize(inference_engine *ie)
                      tflite::ops::micro::xcore::Register_MaxPool2D());
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Shallow());
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Deep_OpCode,
+                     tflite::ops::micro::xcore::Register_Conv2D_Deep());
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
@@ -122,9 +126,6 @@ int interp_initialize(inference_engine *ie)
                      tflite::ops::micro::xcore::Register_AvgPool2D_Global());
     resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
                      tflite::ops::micro::xcore::Register_FullyConnected_8());
-
-    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_Shallow());
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
