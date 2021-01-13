@@ -115,8 +115,7 @@ class xcore_ai_ie(ABC):
 
     def read_times(self):
       
-        print("timings length: " + str(self._timings_length))
-        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length)
+        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length*4)
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
