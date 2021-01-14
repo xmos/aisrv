@@ -137,7 +137,7 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_data)
             && (sp.wValue == USB_ENDPOINT_HALT)
             && ((sp.wIndex & 0x7F) == 1)) // EP 1 IN or OUT
         {
-            c_data <: (unsigned) 0;
+            c_data <: (unsigned) sp.wIndex;
         }
 
         /* USB bus reset detected, reset EP and get new bus speed */
@@ -165,16 +165,24 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
 
     int output_size = 0;
     int input_size = 0;
-    int stalled = 0;
+    int stalled_in = 0;
+    int stalled_out = 0;
 
     while(1)
     {
         unsigned length = 0;
        
-        if(stalled)
+        while(stalled_in || stalled_out)
         {
-            c_ep0 :> unsigned x;
-            stalled = 0;
+            unsigned x;
+            
+            /* Wait for clear on both Endpoints */
+            c_ep0 :> x;
+            
+            if(x == 0x01)
+                stalled_out = 0;
+            else if(x == 0x81)
+                stalled_in = 0;
         }
 
         /* Get command */
@@ -190,6 +198,28 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
 
         /* Pass on command */
         c <: cmd;
+
+        #if 0
+        printf("CMD: ");
+        switch(cmd)
+        {
+            case CMD_SET_MODEL:
+                printf("SET_MODEL\n");
+                break;
+            
+            case CMD_GET_SPEC:
+                printf("GET_SPEC\n");
+                break;
+
+            case CMD_GET_DEBUG_LOG:
+                printf("GET_DEBUG_LOG\n");
+                break;
+
+            default:
+                printf("%x\n", cmd);
+                break;
+        }
+        #endif
        
         /* Check cmd write bit */
         if(cmd & 0x80)
@@ -227,9 +257,10 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
             if(status != STATUS_OKAY)
             {
                 printf("Write Error, setting stall\n");
-                stalled = 1;
-                XUD_SetStallByAddr(0x81);
-                XUD_SetStallByAddr(0x01);
+                stalled_in = 1;
+                stalled_out = 1;
+                XUD_SetStall(ep_in);
+                XUD_SetStall(ep_out);
             }
         }
         else
@@ -268,7 +299,8 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
             else
             {
                 printf("Read Error, setting stall\n");
-                stalled = 1;
+                stalled_in = 1;
+                stalled_out = 1;
                 XUD_SetStall(ep_in);
                 XUD_SetStall(ep_out);
             }
