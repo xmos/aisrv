@@ -9,8 +9,28 @@ from xcore_ai_ie import aisrv_cmd
 
 XCORE_IE_MAX_BLOCK_SIZE = 512 
 
-class IOError(Exception):
+class AISRVError(Exception):
+    """Error from device"""
+    pass
+
+class IOError(AISRVError):
     """IO Error from device"""
+    pass
+
+class NoModelError(AISRVError):
+    """No model error from device"""
+    pass
+
+class ModelError(AISRVError):
+    """Model error from device"""
+    pass
+
+class InferenceError(AISRVError):
+    """Inference Error from device"""
+    pass
+
+class CmdError(AISRVError):
+    """Cmd Error from device"""
     pass
 
 class xcore_ai_ie(ABC):
@@ -174,6 +194,8 @@ class xcore_ai_ie(ABC):
         
         spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
 
+        print(str(spec))
+
         assert len(spec) == self._spec_length
 
         # TODO ideally remove magic indexing numbers
@@ -244,14 +266,28 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
         to_send = [aisrv_cmd.CMD_GET_STATUS] + self._dummy_bytes + (4 * [0])
         r =  self._dev.xfer(to_send)
-        return r
+
+        return r[self.dummy_byte_count] # TODO more than 1 status byte?
 
     def _wait_for_device(self):
         
         while True:
             status = self._read_status()
-            if (status[self._dummy_byte_count] & 0xf) == 0:
+            print(str(status))
+            if status != 1: #TODO STATUS_BUSY
+
+                if status == 0x04: # TODO STATUS_ERROR_NO_MODEL
+                    raise NoModel()
+                elif status == 0x08: # TODO STATUS_ERROR_MODEL_ERR
+                    raise ModelError()
+                elif status == 0x10: # TODO STATUS_ERROR_INFER_ERR
+                    raise InferenceError()
+                elif status == 0x20: # TODO STATUS_BAD_CMD
+                    raise CmdError()
+
                 break;
+
+        return status
 
     def _download_data(self, cmd, data_bytes):
         
@@ -263,7 +299,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         
         while data_len >= self._max_block_size:
             
-            self._wait_for_device()
+            status = self._wait_for_device()
 
             to_send = [cmd]
             to_send.extend(data_ints[data_index:data_index+self._max_block_size])
@@ -274,14 +310,14 @@ class xcore_ai_ie_spi(xcore_ai_ie):
             self._dev.xfer(to_send)
         
         # Note, send a 0 length if size % XCORE_IE_MAX_BLOCK_SIZE == 0
-        self._wait_for_device()
+        status = self._wait_for_device()
         to_send = [cmd]
         to_send.extend(data_ints[data_index:data_index+data_len])
         self._dev.xfer(to_send)
 
     def _upload_data(self, cmd, length):
 
-        self._wait_for_device()
+        status = self._wait_for_device()
 
         to_send = self._construct_packet(cmd, length+1)
     
