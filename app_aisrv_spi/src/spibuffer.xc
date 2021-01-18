@@ -145,23 +145,34 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
             }
             chkct(to_engine, XS1_CT_END);
            
-            #if 0 
-            // TODO
+            /* Get timings array - TODO use receive_array func */
             to_engine <: CMD_GET_TIMINGS;
-            master {
-                to_engine <: mem->timings_length;
-                for(int i = 0; i < mem->timings_length; i++) {
-                    unsafe {
-                    to_engine :> mem->memory[mem->timings_index + i];
-                    }
-                }
+            to_engine :> status;
+           
+            i = 0;
+
+            while(!testct(to_engine))
+            {
+                mem->memory[mem->timings_index + i] = inuint(to_engine);
+                i++;
             }
-            #endif 
+            chkct(to_engine, XS1_CT_END);
+            i *= 4;
+
+             while(!testct(to_engine))
+            {
+                (mem->memory, uint8_t[])[mem->timings_index + i] = inuchar(to_engine);
+                i++;
+            }
+            chkct(to_engine, XS1_CT_END);
+            
             mem->tensor_is_sensor_output = 0;
             break;
+
         case CMD_SET_SERVER:
             // DFU
             break;
+        
         case CMD_START_ACQUIRE:
             set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_OKAY | STATUS_SENSING | STATUS_BUSY);
             to_sensor <: cmd;
