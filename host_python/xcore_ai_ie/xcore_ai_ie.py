@@ -29,8 +29,8 @@ class InferenceError(AISRVError):
     """Inference Error from device"""
     pass
 
-class CmdError(AISRVError):
-    """Cmd Error from device"""
+class CommandError(AISRVError):
+    """Command Error from device"""
     pass
 
 class xcore_ai_ie(ABC):
@@ -333,7 +333,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
                 elif status == 0x10: # TODO STATUS_ERROR_INFER_ERR
                     raise InferenceError()
                 elif status == 0x20: # TODO STATUS_BAD_CMD
-                    raise CmdError()
+                    raise CommandError()
 
                 break;
 
