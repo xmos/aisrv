@@ -31,6 +31,36 @@ static inline void set_mem_status(uint32_t status[1], uint32_t byte, uint32_t va
 }
 //         = STATUS_NORMAL;
 
+
+void get_debug_log(chanend to_engine, struct memory * unsafe mem)
+{
+    unsafe
+    {
+    aisrv_status_t status;
+   
+    to_engine <: CMD_GET_DEBUG_LOG;
+    to_engine :> status;
+
+    size_t i = 0;
+
+    while(!testct(to_engine))
+    {
+        mem->memory[mem->debug_log_index + i] = inuint(to_engine);
+        i++;    
+    }
+
+    chkct(to_engine, XS1_CT_END);
+    i*=4;
+    
+    while(!testct(to_engine))
+    {
+        mem->memory[mem->debug_log_index + i] = inuchar(to_engine);
+        i++;
+    }
+    chkct(to_engine, XS1_CT_END);
+}
+}
+
 void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct memory * unsafe mem) 
 {
     unsigned cmd_in_flight = 0;
@@ -40,7 +70,6 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
     unsafe
     {
     set_mem_status(mem->status, STATUS_BYTE_STATUS, status);
-   
     
     while(1) 
     {
@@ -87,6 +116,8 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                 {
                     status = (mem->status, uint8_t[])[STATUS_BYTE_STATUS]; 
                     set_mem_status(mem->status, STATUS_BYTE_STATUS, status | STATUS_ERROR_MODEL_ERR);
+
+                    get_debug_log(to_engine, mem);
                 }
             }
 
