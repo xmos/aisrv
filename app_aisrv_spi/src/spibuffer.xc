@@ -34,20 +34,31 @@ static inline void set_mem_status(uint32_t status[1], uint32_t byte, uint32_t va
 void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct memory * unsafe mem) 
 {
     unsigned cmd_in_flight = 0;
-   
-    unsafe {
     
-    while(1) {
+    aisrv_status_t status = STATUS_OKAY;
+    
+    unsafe
+    {
+    set_mem_status(mem->status, STATUS_BYTE_STATUS, status);
+   
+    
+    while(1) 
+    {
         int cmd;
         int N;
-
-        set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL);
+        
+        status = (mem->status, uint8_t[])[STATUS_BYTE_STATUS];
+        set_mem_status(mem->status, STATUS_BYTE_STATUS, status & ~STATUS_BUSY);
+        
         from_spi :> cmd;
-        set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL | STATUS_BUSY);
         
-        switch(cmd) {
+        status = (mem->status, uint8_t[])[STATUS_BYTE_STATUS];
+        set_mem_status(mem->status, STATUS_BYTE_STATUS, status | STATUS_BUSY);
+
+        switch(cmd) 
+        {
         case CMD_SET_MODEL:
-        
+       
             from_spi :> N;
             
             if(!cmd_in_flight)
@@ -65,12 +76,18 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                 cmd_in_flight = 0;
                 outct(to_engine, XS1_CT_END); outct(to_engine,XS1_CT_END);
               
-                /* TODO check or pass on status */ 
-                aisrv_status_t status;
                 status = inuint(to_engine);
                 chkct(to_engine, XS1_CT_END);
-               
-                read_spec(to_engine, mem);
+
+                if(status == STATUS_OKAY)
+                {
+                    read_spec(to_engine, mem);
+                }
+                else
+                {
+                    status = (mem->status, uint8_t[])[STATUS_BYTE_STATUS]; 
+                    set_mem_status(mem->status, STATUS_BYTE_STATUS, status | STATUS_ERROR_MODEL_ERR);
+                }
             }
 
             break;
@@ -112,6 +129,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
             to_engine <: CMD_GET_OUTPUT_TENSOR;
             to_engine :> status;
 
+            /* Get output tensor - TODO use receive_array func */
             size_t i = 0;
             while(!testct(to_engine))
             {
@@ -145,10 +163,10 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
             // DFU
             break;
         case CMD_START_ACQUIRE:
-            set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL | STATUS_SENSING | STATUS_BUSY);
+            set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_OKAY | STATUS_SENSING | STATUS_BUSY);
             to_sensor <: cmd;
             to_sensor :> int _;
-            set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_NORMAL | STATUS_BUSY);
+            set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_OKAY | STATUS_BUSY);
             // watch out: <= not < to force a zero block at the end
             for(int block = 0; block <= mem->input_tensor_length; block += MAX_PACKET_SIZE_WORDS) {
                 to_engine <: CMD_SET_INPUT_TENSOR;
