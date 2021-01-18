@@ -194,8 +194,6 @@ class xcore_ai_ie(ABC):
         
         spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
 
-        print(str(spec))
-
         assert len(spec) == self._spec_length
 
         # TODO ideally remove magic indexing numbers
@@ -326,7 +324,6 @@ class xcore_ai_ie_spi(xcore_ai_ie):
             
             status = self._read_status()
            
-            print(str(status))
             if status != 1: #TODO STATUS_BUSY
 
                 if status == 0x04: # TODO STATUS_ERROR_NO_MODEL
@@ -339,8 +336,6 @@ class xcore_ai_ie_spi(xcore_ai_ie):
                     raise CmdError()
 
                 break;
-
-
 
 
 class xcore_ai_ie_usb(xcore_ai_ie):
