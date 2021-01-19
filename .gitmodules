@@ -4,3 +4,9 @@
 [submodule "submodules/ai_tools"]
 	path = submodules/ai_tools
 	url = git@github.com:xmos/ai_tools.git
+[submodule "submodules/lib_i2c"]
+	path = submodules/lib_i2c
+	url = git@github.com:xmos/lib_i2c.git
+[submodule "submodules/lib_xassert"]
+	path = submodules/lib_xassert
+	url = git@github.com:xmos/lib_xassert.git

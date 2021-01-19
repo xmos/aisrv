@@ -1,7 +1,5 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-
-
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +13,8 @@
 #include "aiengine.h"
 #include "aisrv.h"
 #include "inference_engine.h"
+
+#include "aisrv_mipi.h"
 
 #ifdef ENABLE_USB
 #include "xud.h"
@@ -48,10 +48,11 @@ on tile[1]: out port reset1 = XS1_PORT_4A;
 on tile[1]: clock clkblk_s = XS1_CLKBLK_4;
 #endif
 
-#if defined(I2C_REQUIRED)
+#if defined(I2C_INTEGRATION)
 on tile[0]: port p_scl = XS1_PORT_1N;
 on tile[0]: port p_sda = XS1_PORT_1O;
 #endif
+
 
 int main(void) 
 {
@@ -68,13 +69,17 @@ int main(void)
 
     par 
     {
+
+        on tile[0]: aiengine(c_spi_to_engine, c_usb_to_engine);
+
 #if defined(I2C_INTEGRATION)
         on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
 #endif
 #if defined(MIPI_INTEGRATION)
         on tile[1]: mipi_main(i2c[0], c_acquire_to_sensor);
 #endif
-        on tile[0]: aiengine(c_spi_to_engine, c_usb_to_engine);
+
+
 #if defined(PSOC_INTEGRATION)
         on tile[0]: {
             leds(c_led);
@@ -121,6 +126,7 @@ int main(void)
             }
         }
 #endif
+
     }
     return 0;
 }

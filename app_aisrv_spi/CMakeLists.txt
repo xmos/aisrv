@@ -27,8 +27,12 @@ enable_language(CXX C ASM)
 set(AI_TOOLS_DIR "$ENV{XMOS_AISRV_PATH}/submodules/ai_tools")
 
 set(LIB_XUD_DIR "$ENV{XMOS_LIB_XUD_PATH}")
+set(LIB_I2C_DIR "$ENV{XMOS_LIB_I2C_PATH}")
+set(LIB_XASSERT_DIR "$ENV{XMOS_LIB_XASSERT_PATH}")
 
 set(LIB_XUD_SRC_DIR "${LIB_XUD_DIR}/lib_xud/src/")
+set(LIB_I2C_SRC_DIR "${LIB_I2C_DIR}/lib_i2c/src/")
+set(LIB_XASSERT_SRC_DIR "${LIB_XASSERT_DIR}/lib_xassert/src/")
 
 #**********************
 # Build flags
@@ -57,6 +61,9 @@ set(BUILD_FLAGS
   "-O2"
   "-DENABLE_USB"
   "-DUSB_TILE=tile[1]"
+  "-DMIPI_INTEGRATION"
+  "-DI2C_INTEGRATION"
+
 )
 
 target_compile_options(aisrv_usb_spi PRIVATE ${BUILD_FLAGS} -DPSOC_INTEGRATION)
@@ -104,6 +111,24 @@ set_source_files_properties("${LIB_XUD_SRC_DIR}/user/client/XUD_EpFunctions.xc" 
 set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_device.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${LIB_XUD_SRC_DIR}/user/control/xud_std_requests.xc" PROPERTIES LANGUAGE C)
 
+#***
+#lib_i2c sources
+#***
+set(LIB_I2C_SOURCES
+    "${LIB_I2C_SRC_DIR}/i2c_master.xc"
+)
+
+set_source_files_properties("${LIB_I2C_SRC_DIR}/i2c_master.xc" PROPERTIES LANGUAGE C)
+
+#***
+#lib_xassert sources
+#***
+set(LIB_XASSERT_SOURCES
+    "${LIB_XASSERT_SRC_DIR}/xassert.xc"
+)
+
+set_source_files_properties("${LIB_XASSERT_SRC_DIR}/xassert.xc" PROPERTIES LANGUAGE C)
+
 
 #**********************
 # LIB sources
@@ -127,6 +152,14 @@ set(LIB_XUD_INCLUDE_DIRS
     "${LIB_XUD_SRC_DIR}/user"
 )
 
+set(LIB_I2C_INCLUDE_DIRS
+    "${LIB_I2C_DIR}/lib_i2c/api"
+)
+
+set(LIB_XASSERT_INCLUDE_DIRS
+    "${LIB_XASSERT_DIR}/lib_xassert/api"
+)
+
 
 #**********************
 # APP sources
@@ -141,6 +174,7 @@ set(APP_SOURCES
   "${PROJECT_SOURCE_DIR}/src/spibuffer.xc"
   "${PROJECT_SOURCE_DIR}/src/inference_engine.cc"
   "${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc"
+  "${PROJECT_SOURCE_DIR}/src/aisrv_mipi.xc"
 )
 
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
@@ -149,6 +183,7 @@ set_source_files_properties("${PROJECT_SOURCE_DIR}/src/spi.xc" PROPERTIES LANGUA
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aiengine.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/acquire.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc" PROPERTIES LANGUAGE C)
+set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_mipi.xc" PROPERTIES LANGUAGE C)
 
 
 #**********************
@@ -157,23 +192,31 @@ set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc" PROPERTIES 
 target_sources(aisrv_usb_spi
   PRIVATE ${APP_SOURCES}
   PRIVATE ${LIB_XUD_SOURCES}
+  PRIVATE ${LIB_I2C_SOURCES}
+  PRIVATE ${LIB_XASSERT_SOURCES}
 )
 
 target_sources(aisrv_usb
   PRIVATE ${APP_SOURCES}
   PRIVATE ${LIB_XUD_SOURCES}
+  PRIVATE ${LIB_I2C_SOURCES}
+  PRIVATE ${LIB_XASSERT_SOURCES}
 )
 
 target_include_directories(aisrv_usb_spi
   PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
   PRIVATE ${LIB_XUD_INCLUDE_DIRS}
+  PRIVATE ${LIB_I2C_INCLUDE_DIRS}
+  PRIVATE ${LIB_XASSERT_INCLUDE_DIRS}
 )
 
 target_include_directories(aisrv_usb
   PRIVATE ${INFERENCE_ENGINE_INCLUDE_DIRS}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
   PRIVATE ${LIB_XUD_INCLUDE_DIRS}
+  PRIVATE ${LIB_I2C_INCLUDE_DIRS}
+  PRIVATE ${LIB_XASSERT_INCLUDE_DIRS}
 )
 
 #**********************
