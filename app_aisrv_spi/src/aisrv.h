@@ -19,13 +19,8 @@ typedef enum aisrv_cmd
     #undef int
 } aisrv_cmd_t;
     
-#define STATUS_BYTE_STATUS        0
-#define STATUS_BUSY            0x01
-#define STATUS_SENSING         0x02
-#define STATUS_FLASHING        0x04
-#define STATUS_NORMAL          0x80
-#define STATUS_BYTE_ERROR         1
-#define STATUS_ERROR           0x01
+#define STATUS_BYTE_STATUS        (0)
+//#define STATUS_BYTE_ERROR         (1)
 
 typedef enum aisrv_spec {
     SPEC_WORD_0                   = 0x00,
@@ -40,10 +35,13 @@ typedef enum aisrv_spec {
 
 typedef enum aisrv_status
 {
-    STATUS_OKAY = 0,
-    STATUS_ERROR_NO_MODEL,
-    STATUS_ERROR_INFER,
-    STATUS_ERROR_BADCMD,
+    STATUS_OKAY                 = 0x00,
+    STATUS_BUSY                 = 0x01,
+    STATUS_SENSING              = 0x02,
+    STATUS_ERROR_NO_MODEL       = 0x04,
+    STATUS_ERROR_MODEL_ERR      = 0x08,
+    STATUS_ERROR_INFER_ERR      = 0x10,
+    STATUS_ERROR_BAD_CMD        = 0x20
 } aisrv_status_t;
 
 #ifdef __XC__

@@ -67,7 +67,7 @@ aisrv_status_t interp_invoke()
     if (invoke_status != kTfLiteOk) 
     {
         TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
-        return STATUS_ERROR_INFER;
+        return STATUS_ERROR_INFER_ERR;
     }
 
     return STATUS_OKAY;
@@ -77,9 +77,24 @@ void inference_engine_initialize(inference_engine *ie)
 {
     ie->model_data = model_data;    
 }
+int count = 0;
 
 int interp_initialize(inference_engine *ie) 
 {
+
+#if 0
+    if (!count)
+    { 
+        count++;
+        printf("returning error\n");
+        return 1;
+    }
+    else
+    {
+        printf("proceeding\n");
+    }
+#endif
+
     // Set up logging
     static tflite::MicroErrorReporter error_reporter;
     reporter = &error_reporter;
@@ -107,31 +122,26 @@ int interp_initialize(inference_engine *ie)
     // This pulls in all the operation implementations we need.
     resolver->AddSoftmax();
     resolver->AddPad();
-    resolver->AddAdd();
     resolver->AddMean();
     resolver->AddConcatenation();
     resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
                      tflite::ops::micro::xcore::Register_Add_8());
+    
     resolver->AddCustom(tflite::ops::micro::xcore::MaxPool2D_OpCode,
                      tflite::ops::micro::xcore::Register_MaxPool2D());
+    
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Shallow());
+    
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Deep_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Deep());
+    
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
-    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_1x1());
+    
     resolver->AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
                      tflite::ops::micro::xcore::Register_AvgPool2D_Global());
-    resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
-                     tflite::ops::micro::xcore::Register_FullyConnected_8());
-    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
-    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_1x1());
-    resolver->AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
-                     tflite::ops::micro::xcore::Register_AvgPool2D_Global());
+    
     resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
                      tflite::ops::micro::xcore::Register_FullyConnected_8());
 

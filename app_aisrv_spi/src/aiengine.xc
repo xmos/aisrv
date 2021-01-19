@@ -95,11 +95,16 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             haveModel = !interp_initialize(&ie);
 
             if(haveModel)
+            {
+                outuint(c, STATUS_OKAY);
                 printf("Model written sucessfully\n");
+            }
             else
+            {
+                outuint(c, STATUS_ERROR_MODEL_ERR);
                 printf("Model update failed\n");
+            }
 
-            outuint(c, !haveModel);
             outct(c, XS1_CT_END);
 
             break;
@@ -200,7 +205,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             break; 
 
         default:
-            c <: (unsigned) STATUS_ERROR_BADCMD;
+            c <: (unsigned) STATUS_ERROR_BAD_CMD;
             printf("Unknown command (aiengine): %d\n", cmd);
             break;
     }

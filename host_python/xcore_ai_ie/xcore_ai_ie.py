@@ -9,8 +9,28 @@ from xcore_ai_ie import aisrv_cmd
 
 XCORE_IE_MAX_BLOCK_SIZE = 512 
 
-class IOError(Exception):
+class AISRVError(Exception):
+    """Error from device"""
+    pass
+
+class IOError(AISRVError):
     """IO Error from device"""
+    pass
+
+class NoModelError(AISRVError):
+    """No model error from device"""
+    pass
+
+class ModelError(AISRVError):
+    """Model error from device"""
+    pass
+
+class InferenceError(AISRVError):
+    """Inference Error from device"""
+    pass
+
+class CommandError(AISRVError):
+    """Command Error from device"""
     pass
 
 class xcore_ai_ie(ABC):
@@ -115,8 +135,7 @@ class xcore_ai_ie(ABC):
 
     def read_times(self):
       
-        print("timings length: " + str(self._timings_length))
-        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length)
+        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length*4)
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
@@ -228,32 +247,6 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         self._dummy_byte_count = len(self._dummy_bytes)
         super().__init__()
 
-    def _construct_packet(self, cmd, length):
-
-        def round_to_word(x):
-            return 4 * round(x/4)
-
-        return [cmd] + self._dummy_bytes + (round_to_word(length) * [0])
-
-    def connect(self):
-        import spidev
-        self._dev = spidev.SpiDev()
-        self._dev.open(self._bus, self._device)
-        self._dev.max_speed_hz = self._speed
-
-    def _read_status(self):
-
-        to_send = [aisrv_cmd.CMD_GET_STATUS] + self._dummy_bytes + (4 * [0])
-        r =  self._dev.xfer(to_send)
-        return r
-
-    def _wait_for_device(self):
-        
-        while True:
-            status = self._read_status()
-            if (status[self._dummy_byte_count] & 0xf) == 0:
-                break;
-
     def _download_data(self, cmd, data_bytes):
         
         data_len = len(data_bytes)
@@ -275,7 +268,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
             self._dev.xfer(to_send)
         
         # Note, send a 0 length if size % XCORE_IE_MAX_BLOCK_SIZE == 0
-        self._wait_for_device()
+        status = self._wait_for_device()
         to_send = [cmd]
         to_send.extend(data_ints[data_index:data_index+data_len])
         self._dev.xfer(to_send)
@@ -291,6 +284,17 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         #r = [x-256 if x > 127 else x for x in r]
         r = r[self._dummy_byte_count:]
         return r[:length]
+  
+    def _clear_error(self):
+        """Clear error bits in status register"""
+        # Error flags are cleared by GET_STATUS
+        pass       
+
+    def connect(self):
+        import spidev
+        self._dev = spidev.SpiDev()
+        self._dev.open(self._bus, self._device)
+        self._dev.max_speed_hz = self._speed
 
     # TODO move to super()
     def start_inference(self):
@@ -298,9 +302,41 @@ class xcore_ai_ie_spi(xcore_ai_ie):
         to_send = self._construct_packet(aisrv_cmd.CMD_START_INFER, 0)
         r =  self._dev.xfer(to_send)
 
-    def _clear_error(self):
-        # TODO
-        pass
+    def _construct_packet(self, cmd, length):
+
+        def round_to_word(x):
+            return 4 * round(x/4)
+
+        return [cmd] + self._dummy_bytes + (round_to_word(length) * [0])
+
+   
+    def _read_status(self):
+
+        to_send = [aisrv_cmd.CMD_GET_STATUS] + self._dummy_bytes + (4 * [0])
+        r =  self._dev.xfer(to_send)
+
+        return r[self._dummy_byte_count] # TODO more than 1 status byte?
+
+    def _wait_for_device(self):
+        """Wait for device to report not busy. Raise exception on any error Status"""
+        
+        while True:
+            
+            status = self._read_status()
+           
+            if status != 1: #TODO STATUS_BUSY
+
+                if status == 0x04: # TODO STATUS_ERROR_NO_MODEL
+                    raise NoModel()
+                elif status == 0x08: # TODO STATUS_ERROR_MODEL_ERR
+                    raise ModelError()
+                elif status == 0x10: # TODO STATUS_ERROR_INFER_ERR
+                    raise InferenceError()
+                elif status == 0x20: # TODO STATUS_BAD_CMD
+                    raise CommandError()
+
+                break;
+
 
 class xcore_ai_ie_usb(xcore_ai_ie):
 

@@ -88,9 +88,11 @@ int main(void)
                 mem->input_tensor_length = 0;
                 mem->output_tensor_index = 0;
                 mem->output_tensor_length = 0;
-                mem->timings_index = 10;
-                mem->timings_length = 31;
+                mem->timings_index = 10;  // TODO FIXME this hardcored value needs to relate to model 
+                mem->timings_length = 31; // TODO FIXME as above
                 mem->model_index = 0;
+                mem->debug_log_index = 134; // TODO FIXME
+                mem->debug_log_length = (MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
                 mem->ai_server_id[0] = INFERENCE_ENGINE_ID;
                 reset1 <: 0;
                 par {
