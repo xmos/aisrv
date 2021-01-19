@@ -100,7 +100,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
             data_words_out(isnull(p_miso) ? p_data : p_miso,
                            cycle + DUMMY_CLOCKS,
                            mem->status, 0, 1);
-            (mem->status, uint8_t[])[STATUS_BYTE_ERROR] = 0;
+            (mem->status, uint8_t[])[STATUS_BYTE_STATUS] &= 0x3; // Clear any error flags TODO magic number
             break;
         case CMD_GET_ID:
             data_words_out(isnull(p_miso) ? p_data : p_miso,
@@ -148,8 +148,13 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
         case CMD_HELLO*2:
         case CMD_HELLO*2+1:
             break;
+        case CMD_GET_DEBUG_LOG:
+            data_words_out(isnull(p_miso) ? p_data : p_miso,
+                           cycle + DUMMY_CLOCKS,
+                           mem->memory, mem->debug_log_index, mem->debug_log_length);
+            break;
         default:
-            (mem->status, uint8_t[])[STATUS_BYTE_ERROR] = STATUS_ERROR;
+            (mem->status, uint8_t[])[STATUS_BYTE_STATUS] |= STATUS_ERROR_BAD_CMD;
             printf("ERR %02x last proper comand %02x [%d]\n", cmd, lastcmd, mem->output_tensor_length);
             break;
         }
