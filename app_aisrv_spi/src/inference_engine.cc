@@ -81,20 +81,6 @@ int count = 0;
 
 int interp_initialize(inference_engine *ie) 
 {
-
-#if 0
-    if (!count)
-    { 
-        count++;
-        printf("returning error\n");
-        return 1;
-    }
-    else
-    {
-        printf("proceeding\n");
-    }
-#endif
-
     // Set up logging
     static tflite::MicroErrorReporter error_reporter;
     reporter = &error_reporter;
