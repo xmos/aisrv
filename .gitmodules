@@ -10,3 +10,6 @@
 [submodule "submodules/lib_xassert"]
 	path = submodules/lib_xassert
 	url = git@github.com:xmos/lib_xassert.git
+[submodule "submodules/lib_mipi"]
+	path = submodules/lib_mipi
+	url = git@github.com:xmos/lib_mipi.git
