@@ -8,7 +8,7 @@
 unsafe
 {
 
-static inline void send_array(chanend c, uint32_t * unsafe array, unsigned size)
+void send_array(chanend c, uint32_t * unsafe array, unsigned size)
 {
     size_t i;
 
@@ -54,12 +54,13 @@ static inline size_t receive_array_(chanend c, unsigned * unsafe array, unsigned
     return i;
 }
 static inference_engine_t ie;
-extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
-extern size_t debug_log_length;
+//extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
+//extern size_t debug_log_length;
+
+int8_t sensor_tensor[RAW_IMAGE_WIDTH*RAW_IMAGE_HEIGHT]; // TODO needs to be 3x
 
 
-
-void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
+void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_acquire)
 {
     unsigned data[MAX_PACKET_SIZE_WORDS]; 
 
@@ -76,7 +77,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             spec[SPEC_TIMINGS_LENGTH] = ie.output_times_size;
 
             /* TODO bad status if no model */
-            c <: (unsigned) STATUS_OKAY;
+            c <: (unsigned) AISRV_STATUS_OKAY;
             send_array(c, spec, SPEC_MODEL_TOTAL*sizeof(uint32_t));
             break;
 
@@ -96,12 +97,12 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
 
             if(haveModel)
             {
-                outuint(c, STATUS_OKAY);
+                outuint(c, AISRV_STATUS_OKAY);
                 printf("Model written sucessfully\n");
             }
             else
             {
-                outuint(c, STATUS_ERROR_MODEL_ERR);
+                outuint(c, AISRV_STATUS_ERROR_MODEL_ERR);
                 printf("Model update failed\n");
             }
 
@@ -114,7 +115,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
            
             printf("Sending model length: %d\n", modelSize); 
             /* TODO bad status if no model */
-            c <: (unsigned) STATUS_OKAY;
+            c <: (unsigned) AISRV_STATUS_OKAY;
             send_array(c, ie.model_data, modelSize);
             break;
 
@@ -125,19 +126,19 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
         
             if(haveModel)
             {
-                outuint(c, STATUS_OKAY);
+                outuint(c, AISRV_STATUS_OKAY);
                 outct(c, XS1_CT_END);
             }
             else
             {
-                outuint(c, STATUS_ERROR_NO_MODEL);
+                outuint(c, AISRV_STATUS_ERROR_NO_MODEL);
                 outct(c, XS1_CT_END);
             }
             break;
 
         case CMD_START_INFER:
 
-            aisrv_status_t status = STATUS_OKAY;
+            aisrv_status_t status = AISRV_STATUS_OKAY;
 
             /* Note currently receive extra 0 length */
             /* TODO remove the need for this */
@@ -151,7 +152,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             }
             else
             {
-                status = STATUS_ERROR_NO_MODEL;
+                status = AISRV_STATUS_ERROR_NO_MODEL;
             }
 
             outuint(c, status);
@@ -163,12 +164,12 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             // TODO use a send array function 
             if(haveModel)
             {
-                c <: (unsigned) STATUS_OKAY;
+                c <: (unsigned) AISRV_STATUS_OKAY;
                 send_array(c, &ie.output_size, sizeof(ie.output_size));
             }
             else
             {
-                c <: STATUS_ERROR_NO_MODEL;
+                c <: AISRV_STATUS_ERROR_NO_MODEL;
             }
 
             break;
@@ -178,40 +179,69 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel)
             // TODO use a send array function 
             if(haveModel)
             {
-                c <: (unsigned) STATUS_OKAY;
+                c <: (unsigned) AISRV_STATUS_OKAY;
                 send_array(c, &ie.input_size, sizeof(ie.input_size));
             }
             else
             {
-                c <: STATUS_ERROR_NO_MODEL;
+                c <: AISRV_STATUS_ERROR_NO_MODEL;
             }
 
             break;
 
         case CMD_GET_OUTPUT_TENSOR:
-            c <: (unsigned) STATUS_OKAY;
+            c <: (unsigned) AISRV_STATUS_OKAY;
             send_array(c, ie.output_buffer, ie.output_size);
+            break;
+        
+        case CMD_GET_INPUT_TENSOR:
+            printf("GET_INPUT_TENSOR\n");
+            c <: (unsigned) AISRV_STATUS_OKAY;
+            send_array(c, ie.input_buffer, ie.input_size);
             break;
             
         case CMD_GET_TIMINGS: 
-
-            c <: (unsigned) STATUS_OKAY;
+            c <: (unsigned) AISRV_STATUS_OKAY;
             send_array(c, ie.output_times, ie.output_times_size * sizeof(uint32_t));
             break;
 
         case CMD_GET_DEBUG_LOG:
-            c <: (unsigned) STATUS_OKAY;
-            send_array(c, (unsigned * unsafe) debug_log_buffer,  MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
+            c <: (unsigned) AISRV_STATUS_OKAY;
+            //send_array(c, (unsigned * unsafe) debug_log_buffer,  MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
             break; 
 
+        case CMD_GET_SENSOR_TENSOR:
+            c <: (unsigned) AISRV_STATUS_OKAY;
+            send_array(c, (unsigned * unsafe) sensor_tensor,  RAW_IMAGE_HEIGHT * RAW_IMAGE_WIDTH);
+            break;
+
+        case CMD_START_ACQUIRE_SINGLE:
+
+            /* Note currently receive extra 0 length */
+            /* TODO remove the need for this */
+            size_t size = receive_array_(c, data, 0);
+
+            aisrv_status_t status = AISRV_STATUS_OKAY;
+            c_acquire <: (unsigned) CMD_START_ACQUIRE_SINGLE;
+
+            /* Currently we Receive sensor data into sensor_tensor buffer */
+            printf("aiengine waiting for array..\n");
+            size = receive_array_(c_acquire, (uint32_t * unsafe)sensor_tensor, 0);
+
+            printf("ACQUIRE: %d bytes\n", size); 
+
+            outuint(c, status);
+            outct(c, XS1_CT_END);
+            break;
+
         default:
-            c <: (unsigned) STATUS_ERROR_BAD_CMD;
+            c <: (unsigned) AISRV_STATUS_ERROR_BAD_CMD;
             printf("Unknown command (aiengine): %d\n", cmd);
             break;
     }
 }
 
-void aiengine(chanend c_usb, chanend c_spi)
+void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire)
 {
     aisrv_cmd_t cmd = CMD_NONE;
     size_t length = 0;
@@ -224,11 +254,11 @@ void aiengine(chanend c_usb, chanend c_spi)
         select
         {
             case c_usb :> cmd:
-                HandleCommand(c_usb, cmd, haveModel);
+                HandleCommand(c_usb, cmd, haveModel, c_acquire);
                 break;
             
             case c_spi :> cmd:
-                HandleCommand(c_spi, cmd, haveModel);
+                HandleCommand(c_spi, cmd, haveModel, c_acquire);
                 break;
         }
     }

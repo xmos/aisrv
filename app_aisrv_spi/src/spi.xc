@@ -139,9 +139,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
             c_to_buffer <: bytes;
             break;
         case CMD_START_INFER:
-            c_to_buffer <: cmd;
-            break;
-        case CMD_START_ACQUIRE:
+        case CMD_START_ACQUIRE_SINGLE:
             c_to_buffer <: cmd;
             break;
         case CMD_HELLO:
@@ -154,7 +152,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
                            mem->memory, mem->debug_log_index, mem->debug_log_length);
             break;
         default:
-            (mem->status, uint8_t[])[STATUS_BYTE_STATUS] |= STATUS_ERROR_BAD_CMD;
+            (mem->status, uint8_t[])[STATUS_BYTE_STATUS] |= AISRV_STATUS_ERROR_BAD_CMD;
             printf("ERR %02x last proper comand %02x [%d]\n", cmd, lastcmd, mem->output_tensor_length);
             break;
         }

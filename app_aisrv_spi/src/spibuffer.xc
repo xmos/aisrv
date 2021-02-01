@@ -29,8 +29,6 @@ static void read_spec(chanend to_engine, struct memory * unsafe mem)
 static inline void set_mem_status(uint32_t status[1], uint32_t byte, uint32_t val) {
     asm volatile("st8 %0, %1[%2]" :: "r" (val), "r" (status), "r" (byte));
 }
-//         = STATUS_NORMAL;
-
 
 void get_debug_log(chanend to_engine, struct memory * unsafe mem)
 {
@@ -65,7 +63,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
 {
     unsigned cmd_in_flight = 0;
     
-    aisrv_status_t status = STATUS_OKAY;
+    aisrv_status_t status = AISRV_STATUS_OKAY;
     
     unsafe
     {
@@ -77,12 +75,12 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
         int N;
         
         status = (mem->status, uint8_t[])[STATUS_BYTE_STATUS];
-        set_mem_status(mem->status, STATUS_BYTE_STATUS, status & ~STATUS_BUSY);
+        set_mem_status(mem->status, STATUS_BYTE_STATUS, status & ~AISRV_STATUS_BUSY);
         
         from_spi :> cmd;
         
         status = (mem->status, uint8_t[])[STATUS_BYTE_STATUS];
-        set_mem_status(mem->status, STATUS_BYTE_STATUS, status | STATUS_BUSY);
+        set_mem_status(mem->status, STATUS_BYTE_STATUS, status | AISRV_STATUS_BUSY);
 
         switch(cmd) 
         {
@@ -108,14 +106,14 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
                 status = inuint(to_engine);
                 chkct(to_engine, XS1_CT_END);
 
-                if(status == STATUS_OKAY)
+                if(status == AISRV_STATUS_OKAY)
                 {
                     read_spec(to_engine, mem);
                 }
                 else
                 {
                     status = (mem->status, uint8_t[])[STATUS_BYTE_STATUS]; 
-                    set_mem_status(mem->status, STATUS_BYTE_STATUS, status | STATUS_ERROR_MODEL_ERR);
+                    set_mem_status(mem->status, STATUS_BYTE_STATUS, status | AISRV_STATUS_ERROR_MODEL_ERR);
 
                     get_debug_log(to_engine, mem);
                 }
@@ -204,11 +202,11 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
             // DFU
             break;
         
-        case CMD_START_ACQUIRE:
-            set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_OKAY | STATUS_SENSING | STATUS_BUSY);
+        case CMD_START_ACQUIRE_SINGLE:
+            set_mem_status(mem->status, STATUS_BYTE_STATUS, AISRV_STATUS_OKAY | AISRV_STATUS_SENSING | AISRV_STATUS_BUSY);
             to_sensor <: cmd;
             to_sensor :> int _;
-            set_mem_status(mem->status, STATUS_BYTE_STATUS, STATUS_OKAY | STATUS_BUSY);
+            set_mem_status(mem->status, STATUS_BYTE_STATUS, AISRV_STATUS_OKAY | AISRV_STATUS_BUSY);
             // watch out: <= not < to force a zero block at the end
             for(int block = 0; block <= mem->input_tensor_length; block += MAX_PACKET_SIZE_WORDS) {
                 to_engine <: CMD_SET_INPUT_TENSOR;

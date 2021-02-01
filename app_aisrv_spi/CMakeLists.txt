@@ -191,9 +191,6 @@ set(APP_SOURCES
   "${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc"
   "${PROJECT_SOURCE_DIR}/src/aisrv_mipi.xc"
   "${PROJECT_SOURCE_DIR}/src/imx219.xc"
-  "${PROJECT_SOURCE_DIR}/src/haar.xc"
-  "${PROJECT_SOURCE_DIR}/src/haar_features.xc"
-  "${PROJECT_SOURCE_DIR}/src/haar_single_classifier.S"
   "${PROJECT_SOURCE_DIR}/src/usleep.xc"
   "${PROJECT_SOURCE_DIR}/src/get_time.c"
   "${PROJECT_SOURCE_DIR}/src/leds.xc"
@@ -208,9 +205,6 @@ set_source_files_properties("${PROJECT_SOURCE_DIR}/src/acquire.xc" PROPERTIES LA
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_usb.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_mipi.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/imx219.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/src/haar.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/src/haar_features.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/src/haar_single_classifier.S" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/usleep.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/leds.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/calls.S" PROPERTIES LANGUAGE C)

@@ -20,7 +20,7 @@ typedef struct inference_engine {
     unsigned int * UNSAFE output_times;
 } inference_engine_t;
 
-#define MAX_MODEL_SIZE_BYTES (1060000)
+#define MAX_MODEL_SIZE_BYTES (907000)
 
 #ifdef __cplusplus
 extern "C" {
