@@ -14,9 +14,9 @@
 #include "tensorflow/lite/version.h"
 #include "xcore_device_memory.h"
 
-constexpr int kTensorArenaSize = 300000;
+constexpr int kTensorArenaSize = 220000;
 
-uint8_t kTensorArena[kTensorArenaSize];
+uint8_t kTensorArena[kTensorArenaSize]; __attribute__((aligned(4)));
 
 // shorthand typedefs
 typedef tflite::MicroAllocator micro_allocator_t;
@@ -47,6 +47,7 @@ __attribute__((section(".ExtMem_data")))
 #endif
 unsigned char model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
 
+#if 0
 size_t debug_log_index = 0;
 char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
 
@@ -58,6 +59,7 @@ extern "C" void DebugLog(const char* s)
     if(debug_log_index == MAX_DEBUG_LOG_ENTRIES) 
         debug_log_index = 0;
 }
+#endif
 
 aisrv_status_t interp_invoke() 
 {
@@ -67,10 +69,10 @@ aisrv_status_t interp_invoke()
     if (invoke_status != kTfLiteOk) 
     {
         TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
-        return STATUS_ERROR_INFER_ERR;
+        return AISRV_STATUS_ERROR_INFER_ERR;
     }
 
-    return STATUS_OKAY;
+    return AISRV_STATUS_OKAY;
 }
 
 void inference_engine_initialize(inference_engine *ie)
@@ -130,6 +132,9 @@ int interp_initialize(inference_engine *ie)
     
     resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
                      tflite::ops::micro::xcore::Register_FullyConnected_8());
+
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
+                     tflite::ops::micro::xcore::Register_Conv2D_1x1());
 
     if (interpreter) 
     {

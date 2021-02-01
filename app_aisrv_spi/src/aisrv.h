@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+//#ifdef ENABLE_MIPI
+//#define USB_TILE tile[0]
+//#else
+//#define USB_TILE tile[1]
+//#endif
+
 #define AISRV_CMD_WRITE_BIT_MASK    (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
 #define CMD_LENGTH_BYTES            (1)
 #define MAX_PACKET_SIZE             (512)
@@ -11,6 +17,9 @@
 #define DUMMY_CLOCKS                (16)
 #define MAX_DEBUG_LOG_LENGTH        (100)
 #define MAX_DEBUG_LOG_ENTRIES       (3)
+
+#define RAW_IMAGE_HEIGHT (320/2)
+#define RAW_IMAGE_WIDTH  (320/2)
 
 typedef enum aisrv_cmd
 {
@@ -35,13 +44,13 @@ typedef enum aisrv_spec {
 
 typedef enum aisrv_status
 {
-    STATUS_OKAY                 = 0x00,
-    STATUS_BUSY                 = 0x01,
-    STATUS_SENSING              = 0x02,
-    STATUS_ERROR_NO_MODEL       = 0x04,
-    STATUS_ERROR_MODEL_ERR      = 0x08,
-    STATUS_ERROR_INFER_ERR      = 0x10,
-    STATUS_ERROR_BAD_CMD        = 0x20
+    AISRV_STATUS_OKAY                 = 0x00,
+    AISRV_STATUS_BUSY                 = 0x01,
+    AISRV_STATUS_SENSING              = 0x02,
+    AISRV_STATUS_ERROR_NO_MODEL       = 0x04,
+    AISRV_STATUS_ERROR_MODEL_ERR      = 0x08,
+    AISRV_STATUS_ERROR_INFER_ERR      = 0x10,
+    AISRV_STATUS_ERROR_BAD_CMD        = 0x20
 } aisrv_status_t;
 
 #ifdef __XC__

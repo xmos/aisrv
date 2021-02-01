@@ -254,7 +254,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
             status = inuint(c);
             chkct(c, XS1_CT_END);
 
-            if(status != STATUS_OKAY)
+            if(status != AISRV_STATUS_OKAY)
             {
                 printf("Write Error, setting stall\n");
                 stalled_in = 1;
@@ -266,11 +266,11 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
         else
         {
             /* Read command */
-            aisrv_status_t status = STATUS_OKAY;
+            aisrv_status_t status = AISRV_STATUS_OKAY;
            
             c :> status;
 
-            if(status == STATUS_OKAY)
+            if(status == AISRV_STATUS_OKAY)
             {
                 size_t i = 0;
                 while(!testct(c))
