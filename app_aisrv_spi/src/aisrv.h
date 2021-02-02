@@ -18,8 +18,9 @@
 #define MAX_DEBUG_LOG_LENGTH        (100)
 #define MAX_DEBUG_LOG_ENTRIES       (3)
 
-#define RAW_IMAGE_HEIGHT (320/2)
-#define RAW_IMAGE_WIDTH  (320/2)
+#define RAW_IMAGE_HEIGHT (128)
+#define RAW_IMAGE_WIDTH  (128)
+#define RAW_IMAGE_DEPTH  (3)
 
 typedef enum aisrv_cmd
 {
