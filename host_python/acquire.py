@@ -43,7 +43,7 @@ ie.start_acquire_single()
 
 sensor_tensor = ie.read_sensor_tensor()
 
-SENSOR_SHAPE=[160,160]
+SENSOR_SHAPE=[128,128]
 
 r = sensor_tensor
 #r = [x-256 if x > 127 else x for x in r]
