@@ -57,9 +57,6 @@ static inference_engine_t ie;
 //extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
 //extern size_t debug_log_length;
 
-int8_t sensor_tensor[RAW_IMAGE_WIDTH*RAW_IMAGE_HEIGHT]; // TODO needs to be 3x
-
-
 void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_acquire)
 {
     unsigned data[MAX_PACKET_SIZE_WORDS]; 
@@ -212,7 +209,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
 
         case CMD_GET_SENSOR_TENSOR:
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, (unsigned * unsafe) sensor_tensor,  RAW_IMAGE_HEIGHT * RAW_IMAGE_WIDTH);
+            send_array(c, (unsigned * unsafe) ie.input_buffer,  RAW_IMAGE_HEIGHT * RAW_IMAGE_WIDTH); //* RAW_IMAGE_DEPTH);
             break;
 
         case CMD_START_ACQUIRE_SINGLE:
@@ -226,7 +223,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
 
             /* Currently we Receive sensor data into sensor_tensor buffer */
             printf("aiengine waiting for array..\n");
-            size = receive_array_(c_acquire, (uint32_t * unsafe)sensor_tensor, 0);
+            size = receive_array_(c_acquire, (uint32_t * unsafe)ie.input_buffer, 0);
 
             printf("ACQUIRE: %d bytes\n", size); 
 
