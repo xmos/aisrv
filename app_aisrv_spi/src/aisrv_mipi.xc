@@ -10,7 +10,6 @@
 #include "imx219.h"
 #include "mipi.h"
 #include "debayer.h"
-#include "haar.h"
 #include "usleep.h"
 #include "yuv_to_rgb.h"
 #include "get_time.h"
@@ -29,9 +28,6 @@ void send_array(chanend c, uint32_t * unsafe array, unsigned size);
 #endif
 #define IWIDTH (828)
 
-// TODO rm me
-#define EMBEDDING_SIZE 77
-
 #define IDENT(x) x
 #define IDENT_H(x) x.h
 #define XSTR(x) x
@@ -43,12 +39,7 @@ void send_array(chanend c, uint32_t * unsafe array, unsigned size);
 #define NETWORK_INPUT_WIDTH 112
 #define NETWORK_INPUT_DEPTH 4
 
-#ifndef NETWORK_DISTANCE_THRESHOLD 
-#define NETWORK_DISTANCE_THRESHOLD 100
-#endif
-
 #define NETWORK_INPUT_SIZE (NETWORK_INPUT_HEIGHT * NETWORK_INPUT_WIDTH * NETWORK_INPUT_DEPTH)
-
 
 #ifndef MIPI_TILE
 #define MIPI_TILE 1
@@ -124,9 +115,9 @@ uint8_t saveImage[end_y - start_y][end_x - start_x];
 uint32_t frame_time = 0, line_time = 0;
 
 struct decoupler_buffer {
-    uint8_t y[2 * RAW_IMAGE_WIDTH];
-    uint8_t u[RAW_IMAGE_WIDTH / 2];
-    uint8_t v[RAW_IMAGE_WIDTH / 2];
+    uint8_t y[2 * RAW_IMAGE_WIDTH * 3];
+   //uint8_t u[RAW_IMAGE_WIDTH / 2];
+    //uint8_t v[RAW_IMAGE_WIDTH / 2];
     int serial;
 } decoupler[4];
 
@@ -182,6 +173,12 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2,
                             linesSaved++;
                             if (linesSaved == 4) 
                             {
+                                #if 0
+                                debayer_four_lines_yuv((bayeredBuffer, int8_t[]), 2 * RAW_IMAGE_WIDTH,
+                                                       (decoupler[decoupleCount].y, int8_t[]),
+                                                       (decoupler[decoupleCount].u, int8_t[]),
+                                                       (decoupler[decoupleCount].v, int8_t[]));
+                                #else
                                 // Debayer and subsample 4 lines to 2
                                 debayer_four_lines_rgb((bayeredBuffer, int8_t[]), 2* RAW_IMAGE_WIDTH, (rgbBuffer[decoupleCount], int8_t[]));
                                 
@@ -192,6 +189,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2,
                                     decoupler[decoupleCount].y[i+RAW_IMAGE_WIDTH] = rgbBuffer[decoupleCount][index+RAW_IMAGE_WIDTH*3];
                                     index+=3;
                                 }
+                                #endif
 
                                 decoupler[decoupleCount].serial = lineCount-start_y;
                                
@@ -284,13 +282,17 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c,
             }
         }
         lineCount += 4;
-        unsafe {
+        
+        unsafe 
+        {
             memcpy(saveY+yIndex, decoupler_r[decoupleCount].y, 2*RAW_IMAGE_WIDTH);
-            memcpy(saveU+uvIndex, decoupler_r[decoupleCount].u, RAW_IMAGE_WIDTH/2);
-            memcpy(saveV+uvIndex, decoupler_r[decoupleCount].v, RAW_IMAGE_WIDTH/2);
+            //memcpy(saveU+uvIndex, decoupler_r[decoupleCount].u, RAW_IMAGE_WIDTH/2);
+            //memcpy(saveV+uvIndex, decoupler_r[decoupleCount].v, RAW_IMAGE_WIDTH/2);
         }
+        
         yIndex += 2*RAW_IMAGE_WIDTH;
         uvIndex += RAW_IMAGE_WIDTH/2;
+        
         if(yIndex >= RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT)
         {
             outuchar(c_debayerer, IMAGER_DONTSAMPLE);
