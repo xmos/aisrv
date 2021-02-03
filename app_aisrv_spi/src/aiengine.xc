@@ -54,8 +54,8 @@ static inline size_t receive_array_(chanend c, unsigned * unsafe array, unsigned
     return i;
 }
 static inference_engine_t ie;
-//extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
-//extern size_t debug_log_length;
+extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
+extern size_t debug_log_length;
 
 void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_acquire)
 {
@@ -204,13 +204,8 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
 
         case CMD_GET_DEBUG_LOG:
             c <: (unsigned) AISRV_STATUS_OKAY;
-            //send_array(c, (unsigned * unsafe) debug_log_buffer,  MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
+            send_array(c, (unsigned * unsafe) debug_log_buffer,  MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
             break; 
-
-        case CMD_GET_SENSOR_TENSOR:
-            c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, (unsigned * unsafe) ie.input_buffer,  RAW_IMAGE_HEIGHT * RAW_IMAGE_WIDTH * RAW_IMAGE_DEPTH);
-            break;
 
         case CMD_START_ACQUIRE_SINGLE:
 
@@ -222,10 +217,8 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
             c_acquire <: (unsigned) CMD_START_ACQUIRE_SINGLE;
 
             /* Currently we Receive sensor data into sensor_tensor buffer */
-            printf("aiengine waiting for array..\n");
+            /* TODO check we dont overrun input_buffer */
             size = receive_array_(c_acquire, (uint32_t * unsafe)ie.input_buffer, 0);
-
-            printf("ACQUIRE: %d bytes\n", size); 
 
             outuint(c, status);
             outct(c, XS1_CT_END);

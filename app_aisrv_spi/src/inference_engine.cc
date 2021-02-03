@@ -1,5 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+#include "aisrv.h"
 #include "inference_engine.h"
 
 #include <cstddef>
@@ -14,7 +15,7 @@
 #include "tensorflow/lite/version.h"
 #include "xcore_device_memory.h"
 
-constexpr int kTensorArenaSize = 220000;
+constexpr int kTensorArenaSize = NETWORK_ARENA_SIZE;
 
 uint8_t kTensorArena[kTensorArenaSize]; __attribute__((aligned(4)));
 
@@ -47,7 +48,6 @@ __attribute__((section(".ExtMem_data")))
 #endif
 unsigned char model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
 
-#if 0
 size_t debug_log_index = 0;
 char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
 
@@ -59,7 +59,6 @@ extern "C" void DebugLog(const char* s)
     if(debug_log_index == MAX_DEBUG_LOG_ENTRIES) 
         debug_log_index = 0;
 }
-#endif
 
 aisrv_status_t interp_invoke() 
 {

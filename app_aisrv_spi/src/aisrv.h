@@ -59,4 +59,8 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
 void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_dat);
 #endif
 
+#define NETWORK_ARENA_SIZE (220000)
+//#define NETWORK_HEAP_SIZE (5 * 1024)
+#define NETWORK_NUM_THREADS 1
+
 #endif

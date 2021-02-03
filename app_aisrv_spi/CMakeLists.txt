@@ -194,7 +194,6 @@ set(APP_SOURCES
   "${PROJECT_SOURCE_DIR}/src/usleep.xc"
   "${PROJECT_SOURCE_DIR}/src/get_time.c"
   "${PROJECT_SOURCE_DIR}/src/leds.xc"
-  "${PROJECT_SOURCE_DIR}/src/calls.S"
 )
 
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
@@ -207,7 +206,6 @@ set_source_files_properties("${PROJECT_SOURCE_DIR}/src/aisrv_mipi.xc" PROPERTIES
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/imx219.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/usleep.xc" PROPERTIES LANGUAGE C)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/src/leds.xc" PROPERTIES LANGUAGE C)
-set_source_files_properties("${PROJECT_SOURCE_DIR}/src/calls.S" PROPERTIES LANGUAGE C)
 
 
 #**********************
