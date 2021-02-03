@@ -209,7 +209,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
 
         case CMD_GET_SENSOR_TENSOR:
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, (unsigned * unsafe) ie.input_buffer,  RAW_IMAGE_HEIGHT * RAW_IMAGE_WIDTH); //* RAW_IMAGE_DEPTH);
+            send_array(c, (unsigned * unsafe) ie.input_buffer,  RAW_IMAGE_HEIGHT * RAW_IMAGE_WIDTH * RAW_IMAGE_DEPTH);
             break;
 
         case CMD_START_ACQUIRE_SINGLE:
