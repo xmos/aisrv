@@ -16,7 +16,21 @@ import usb.util
 
 from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi
 
-DRAW = False
+OUTPUT_SCALE = 1/255.0
+OUTPUT_ZERO_POINT = -128
+
+OBJECT_CLASSES = [
+    "tench",
+    "goldfish",
+    "great_white_shark",
+    "tiger_shark",
+    "hammerhead",
+    "electric_ray",
+    "stingray",
+    "cock",
+    "hen",
+    "ostrich",
+]
 
 if sys.argv[1] == 'usb':
     ie = xcore_ai_ie_usb()
@@ -38,27 +52,29 @@ print("Inferred input shape: " + str(INPUT_SHAPE))
 
 raw_img = None
 
-
 ie.start_acquire_single()
 
-sensor_tensor = ie.read_sensor_tensor()
+sensor_tensor = ie.read_input_tensor()
 
-SENSOR_SHAPE=[128,128]
+SENSOR_SHAPE=[128,128,3]
 
 r = sensor_tensor
-#r = [x-256 if x > 127 else x for x in r]
 
 r = [x + 128 for x in sensor_tensor]
 
-np_img = np.array(r).reshape(SENSOR_SHAPE)#astype(np.uint8)
-            #np_img = np.round(
-            #    (dequantize(np_img, INPUT_SCALE, INPUT_ZERO_POINT) + NORM_SHIFT) * NORM_SCALE
-            #).astype(np.uint8)
+np_img = np.array(r).reshape(SENSOR_SHAPE).astype(np.uint8)
 
-np_img = np.repeat(np_img[:, :, np.newaxis], 3, axis=2)
+ie.start_inference()
 
-print(str(np_img[0]))
-print(str(np_img[1]))
+print("Waiting for inference")
+output_data_int = ie.read_output_tensor()
 
+max_value = max(output_data_int)
+max_value_index = output_data_int.index(max_value)
+
+prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
+print("Output tensor read as ", str(output_data_int),", this is a " + OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
 pyplot.imshow(np_img)
 pyplot.show()
+
+
