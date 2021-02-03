@@ -192,7 +192,6 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
             break;
         
         case CMD_GET_INPUT_TENSOR:
-            printf("GET_INPUT_TENSOR\n");
             c <: (unsigned) AISRV_STATUS_OKAY;
             send_array(c, ie.input_buffer, ie.input_size);
             break;
