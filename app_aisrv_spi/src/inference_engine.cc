@@ -1,5 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+#include "aisrv.h"
 #include "inference_engine.h"
 
 #include <cstddef>
@@ -14,9 +15,9 @@
 #include "tensorflow/lite/version.h"
 #include "xcore_device_memory.h"
 
-constexpr int kTensorArenaSize = 300000;
+constexpr int kTensorArenaSize = NETWORK_ARENA_SIZE;
 
-uint8_t kTensorArena[kTensorArenaSize];
+uint8_t kTensorArena[kTensorArenaSize]; __attribute__((aligned(4)));
 
 // shorthand typedefs
 typedef tflite::MicroAllocator micro_allocator_t;
@@ -67,10 +68,10 @@ aisrv_status_t interp_invoke()
     if (invoke_status != kTfLiteOk) 
     {
         TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
-        return STATUS_ERROR_INFER_ERR;
+        return AISRV_STATUS_ERROR_INFER_ERR;
     }
 
-    return STATUS_OKAY;
+    return AISRV_STATUS_OKAY;
 }
 
 void inference_engine_initialize(inference_engine *ie)
@@ -81,20 +82,6 @@ int count = 0;
 
 int interp_initialize(inference_engine *ie) 
 {
-
-#if 0
-    if (!count)
-    { 
-        count++;
-        printf("returning error\n");
-        return 1;
-    }
-    else
-    {
-        printf("proceeding\n");
-    }
-#endif
-
     // Set up logging
     static tflite::MicroErrorReporter error_reporter;
     reporter = &error_reporter;
@@ -144,6 +131,9 @@ int interp_initialize(inference_engine *ie)
     
     resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
                      tflite::ops::micro::xcore::Register_FullyConnected_8());
+
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
+                     tflite::ops::micro::xcore::Register_Conv2D_1x1());
 
     if (interpreter) 
     {
