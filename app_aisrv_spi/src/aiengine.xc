@@ -57,7 +57,13 @@ static inference_engine_t ie;
 extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
 extern size_t debug_log_length;
 
-void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_acquire)
+struct aiengine_status
+{
+    unsigned haveModel;
+    unsigned acquireMode;
+} status;
+
+void HandleCommand(chanend c, aisrv_cmd_t cmd, struct aiengine_status &status, chanend c_acquire)
 {
     unsigned data[MAX_PACKET_SIZE_WORDS]; 
 
@@ -90,9 +96,9 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
             modelSize = receive_array_(c, ie.model_data, 0);
            
             printf("Model received: %d bytes\n", modelSize); 
-            haveModel = !interp_initialize(&ie);
+            status.haveModel = !interp_initialize(&ie);
 
-            if(haveModel)
+            if(status.haveModel)
             {
                 outuint(c, AISRV_STATUS_OKAY);
                 printf("Model written sucessfully\n");
@@ -119,9 +125,9 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
         case CMD_SET_INPUT_TENSOR:
 
              // TODO check size vs input_size
-            size_t size = receive_array_(c, ie.input_buffer, !haveModel);
+            size_t size = receive_array_(c, ie.input_buffer, !status.haveModel);
         
-            if(haveModel)
+            if(status.haveModel)
             {
                 outuint(c, AISRV_STATUS_OKAY);
                 outct(c, XS1_CT_END);
@@ -135,31 +141,31 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
 
         case CMD_START_INFER:
 
-            aisrv_status_t status = AISRV_STATUS_OKAY;
+            aisrv_status_t trans_status = AISRV_STATUS_OKAY;
 
             /* Note currently receive extra 0 length */
             /* TODO remove the need for this */
             size_t size = receive_array_(c, data, 0);
                 
-            if(haveModel)
+            if(status.haveModel)
             {
-                status = interp_invoke();
+                trans_status = interp_invoke();
                 //print_output();
                 print_profiler_summary();
             }
             else
             {
-                status = AISRV_STATUS_ERROR_NO_MODEL;
+                trans_status = AISRV_STATUS_ERROR_NO_MODEL;
             }
 
-            outuint(c, status);
+            outuint(c, trans_status);
             outct(c, XS1_CT_END);
             break;
         
         case CMD_GET_OUTPUT_TENSOR_LENGTH:
 
             // TODO use a send array function 
-            if(haveModel)
+            if(status.haveModel)
             {
                 c <: (unsigned) AISRV_STATUS_OKAY;
                 send_array(c, &ie.output_size, sizeof(ie.output_size));
@@ -174,7 +180,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
          case CMD_GET_INPUT_TENSOR_LENGTH:
             
             // TODO use a send array function 
-            if(haveModel)
+            if(status.haveModel)
             {
                 c <: (unsigned) AISRV_STATUS_OKAY;
                 send_array(c, &ie.input_size, sizeof(ie.input_size));
@@ -206,6 +212,24 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
             send_array(c, (unsigned * unsafe) debug_log_buffer,  MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
             break; 
 
+        case CMD_START_ACQUIRE_STREAM:
+
+            size_t size = receive_array_(c, data, 0);
+
+            status.acquireMode = (data, unsigned[])[0];
+            
+            printf("Aquire mode: %d\n", status.acquireMode);
+            aisrv_status_t trans_status = AISRV_STATUS_OKAY;
+            outuint(c, trans_status);
+            outct(c, XS1_CT_END);
+            
+            break;
+
+        //case CMD_GET_ACQUIRE_MODE:
+        //    c <: (unsigned) AISRV_STATUS_OKAY;
+        //    send_array(c, &status.acquireMode, sizeof(status.acquireMode));
+        //    break;
+
         case CMD_START_ACQUIRE_SINGLE:
 
             /* Note currently receive extra 0 length */
@@ -230,24 +254,29 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, unsigned &haveModel, chanend c_ac
     }
 }
 
+
+
+
 void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire)
 {
     aisrv_cmd_t cmd = CMD_NONE;
     size_t length = 0;
-    unsigned haveModel = 0;
 
     unsafe { inference_engine_initialize(&ie); }
+
+    status.haveModel = 0;
+    status.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
 
     while(1)
     {
         select
         {
             case c_usb :> cmd:
-                HandleCommand(c_usb, cmd, haveModel, c_acquire);
+                HandleCommand(c_usb, cmd, status, c_acquire);
                 break;
             
             case c_spi :> cmd:
-                HandleCommand(c_spi, cmd, haveModel, c_acquire);
+                HandleCommand(c_spi, cmd, status, c_acquire);
                 break;
         }
     }
