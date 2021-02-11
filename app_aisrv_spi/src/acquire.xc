@@ -33,7 +33,7 @@ void acquire(chanend from_buffer, chanend to_sensor, struct memory * unsafe mem)
         int cmd;
         from_buffer :> cmd;
         switch(cmd) {
-        case CMD_START_ACQUIRE:
+        case CMD_START_ACQUIRE_SINGLE:
             unsafe {
                 acquire_data(to_sensor,
                              &mem->memory[mem->input_tensor_index],

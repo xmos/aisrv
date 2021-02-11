@@ -107,14 +107,6 @@ class xcore_ai_ie(ABC):
         
         return self._timings_length
 
-    @abstractmethod
-    def write_input_tensor(self, input_tensor):
-        pass
-
-    @abstractmethod
-    def read_output_tensor(self):
-        pass
-
     # Internal method to read input tensor length
     @abstractmethod
     def _read_input_length(self):
@@ -228,12 +220,35 @@ class xcore_ai_ie(ABC):
 
         return self.bytes_to_ints(data_read)
 
+    def read_input_tensor(self):
+
+        # Retrieve result from device
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_INPUT_TENSOR, self.input_length)
+
+        assert type(data_read) == list
+        assert type(data_read[0]) == int
+
+        return self.bytes_to_ints(data_read)
+
+    def read_sensor_tensor(self):
+
+        # Retrieve result from device
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_SENSOR_TENSOR, 160*160) # TODO fix magic length number
+
+        assert type(data_read) == list
+        assert type(data_read[0]) == int
+
+        return self.bytes_to_ints(data_read)
+
     def read_debug_log(self):
 
         debug_string = self._upload_data(aisrv_cmd.CMD_GET_DEBUG_LOG, 300) #TODO rm magic number
 
         r = bytearray(debug_string).decode("ascii")
         return r
+
+
+
 
 
 class xcore_ai_ie_spi(xcore_ai_ie):
@@ -434,7 +449,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             assert self._out_ep is not None
             assert self._in_ep is not None
 
-            print("Connected")
+            print("Connected to AISRV via USB")
 
     # TODO move to super()
     def start_inference(self):
@@ -444,6 +459,16 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
+
+    # TODO move to super()
+    def start_acquire_single(self):
+
+        # Send cmd
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_SINGLE]), 1000)
+
+        # Send out a 0 length packet 
+        self._out_ep.write(bytes([]), 1000)
+
 
     
   

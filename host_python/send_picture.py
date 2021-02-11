@@ -99,8 +99,6 @@ for arg in sys.argv[2:]:
                 raw_img = raw_file.read()
                 raw_file.close()
             
-            #newFile = open("raw_img.raw", "wb")
-            #newFile.write(raw_img)
             ie.write_input_tensor(raw_img)
                 
         except KeyboardInterrupt:
