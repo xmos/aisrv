@@ -50,15 +50,11 @@ INPUT_SHAPE = (input_shape_spacial, input_shape_spacial, input_shape_channels)
 
 print("Inferred input shape: " + str(INPUT_SHAPE))
 
-raw_img = None
-
 ie.start_acquire_single()
 
 sensor_tensor = ie.read_input_tensor()
 
 SENSOR_SHAPE=[128,128,3]
-
-r = sensor_tensor
 
 r = [x + 128 for x in sensor_tensor]
 
@@ -76,5 +72,4 @@ prob = (max_value - OUTPUT_ZERO_POINT) * OUTPUT_SCALE * 100.0
 print("Output tensor read as ", str(output_data_int),", this is a " + OBJECT_CLASSES[max_value_index], f"{prob:0.2f}%")
 pyplot.imshow(np_img)
 pyplot.show()
-
 
