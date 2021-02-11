@@ -449,7 +449,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             assert self._out_ep is not None
             assert self._in_ep is not None
 
-            print("Connected")
+            print("Connected to AISRV via USB")
 
     # TODO move to super()
     def start_inference(self):
