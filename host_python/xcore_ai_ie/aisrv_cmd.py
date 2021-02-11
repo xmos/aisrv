@@ -22,12 +22,14 @@ CMD_GET_OUTPUT_TENSOR_LENGTH    = int(0x0B)
 
 CMD_START_ACQUIRE_SINGLE        = int(0x8C)
 
+CMD_START_ACQUIRE_STREAM        = int(0x8E)
+
 CMD_GET_SENSOR_TENSOR           = int(0x0D)
 CMD_SET_SENSOR_TENSOR           = int(0x8D)
 
-CMD_GET_DEBUG_LOG               = int(0x0E)
+CMD_GET_DEBUG_LOG               = int(0x0F)
 
-CMD_GET_ID                      = int(0x0F)
+CMD_GET_ID                      = int(0x10)
 
 CMD_HELLO                       = int(0x55)
 

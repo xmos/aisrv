@@ -252,7 +252,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c,
             lineCount = 0;
             index = 0;
            
-#if 0 
+#if 0
             int max = -200;
             int min = 200;
             for(int y = 3*RAW_IMAGE_HEIGHT/8; y < 5*RAW_IMAGE_HEIGHT/8; y++) 

@@ -54,13 +54,21 @@ typedef enum aisrv_status
     AISRV_STATUS_ERROR_BAD_CMD        = 0x20
 } aisrv_status_t;
 
+typedef enum aisrv_acquire_mode
+{
+    AISRV_ACQUIRE_MODE_SINGLE         = 0x00,
+    AISRV_ACQUIRE_MODE_STREAM         = 0x01,
+} aisrv_acquire_mode_t;
+
 #ifdef __XC__
 void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0);
 void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_dat);
+void exit(int);
 #endif
 
 #define NETWORK_ARENA_SIZE (220000)
 //#define NETWORK_HEAP_SIZE (5 * 1024)
 #define NETWORK_NUM_THREADS 1
+
 
 #endif
