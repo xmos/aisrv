@@ -22,10 +22,14 @@ XCC_FLAGS  = -report \
 -O3 -fcomment-asm -fxscope -mcmodel=large  -Wno-xcore-fptrgroup \
 -Wno-unknown-pragmas \
 -Wno-bidirectional-buffered-port \
-\
+-g \
 -DTF_LITE_STATIC_MEMORY \
 -DXCORE \
--DUSE_EXTMEM
+-DUSE_EXTMEM \
+-DENABLE_USB \
+-DUSB_TILE=tile[0] \
+-DMIPI_INTEGRATION=1 \
+-DI2C_INTEGRATION=1 
 
 XCC_CPP_FLAGS = $(XCC_FLAGS) -std=c++11
 
