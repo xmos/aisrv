@@ -35,9 +35,11 @@ XCC_CPP_FLAGS = $(XCC_FLAGS) -std=c++11
 
 SOURCE_DIRS = src
 
-
 # The USED_MODULES variable lists other module used by the application. 
 USED_MODULES = lib_i2c lib_xud lib_tensorflow lib_mipi
+
+XCC_FLAGS_usb = $(XCC_FLAGS)
+XCC_CPP_FLAGS_usb = $(XCC_FLAGS) -std=c++11
 
 #=============================================================================
 # The following part of the Makefile includes the common build infrastructure
