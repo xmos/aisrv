@@ -106,7 +106,7 @@ int interp_initialize(inference_engine *ie)
         return 1;
     }
 
-    // This pulls in all the operation implementations we need.
+    // This pulls in all the operation implementations we expect to need.
     resolver->AddSoftmax();
     resolver->AddPad();
     resolver->AddMean();
