@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "xud_device.h"
-#include "../../app_aisrv_spi/src/aisrv.h"
+#include "aisrv.h"
 
 #define BCD_DEVICE   0x1000
 #define VENDOR_ID    0x20B1
