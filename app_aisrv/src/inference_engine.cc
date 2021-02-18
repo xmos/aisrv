@@ -162,7 +162,7 @@ int interp_initialize(inference_engine *ie)
     ie->input_size = interpreter->input(0)->bytes;
     ie->output_buffer = (unsigned char *)(interpreter->output(0)->data.raw);
     ie->output_size = interpreter->output(0)->bytes;
-    ie->output_times = (unsigned int *) xcore_profiler.GetTimes();
+    ie->output_times = (unsigned int *) xcore_profiler.GetEventDurations();
     ie->output_times_size = interpreter->operators_size();
     
     return 0;
@@ -175,9 +175,10 @@ void print_profiler_summary()
     const char *op_name;
     uint32_t total = 0;
 
-    if (profiler) {
-        count = profiler->GetNumTimes();
-        times = profiler->GetTimes();
+    if (profiler) 
+    {
+        count = profiler->GetNumEvents();
+        times = profiler->GetEventDurations();
     }
 
     for (size_t i = 0; i < interpreter->operators_size(); ++i) 
