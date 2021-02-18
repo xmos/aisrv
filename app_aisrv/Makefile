@@ -18,7 +18,7 @@ APP_NAME = app_aisrv_spi
 # If the variable XCC_MAP_FLAGS is set it overrides the flags passed to 
 # xcc for the final link (mapping) stage.
 
-XCC_FLAGS  = -report \
+SHARED_FLAGS  = -report \
 -O3 -fcomment-asm -fxscope -mcmodel=large  -Wno-xcore-fptrgroup \
 -Wno-unknown-pragmas \
 -Wno-bidirectional-buffered-port \
@@ -31,15 +31,13 @@ XCC_FLAGS  = -report \
 -DMIPI_INTEGRATION=1 \
 -DI2C_INTEGRATION=1 
 
-XCC_CPP_FLAGS = $(XCC_FLAGS) -std=c++11
-
 SOURCE_DIRS = src
 
 # The USED_MODULES variable lists other module used by the application. 
 USED_MODULES = lib_i2c lib_xud lib_tensorflow lib_mipi
 
-XCC_FLAGS_usb = $(XCC_FLAGS)
-XCC_CPP_FLAGS_usb = $(XCC_FLAGS) -std=c++11
+XCC_FLAGS_usb = $(SHARED_FLAGS)
+XCC_CPP_FLAGS_usb = $(SHARED_FLAGS) -std=c++11
 
 #=============================================================================
 # The following part of the Makefile includes the common build infrastructure
