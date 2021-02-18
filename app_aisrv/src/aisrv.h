@@ -3,12 +3,6 @@
 
 #include <stdint.h>
 
-//#ifdef ENABLE_MIPI
-//#define USB_TILE tile[0]
-//#else
-//#define USB_TILE tile[1]
-//#endif
-
 #define AISRV_CMD_WRITE_BIT_MASK    (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
 #define CMD_LENGTH_BYTES            (1)
 #define MAX_PACKET_SIZE             (512)
