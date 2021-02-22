@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#ifndef MIPI_TILE
+#define MIPI_TILE (1)
+#endif
+
 #define AISRV_CMD_WRITE_BIT_MASK    (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
 #define CMD_LENGTH_BYTES            (1)
 #define MAX_PACKET_SIZE             (512)
@@ -60,8 +64,7 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_dat);
 void exit(int);
 #endif
 
-#define NETWORK_ARENA_SIZE (220000)
-//#define NETWORK_HEAP_SIZE (5 * 1024)
+#define NETWORK_ARENA_SIZE (270000)
 #define NETWORK_NUM_THREADS 1
 
 

@@ -26,8 +26,7 @@ SHARED_FLAGS  = -report \
 -DTF_LITE_STATIC_MEMORY \
 -DXCORE \
 -DUSE_EXTMEM \
--DENABLE_USB \
--DUSB_TILE=tile[0] \
+-DENABLE_USB 
 
 
 SOURCE_DIRS = src
@@ -35,10 +34,10 @@ SOURCE_DIRS = src
 # The USED_MODULES variable lists other module used by the application. 
 USED_MODULES = lib_i2c lib_xud lib_tensorflow lib_mipi
 
-XCC_FLAGS_usb = $(SHARED_FLAGS)
-XCC_CPP_FLAGS_usb = $(SHARED_FLAGS) -std=c++11
+XCC_FLAGS_usb = $(SHARED_FLAGS) -DUSB_TILE=tile[1] 
+XCC_CPP_FLAGS_usb = $(SHARED_FLAGS) -std=c++11 
 
-XCC_FLAGS_usb_mipi = $(SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
+XCC_FLAGS_usb_mipi = $(SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 -DUSB_TILE=tile[0]
 XCC_CPP_FLAGS_usb_mipi = $(SHARED_FLAGS) -std=c++11 -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
 
 #=============================================================================
