@@ -8,7 +8,7 @@ TARGET = XCORE-AI-EXPLORER-800.xn
 # The APP_NAME variable determines the name of the final .xe file. It should
 # not include the .xe postfix. If left blank the name will default to 
 # the project name
-APP_NAME = app_aisrv_spi
+APP_NAME = app_aisrv
 
 # The flags passed to xcc when building the application
 # You can also set the following to override flags for a particular language:
@@ -28,8 +28,7 @@ SHARED_FLAGS  = -report \
 -DUSE_EXTMEM \
 -DENABLE_USB \
 -DUSB_TILE=tile[0] \
--DMIPI_INTEGRATION=1 \
--DI2C_INTEGRATION=1 
+
 
 SOURCE_DIRS = src
 
@@ -38,6 +37,9 @@ USED_MODULES = lib_i2c lib_xud lib_tensorflow lib_mipi
 
 XCC_FLAGS_usb = $(SHARED_FLAGS)
 XCC_CPP_FLAGS_usb = $(SHARED_FLAGS) -std=c++11
+
+XCC_FLAGS_usb_mipi = $(SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
+XCC_CPP_FLAGS_usb_mipi = $(SHARED_FLAGS) -std=c++11 -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
 
 #=============================================================================
 # The following part of the Makefile includes the common build infrastructure
