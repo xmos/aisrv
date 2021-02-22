@@ -1,3 +1,6 @@
+
+#if (MIPI_INTEGRATION == 1)
+
 #include <xs1.h>
 #include <print.h>
 #include <stdio.h>
@@ -25,10 +28,6 @@ void send_array(chanend c, uint32_t * unsafe array, unsigned size);
 
 #ifndef MIPI_BUFFER_SIZE_BYTES
 #define MIPI_BUFFER_SIZE_BYTES (3300)
-#endif
-
-#ifndef MIPI_TILE
-#define MIPI_TILE 1
 #endif
 
 #define MIPI_LINES 8
@@ -352,3 +351,5 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_led0, chanend c_led
     }
     i2c.shutdown();
 }
+
+#endif
