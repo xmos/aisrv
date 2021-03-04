@@ -119,49 +119,49 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize)
     
     
     resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
-                     tflite::ops::micro::xcore::Register_Add_8());
-    
+            tflite::ops::micro::xcore::Register_Add_8());
+
     resolver->AddCustom(tflite::ops::micro::xcore::MaxPool2D_OpCode,
-                     tflite::ops::micro::xcore::Register_MaxPool2D());
+            tflite::ops::micro::xcore::Register_MaxPool2D());
 
     resolver->AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
-                      tflite::ops::micro::xcore::Register_AvgPool2D_Global());
+            tflite::ops::micro::xcore::Register_AvgPool2D_Global());
 
-   resolver->AddCustom(tflite::ops::micro::xcore::AvgPool2D_OpCode,
-                       tflite::ops::micro::xcore::Register_AvgPool2D());
-    
+    resolver->AddCustom(tflite::ops::micro::xcore::AvgPool2D_OpCode,
+            tflite::ops::micro::xcore::Register_AvgPool2D());
+
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_Shallow());
-    
+            tflite::ops::micro::xcore::Register_Conv2D_Shallow());
+
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Deep_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_Deep());
-    
+            tflite::ops::micro::xcore::Register_Conv2D_Deep());
+
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
-    
+            tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
+
     resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
-                     tflite::ops::micro::xcore::Register_FullyConnected_8());
+            tflite::ops::micro::xcore::Register_FullyConnected_8());
 
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
-                     tflite::ops::micro::xcore::Register_Conv2D_1x1());
+            tflite::ops::micro::xcore::Register_Conv2D_1x1());
 
     resolver->AddCustom(tflite::ops::micro::xcore::Pad_OpCode,
-                    tflite::ops::micro::xcore::Register_Pad());
- 
+            tflite::ops::micro::xcore::Register_Pad());
+
     resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode,
-                    tflite::ops::micro::xcore::Register_Lookup_8());
+            tflite::ops::micro::xcore::Register_Lookup_8());
 
     resolver->AddCustom(tflite::ops::micro::xcore::BConv2d_Int8_OpCode,
-                    tflite::ops::micro::xcore::Register_BConv2D_Int8());
+            tflite::ops::micro::xcore::Register_BConv2D_Int8());
 
     resolver->AddCustom(tflite::ops::micro::xcore::BConv2d_Int8_DeepIn_DeepOut_OpCode,
-                    tflite::ops::micro::xcore::Register_BConv2D_Int8_Deepin_Deepout());
+            tflite::ops::micro::xcore::Register_BConv2D_Int8_Deepin_Deepout());
 
     resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
-                      tflite::ops::micro::xcore::Register_BSign_8());
+            tflite::ops::micro::xcore::Register_BSign_8());
 
-    (modelSize += 3) & ~0x03; // Align 4
-    kTensorArena += modelSize; 
+    modelSize = (modelSize + 3) & ~0x03; // Align 4
+    kTensorArena = inferenceMem + modelSize; 
     kTensorArenaSize = sizeof(inferenceMem) - modelSize;
    
     if (interpreter) 
