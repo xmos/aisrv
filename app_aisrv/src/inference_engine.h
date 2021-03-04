@@ -20,13 +20,12 @@ typedef struct inference_engine {
     unsigned int * UNSAFE output_times;
 } inference_engine_t;
 
-#define MAX_MODEL_SIZE_BYTES (907000)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
     void inference_engine_initialize(inference_engine_t * UNSAFE ie);
-    int interp_initialize(inference_engine_t * UNSAFE ie);
+    int interp_initialize(inference_engine_t * UNSAFE ie, uint32_t modelSize);
     aisrv_status_t interp_invoke();
     void print_profiler_summary();
 #ifdef __cplusplus
