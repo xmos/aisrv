@@ -1,4 +1,4 @@
-// Copyright (c) 2020, XMOS Ltd, All rights reserved
+// Copyright (c) 2021, XMOS Ltd, All rights reserved
 
 #include "aisrv.h"
 #include "inference_engine.h"
@@ -15,16 +15,12 @@
 #include "tensorflow/lite/version.h"
 #include "xcore_device_memory.h"
 
-constexpr int kTensorArenaSize = NETWORK_ARENA_SIZE;
-
-uint8_t kTensorArena[kTensorArenaSize]; __attribute__((aligned(4)));
-
 // shorthand typedefs
 typedef tflite::MicroAllocator micro_allocator_t;
 typedef tflite::MicroErrorReporter error_reporter_t;
 typedef tflite::micro::xcore::XCoreInterpreter interpreter_t;
 typedef tflite::micro::xcore::XCoreProfiler profiler_t;
-typedef tflite::MicroMutableOpResolver<17> resolver_t;
+typedef tflite::MicroMutableOpResolver<18> resolver_t;
 typedef tflite::Model model_t;
 
 // static buffer for interpreter_t class allocation
@@ -41,12 +37,17 @@ static profiler_t *profiler = nullptr;
 static interpreter_t *interpreter = nullptr;
 static const model_t *model = nullptr;
 
-#ifdef USE_SWMEM
-__attribute__((section(".SwMem_data")))
-#elif USE_EXTMEM
+#ifdef USE_EXTMEM
+constexpr int kTensorArenaSize = NETWORK_ARENA_SIZE;
 __attribute__((section(".ExtMem_data")))
+uint8_t model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
+uint8_t kTensorArena[kTensorArenaSize]; __attribute__((aligned(4)));
+#else
+int kTensorArenaSize = MAX_MODEL_SIZE_BYTES;
+uint8_t inferenceMem[MAX_MODEL_SIZE_BYTES]; __attribute__((aligned(4)));
+uint8_t *model_data = inferenceMem;
+uint8_t *kTensorArena = inferenceMem;
 #endif
-unsigned char model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
 
 size_t debug_log_index = 0;
 char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
@@ -80,7 +81,7 @@ void inference_engine_initialize(inference_engine *ie)
 }
 int count = 0;
 
-int interp_initialize(inference_engine *ie) 
+int interp_initialize(inference_engine *ie, uint32_t modelSize) 
 {
     // Set up logging
     static tflite::MicroErrorReporter error_reporter;
@@ -95,6 +96,8 @@ int interp_initialize(inference_engine *ie)
     static tflite::micro::xcore::XCoreProfiler xcore_profiler;
     profiler = &xcore_profiler;
 
+   
+   
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
     model = tflite::GetModel(model_data);
@@ -106,11 +109,15 @@ int interp_initialize(inference_engine *ie)
         return 1;
     }
 
+
     // This pulls in all the operation implementations we expect to need.
     resolver->AddSoftmax();
     resolver->AddPad();
     resolver->AddMean();
     resolver->AddConcatenation();
+    
+    
+    
     resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
                      tflite::ops::micro::xcore::Register_Add_8());
     
@@ -139,20 +146,24 @@ int interp_initialize(inference_engine *ie)
                      tflite::ops::micro::xcore::Register_Conv2D_1x1());
 
     resolver->AddCustom(tflite::ops::micro::xcore::Pad_OpCode,
-                      tflite::ops::micro::xcore::Register_Pad());
+                    tflite::ops::micro::xcore::Register_Pad());
  
     resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode,
                     tflite::ops::micro::xcore::Register_Lookup_8());
 
     resolver->AddCustom(tflite::ops::micro::xcore::BConv2d_Int8_OpCode,
-                       tflite::ops::micro::xcore::Register_BConv2D_Int8());
+                    tflite::ops::micro::xcore::Register_BConv2D_Int8());
 
     resolver->AddCustom(tflite::ops::micro::xcore::BConv2d_Int8_DeepIn_DeepOut_OpCode,
-                      tflite::ops::micro::xcore::Register_BConv2D_Int8_Deepin_Deepout());
+                    tflite::ops::micro::xcore::Register_BConv2D_Int8_Deepin_Deepout());
 
     resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
                       tflite::ops::micro::xcore::Register_BSign_8());
 
+    (modelSize += 3) & ~0x03; // Align 4
+    kTensorArena += modelSize; 
+    kTensorArenaSize = sizeof(inferenceMem) - modelSize;
+   
     if (interpreter) 
     {
         // Delete existing interpreter

@@ -96,7 +96,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, struct aiengine_status &status, c
             modelSize = receive_array_(c, ie.model_data, 0);
            
             printf("Model received: %d bytes\n", modelSize); 
-            status.haveModel = !interp_initialize(&ie);
+            status.haveModel = !interp_initialize(&ie, modelSize);
 
             if(status.haveModel)
             {

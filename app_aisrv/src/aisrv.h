@@ -64,8 +64,13 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_dat);
 void exit(int);
 #endif
 
-#define NETWORK_ARENA_SIZE (270000)
-#define NETWORK_NUM_THREADS 1
+#ifdef USE_EXTMEM
+#define NETWORK_ARENA_SIZE    (270000)
+#define MAX_MODEL_SIZE_BYTES  (1024000)
+#else
+#define MAX_MODEL_SIZE_BYTES  (350000)
+#endif
 
+#define NETWORK_NUM_THREADS   (1)
 
 #endif
