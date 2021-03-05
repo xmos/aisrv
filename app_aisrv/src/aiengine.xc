@@ -63,7 +63,38 @@ struct aiengine_status
     unsigned acquireMode;
 } status;
 
-void HandleCommand(chanend c, aisrv_cmd_t cmd, struct aiengine_status &status, chanend c_acquire)
+size_t SetModel(chanend c, uint8_t * unsafe model_data)
+{
+    size_t modelSize;
+#if 0
+    if(model_size > MAX_MODEL_SIZE_BYTES)
+        printf("Warning not enough space allocated for model %d %d\n", model_size, MAX_MODEL_SIZE_BYTES);
+    else
+        printf("Model size: %d\n", model_size);
+#endif
+
+    modelSize = receive_array_(c, model_data, 0);
+
+    printf("Model received: %d bytes\n", modelSize); 
+    status.haveModel = !interp_initialize(&ie, modelSize, model_data);
+
+    if(status.haveModel)
+    {
+        outuint(c, AISRV_STATUS_OKAY);
+        printf("Model written sucessfully\n");
+    }
+    else
+    {
+        outuint(c, AISRV_STATUS_ERROR_MODEL_ERR);
+        printf("Model update failed\n");
+    }
+
+    outct(c, XS1_CT_END);
+
+    return modelSize;
+}
+
+void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire)
 {
     unsigned data[MAX_PACKET_SIZE_WORDS]; 
 
@@ -84,42 +115,30 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, struct aiengine_status &status, c
             send_array(c, spec, SPEC_MODEL_TOTAL*sizeof(uint32_t));
             break;
 
-        case CMD_SET_MODEL:
-            
-            #if 0
-                 if(model_size > MAX_MODEL_SIZE_BYTES)
-                    printf("Warning not enough space allocated for model %d %d\n", model_size, MAX_MODEL_SIZE_BYTES);
-                else
-                    printf("Model size: %d\n", model_size);
-            #endif
-            
-            modelSize = receive_array_(c, ie.model_data, 0);
-           
-            printf("Model received: %d bytes\n", modelSize); 
-            status.haveModel = !interp_initialize(&ie, modelSize);
+        case CMD_SET_MODEL_INT:
+            modelSize = SetModel(c, ie.model_data_int);
+            break;
 
-            if(status.haveModel)
-            {
-                outuint(c, AISRV_STATUS_OKAY);
-                printf("Model written sucessfully\n");
-            }
-            else
-            {
-                outuint(c, AISRV_STATUS_ERROR_MODEL_ERR);
-                printf("Model update failed\n");
-            }
-
-            outct(c, XS1_CT_END);
-
+        case CMD_SET_MODEL_EXT:
+            modelSize = SetModel(c, ie.model_data_ext);
             break;
 
         /* TODO debug only = remove for production */
-        case CMD_GET_MODEL:
+        case CMD_GET_MODEL_INT:
            
             printf("Sending model length: %d\n", modelSize); 
             /* TODO bad status if no model */
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, ie.model_data, modelSize);
+            send_array(c, ie.model_data_int, modelSize);
+            break;
+
+        /* TODO debug only = remove for production */
+        case CMD_GET_MODEL_EXT:
+           
+            printf("Sending model length: %d\n", modelSize); 
+            /* TODO bad status if no model */
+            c <: (unsigned) AISRV_STATUS_OKAY;
+            send_array(c, ie.model_data_ext, modelSize);
             break;
 
         case CMD_SET_INPUT_TENSOR:
@@ -272,11 +291,11 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire)
         select
         {
             case c_usb :> cmd:
-                HandleCommand(c_usb, cmd, status, c_acquire);
+                HandleCommand(c_usb, cmd, c_acquire);
                 break;
             
             case c_spi :> cmd:
-                HandleCommand(c_spi, cmd, status, c_acquire);
+                HandleCommand(c_spi, cmd, c_acquire);
                 break;
         }
     }
