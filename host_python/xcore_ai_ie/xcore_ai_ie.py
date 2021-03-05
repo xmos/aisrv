@@ -48,15 +48,23 @@ class xcore_ai_ie(ABC):
     def connect(self):
         pass
 
-    def download_model(self, model_bytes):
+    def download_model(self, model_bytes, ext_mem = False):
         
         assert type(model_bytes) == bytearray
         
         print("Model length (bytes): " + str(len(model_bytes)))
-        
+       
+
+        if ext_mem: 
+            print("Downloading model to external memory")
+            cmd = aisrv_cmd.CMD_SET_MODEL_EXT
+        else:
+            print("Downloading model to internal SRAM")
+            cmd = aisrv_cmd.CMD_SET_MODEL_INT
+
         try:
             # Download model to device
-            self._download_data(aisrv_cmd.CMD_SET_MODEL, model_bytes)
+            self._download_data(cmd, model_bytes)
         except IOError:
             #print("Error from device during model download (likely issue with model)")
             self._clear_error()
@@ -131,11 +139,11 @@ class xcore_ai_ie(ABC):
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
-    def download_model_file(self, model_file):
+    def download_model_file(self, model_file, ext_mem = False):
     
         with open(model_file, "rb") as input_fd:
             model_data = input_fd.read()
-            self.download_model(bytearray(model_data))
+            self.download_model(bytearray(model_data), ext_mem = ext_mem)
 
     def bytes_to_ints(self, data_bytes, bpi=1):
 
