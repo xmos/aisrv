@@ -19,13 +19,12 @@ APP_NAME = app_aisrv
 # xcc for the final link (mapping) stage.
 
 SHARED_FLAGS  = -report \
--O3 -fcomment-asm -fxscope -mcmodel=large  -Wno-xcore-fptrgroup \
+-O3 -fcomment-asm -fxscope -mcmodel=large  -Wno-xcore-fptrgroup -save-temps \
 -Wno-unknown-pragmas \
 -Wno-bidirectional-buffered-port \
 -g \
 -DTF_LITE_STATIC_MEMORY \
 -DXCORE \
--DUSE_EXTMEM \
 -DENABLE_USB 
 
 
@@ -36,6 +35,9 @@ USED_MODULES = lib_i2c lib_xud lib_tensorflow lib_mipi
 
 XCC_FLAGS_usb = $(SHARED_FLAGS) -DUSB_TILE=tile[1] 
 XCC_CPP_FLAGS_usb = $(SHARED_FLAGS) -std=c++11 
+
+XCC_FLAGS_usb_extmem = $(SHARED_FLAGS) -DUSB_TILE=tile[1] -DUSE_EXTMEM
+XCC_CPP_FLAGS_usb_extmem = $(SHARED_FLAGS) -std=c++11 -DUSE_EXTMEM
 
 XCC_FLAGS_usb_mipi = $(SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 -DUSB_TILE=tile[0]
 XCC_CPP_FLAGS_usb_mipi = $(SHARED_FLAGS) -std=c++11 -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
