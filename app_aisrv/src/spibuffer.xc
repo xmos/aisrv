@@ -84,7 +84,7 @@ void spi_buffer(chanend from_spi, chanend to_engine, chanend to_sensor, struct m
 
         switch(cmd) 
         {
-        case CMD_SET_MODEL:
+        case CMD_SET_MODEL_INT:
        
             from_spi :> N;
             

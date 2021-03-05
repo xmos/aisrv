@@ -37,17 +37,14 @@ static profiler_t *profiler = nullptr;
 static interpreter_t *interpreter = nullptr;
 static const model_t *model = nullptr;
 
-#ifdef USE_EXTMEM
-constexpr int kTensorArenaSize = NETWORK_ARENA_SIZE;
+int kTensorArenaSize = INT_MEM_SIZE_BYTES ;
+
 __attribute__((section(".ExtMem_data")))
-uint8_t model_data[MAX_MODEL_SIZE_BYTES] __attribute__((aligned(4)));
-uint8_t kTensorArena[kTensorArenaSize]; __attribute__((aligned(4)));
-#else
-int kTensorArenaSize = MAX_MODEL_SIZE_BYTES;
-uint8_t inferenceMem[MAX_MODEL_SIZE_BYTES]; __attribute__((aligned(4)));
-uint8_t *model_data = inferenceMem;
+uint8_t model_data_ext[MAX_MODEL_SIZE_EXT_BYTES] __attribute__((aligned(4)));
+
+uint8_t inferenceMem[INT_MEM_SIZE_BYTES]; __attribute__((aligned(4)));
+uint8_t *model_data_int = inferenceMem;
 uint8_t *kTensorArena = inferenceMem;
-#endif
 
 size_t debug_log_index = 0;
 char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
@@ -77,11 +74,12 @@ aisrv_status_t interp_invoke()
 
 void inference_engine_initialize(inference_engine *ie)
 {
-    ie->model_data = model_data;    
+    ie->model_data_int = model_data_int;    
+    ie->model_data_ext = model_data_ext;    
 }
 int count = 0;
 
-int interp_initialize(inference_engine *ie, uint32_t modelSize) 
+int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_data) 
 {
     // Set up logging
     static tflite::MicroErrorReporter error_reporter;
@@ -95,7 +93,6 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize)
     // Set up profiling.
     static tflite::micro::xcore::XCoreProfiler xcore_profiler;
     profiler = &xcore_profiler;
-
    
    
     // Map the model into a usable data structure. This doesn't involve any
@@ -115,8 +112,6 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize)
     resolver->AddPad();
     resolver->AddMean();
     resolver->AddConcatenation();
-    
-    
     
     resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
             tflite::ops::micro::xcore::Register_Add_8());
