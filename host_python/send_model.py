@@ -12,10 +12,18 @@ else:
     print("only usb or spi supported")
     exit(1)
 
+if sys.argv[2] == 'ext':
+    ext_mem = True
+elif sys.argv[2] == 'int':
+    ext_mem = False
+else:
+    print("only ext or int (external or internal memory) supported")
+    exit(1)
+
 ie.connect()
 
 try:
-    ie.download_model_file(sys.argv[2])
+    ie.download_model_file(sys.argv[3], ext_mem = ext_mem)
 except AISRVError:
     print("Device reported an error")
     debug_string = ie.read_debug_log()
