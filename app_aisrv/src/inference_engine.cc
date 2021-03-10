@@ -155,7 +155,15 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
     resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
             tflite::ops::micro::xcore::Register_BSign_8());
 
-    modelSize = (modelSize + 3) & ~0x03; // Align 4
+    if(model_data == ie->model_data_ext)
+    {
+        modelSize = 0;
+    }
+    else
+    {
+        modelSize = (modelSize + 3) & ~0x03; // Align 4
+    }
+    
     kTensorArena = inferenceMem + modelSize; 
     kTensorArenaSize = sizeof(inferenceMem) - modelSize;
    
