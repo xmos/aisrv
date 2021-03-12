@@ -64,7 +64,12 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_dat);
 void exit(int);
 #endif
 
+#ifdef MIPI_INTEGRATION
+/* When MIPI enabled USB moves to Tile[0] - need some mem for this */
+#define INT_MEM_SIZE_BYTES          (330000)
+#else
 #define INT_MEM_SIZE_BYTES          (350000)
+#endif
 #define MAX_MODEL_SIZE_EXT_BYTES    (1024000)
 #define NETWORK_NUM_THREADS         (1)
 
