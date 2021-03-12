@@ -477,6 +477,15 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
 
+    # TODO move to super()
+    def start_acquire_stream(self):
+
+        # Send cmd
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_STREAM]), 1000)
+
+        # Send out a 0 length packet 
+        self._out_ep.write(bytes([]), 1000)
+
 
     
   
