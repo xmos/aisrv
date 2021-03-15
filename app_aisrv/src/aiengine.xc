@@ -231,11 +231,13 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire)
             send_array(c, (unsigned * unsafe) debug_log_buffer,  MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
             break; 
 
+        /* TODO do we need to separate AQUIRE_MODE from INFERENCE_MODE? */
+        /* TODO only accept mode if MIPI enabled */
         case CMD_START_ACQUIRE_STREAM:
 
             size_t size = receive_array_(c, data, 0);
-
-            status.acquireMode = (data, unsigned[])[0];
+            //status.acquireMode = (data, unsigned[])[0];
+            status.acquireMode = AISRV_ACQUIRE_MODE_STREAM;
             
             printf("Aquire mode: %d\n", status.acquireMode);
             aisrv_status_t trans_status = AISRV_STATUS_OKAY;
@@ -297,6 +299,22 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire)
             case c_spi :> cmd:
                 HandleCommand(c_spi, cmd, c_acquire);
                 break;
+
+            (status.acquireMode == AISRV_ACQUIRE_MODE_STREAM) => default:
+            {  
+                size_t size;
+
+                /* Run an acquire and a inference */ 
+                c_acquire <: (unsigned) CMD_START_ACQUIRE_SINGLE;
+
+                /* TODO check we dont overrun input_buffer */
+                size = receive_array_(c_acquire, (uint32_t * unsafe)ie.input_buffer, 0);
+
+                // TODO check model status and interp status
+                interp_invoke();
+
+                break;
+            }
         }
     }
 }
