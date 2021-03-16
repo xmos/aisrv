@@ -486,6 +486,23 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
 
+    #TODO move to super()
+    def enable_output_gpio(self):
+
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN]), 1000)
+        self._out_ep.write(bytes([1]), 1000)
+    
+    #TODO move to super()
+    def disable_output_gpio(self):
+
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN]), 1000)
+        self._out_ep.write(bytes([0]), 1000)
+
+
+
+    
+
+
 
     
   

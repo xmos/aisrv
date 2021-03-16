@@ -100,7 +100,7 @@ unsafe
 }
 
 #pragma unsafe arrays
-void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2, chanend c_l0) 
+void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*chanend c_l0*/) 
 {
     int line = 0;
     int lineCount = 0;
@@ -110,7 +110,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2, chan
     int errors = 0;
     int grabbing = 0;
     uint8_t new_grabbing = 0;
-    int fc = 0;
+    //int fc = 0;
     unsafe 
     {
         while(1) 
@@ -125,9 +125,9 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2, chan
                     {
                         lineCount = 0;
                         grabbing = new_grabbing;
-                        outuchar(c_l0, fc);
-                        outct(c_l0, 1);
-                        fc = ~fc;
+                        //outuchar(c_l0, fc);
+                        //outct(c_l0, 1);
+                        //fc = ~fc;
                     } 
                     else if (header == 1) // End of frame
                     {   
@@ -210,8 +210,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2, chan
 int8_t rgbImage[RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH];
 
 #pragma unsafe arrays
-void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c,
-                chanend c_acquire, chanend c_led0, chanend c_led1, chanend c_led2)
+void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend c_acquire)
 {
 #if 0
     int gain = GAIN_DEFAULT_DB;
@@ -315,7 +314,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c,
 #define TEST_DEMUX_EN       (0)
 #define DELAY_MIPI_CLK      (1)
 
-void mipi_main(client interface i2c_master_if i2c, chanend c_led0, chanend c_led1, chanend c_led2, chanend c_led3, chanend c_acquire)
+void mipi_main(client interface i2c_master_if i2c, chanend c_acquire)
 {
     chan c;
     chan c_kill, c_img, c_ctrl;
@@ -346,8 +345,8 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_led0, chanend c_led
         MipiReceive(tile[MIPI_TILE], 1, c, p_mipi_rxd, p_mipi_rxa, c_kill, TEST_DEMUX_EN, TEST_DEMUX_DATATYPE, TEST_DEMUX_MODE, MIPI_CLK_DIV, MIPI_CFG_CLK_DIV);
         MipiDecoupler(c, c_kill, c_img);
 
-        MipiImager(c_img, c_ctrl, null, c_led3);
-        ImagerUser(c_ctrl, i2c, c_acquire, c_led0, c_led1, c_led2);
+        MipiImager(c_img, c_ctrl, null);
+        ImagerUser(c_ctrl, i2c, c_acquire);
     }
     i2c.shutdown();
 }
