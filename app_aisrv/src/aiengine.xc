@@ -62,7 +62,7 @@ struct aiengine_status
     unsigned haveModel;
     unsigned acquireMode;
     unsigned outputGpioEn;
-    uint8_t outputGpioThresh[AISRV_GPIO_LENGTH]; 
+    int8_t outputGpioThresh[AISRV_GPIO_LENGTH]; 
     uint8_t outputGpioMax;
 } status;
 
@@ -102,15 +102,16 @@ void HandleGpio(uint8_t * unsafe outputTensor, size_t length, chanend c_led[AISR
 
     if(status.outputGpioMax)
     {
-        uint8_t max = 0;
+        int8_t max = 0;
         size_t maxi = 0;
 
         /* Find the maximum value in the whole output tensor */
         for(size_t i = 0; i < length; i++)
         {
-            if (outputTensor[i] > max)
+            int8_t x = (int8_t) outputTensor[i];
+            if (x > max)
             {
-                max = outputTensor[i];
+                max = (int8_t) outputTensor[i];
                 maxi = i;
             } 
 
@@ -122,7 +123,7 @@ void HandleGpio(uint8_t * unsafe outputTensor, size_t length, chanend c_led[AISR
             }
         }
 
-        printf("%d: %d\n", maxi, max);
+        printf("%d: %d %d\n", maxi, max, status.outputGpioThresh[maxi]);
         
         /* Note, we do not raise an IO for output tensor values outside the GPIO range */
         if(maxi < AISRV_GPIO_LENGTH)
@@ -343,12 +344,19 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire, chanend c_leds
             
             size_t size = receive_array_(c, data, 0);
 
+            size_t index = (data, uint8_t[])[0];
+            int8_t thresh = (data, uint8_t[])[1];
+
             if (size != 2)
-                c <: (unsigned) AISRV_STATUS_ERROR_BAD_CMD;
+            {
+                outuint(c, AISRV_STATUS_ERROR_BAD_CMD);
+                outct(c, XS1_CT_END);
+            }
             else
             {
-                status.outputGpioThresh[data[0]] = data[1];                
-                c <: (unsigned) AISRV_STATUS_OKAY;
+                status.outputGpioThresh[index] = thresh;                
+                outuint(c, AISRV_STATUS_OKAY);
+                outct(c, XS1_CT_END);
             }
 
             break;
@@ -379,7 +387,7 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4]
 
     for(size_t i = 0; i< AISRV_GPIO_LENGTH; i++)
     {
-        status.outputGpioThresh[i] = 128; // 0
+        status.outputGpioThresh[i] = -128;
     }
 
     status.outputGpioMax = 1;
@@ -411,7 +419,7 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4]
 
                 if(status.outputGpioEn)
                 {
-                    HandleGpio(ie.output_buffer, ie. output_size, c_leds);
+                    HandleGpio(ie.output_buffer, ie.output_size, c_leds);
                 }
 
                 break;

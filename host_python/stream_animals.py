@@ -47,6 +47,9 @@ ie.start_acquire_stream()
 
 ie.enable_output_gpio()
 
+for i in range(4): #FIXME magic number
+    ie.set_output_gpio_threshold(i, OUTPUT_THRESH)
+
 while True:
     #print("Waiting for inference")
     output_data_int = ie.read_output_tensor()
