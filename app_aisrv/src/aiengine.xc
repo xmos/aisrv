@@ -122,12 +122,11 @@ void HandleGpio(uint8_t * unsafe outputTensor, size_t length, chanend c_led[AISR
                 outct(c_led[i], XS1_CT_END);
             }
         }
-
-        printf("%d: %d %d\n", maxi, max, status.outputGpioThresh[maxi]);
         
         /* Note, we do not raise an IO for output tensor values outside the GPIO range */
         if(maxi < AISRV_GPIO_LENGTH)
         {
+            //printf("%d: %d %d\n", maxi, max, status.outputGpioThresh[maxi]);
             outuchar(c_led[maxi], (uint8_t) (outputTensor[maxi] > status.outputGpioThresh[maxi]));
             outct(c_led[maxi], XS1_CT_END);
         }
