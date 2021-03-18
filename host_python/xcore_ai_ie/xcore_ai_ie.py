@@ -503,7 +503,18 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_THRESH]), 1000)
         self._out_ep.write(bytes([index, threshold]), 1000)
 
+    def set_output_gpio_mode_max(self):
         
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE]), 1000)
+        self._out_ep.write(bytes([1]), 1000)
+
+    def set_output_gpio_mode_none(self):
+        
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE]), 1000)
+        self._out_ep.write(bytes([0]), 1000)
+
+
+
 
 
 

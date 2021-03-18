@@ -46,6 +46,7 @@ ie.connect()
 ie.start_acquire_stream()
 
 ie.enable_output_gpio()
+ie.set_output_gpio_mode_max()
 
 for i in range(4): #FIXME magic number
     ie.set_output_gpio_threshold(i, OUTPUT_THRESH)

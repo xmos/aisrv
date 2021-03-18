@@ -40,5 +40,8 @@ CMD_SET_OUTPUT_GPIO_EN          = int(0x80 | 0x11)
 CMD_GET_OUTPUT_GPIO_THRESH      = int(0x12)
 CMD_SET_OUTPUT_GPIO_THRESH      = int(0x80 | 0x12)
 
+CMD_GET_OUTPUT_GPIO_MODE        = int(0x13)
+CMD_SET_OUTPUT_GPIO_MODE        = int(0x80 | 0x13)
+
 CMD_HELLO                       = int(0x55)
 
