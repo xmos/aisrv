@@ -61,6 +61,9 @@ struct aiengine_status
 {
     unsigned haveModel;
     unsigned acquireMode;
+    unsigned outputGpioEn;
+    int8_t outputGpioThresh[AISRV_GPIO_LENGTH]; 
+    uint8_t outputGpioMode;
 } status;
 
 size_t SetModel(chanend c, uint8_t * unsafe model_data)
@@ -94,7 +97,53 @@ size_t SetModel(chanend c, uint8_t * unsafe model_data)
     return modelSize;
 }
 
-void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire)
+void HandleGpio(uint8_t * unsafe outputTensor, size_t length, chanend c_led[AISRV_GPIO_LENGTH])
+{
+    if(status.outputGpioMode == AISRV_GPIO_OUTPUT_MODE_MAX)
+    {
+        int8_t max = 0;
+        size_t maxi = 0;
+
+        /* Find the maximum value in the whole output tensor */
+        for(size_t i = 0; i < length; i++)
+        {
+            int8_t x = (int8_t) outputTensor[i];
+            if (x > max)
+            {
+                max = (int8_t) outputTensor[i];
+                maxi = i;
+            } 
+
+            if(i < AISRV_GPIO_LENGTH)
+            {
+                /* All GPIO low */
+                outuchar(c_led[i], 0);
+                outct(c_led[i], XS1_CT_END);
+            }
+        }
+        
+        /* Note, we do not raise an IO for output tensor values outside the GPIO range */
+        if(maxi < AISRV_GPIO_LENGTH)
+        {
+            //printf("%d: %d %d\n", maxi, max, status.outputGpioThresh[maxi]);
+            outuchar(c_led[maxi], (uint8_t) (((int8_t) outputTensor[maxi]) > status.outputGpioThresh[maxi]));
+            outct(c_led[maxi], XS1_CT_END);
+        }
+    }
+    else
+    {
+        for(size_t i = 0; i < length; i++)
+        {
+            if(i == AISRV_GPIO_LENGTH)
+                break;
+        
+            outuchar(c_led[i], (uint8_t) (((int8_t) outputTensor[i]) > status.outputGpioThresh[i]));
+            outct(c_led[i], XS1_CT_END);
+        }
+    }
+}
+
+void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire, chanend c_leds[AISRV_GPIO_LENGTH])
 {
     unsigned data[MAX_PACKET_SIZE_WORDS]; 
 
@@ -171,6 +220,11 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire)
                 trans_status = interp_invoke();
                 //print_output();
                 print_profiler_summary();
+
+                if(status.outputGpioEn)
+                {
+                    HandleGpio(ie.output_buffer, ie. output_size, c_leds);
+                }
             }
             else
             {
@@ -246,10 +300,10 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire)
             
             break;
 
-        //case CMD_GET_ACQUIRE_MODE:
-        //    c <: (unsigned) AISRV_STATUS_OKAY;
-        //    send_array(c, &status.acquireMode, sizeof(status.acquireMode));
-        //    break;
+        case CMD_GET_ACQUIRE_MODE:
+            c <: (unsigned) AISRV_STATUS_OKAY;
+            send_array(c, &status.acquireMode, sizeof(status.acquireMode));
+            break;
 
         case CMD_START_ACQUIRE_SINGLE:
 
@@ -268,6 +322,62 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire)
             outct(c, XS1_CT_END);
             break;
 
+        case CMD_GET_OUTPUT_GPIO_EN:
+                c <: (unsigned) AISRV_STATUS_OKAY;
+                send_array(c, &ie.output_size, sizeof(status.outputGpioEn));
+            break;
+        
+        case CMD_SET_OUTPUT_GPIO_EN:
+
+            aisrv_status_t trans_status = AISRV_STATUS_OKAY;
+            size_t size = receive_array_(c, data, 0);
+
+            status.outputGpioEn = data[0];
+
+            outuint(c, AISRV_STATUS_OKAY);
+            outct(c, XS1_CT_END);
+            break;
+
+        case CMD_SET_OUTPUT_GPIO_THRESH:
+            
+            size_t size = receive_array_(c, data, 0);
+
+            size_t index = (data, uint8_t[])[0];
+            int8_t thresh = (data, uint8_t[])[1];
+
+            if (size != 2)
+            {
+                outuint(c, AISRV_STATUS_ERROR_BAD_CMD);
+                outct(c, XS1_CT_END);
+            }
+            else
+            {
+                if(index < AISRV_GPIO_LENGTH)
+                {
+                    status.outputGpioThresh[index] = thresh;                
+                }
+                outuint(c, AISRV_STATUS_OKAY);
+                outct(c, XS1_CT_END);
+            }
+
+            break;
+        
+        case CMD_GET_OUTPUT_GPIO_THRESH:
+            c <: (unsigned) AISRV_STATUS_OKAY;
+            send_array(c, &status.outputGpioThresh, sizeof(status.outputGpioThresh));
+            break;
+
+        case CMD_SET_OUTPUT_GPIO_MODE:
+
+            size_t size = receive_array_(c, data, 0);
+            
+            status.outputGpioMode = data[0];
+             
+            outuint(c, AISRV_STATUS_OKAY);
+            outct(c, XS1_CT_END);
+
+            break;
+
         default:
             c <: (unsigned) AISRV_STATUS_ERROR_BAD_CMD;
             printf("Unknown command (aiengine): %d\n", cmd);
@@ -276,9 +386,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire)
 }
 
 
-
-
-void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire)
+void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4])
 {
     aisrv_cmd_t cmd = CMD_NONE;
     size_t length = 0;
@@ -288,16 +396,23 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire)
     status.haveModel = 0;
     status.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
 
+    for(size_t i = 0; i< AISRV_GPIO_LENGTH; i++)
+    {
+        status.outputGpioThresh[i] = -128;
+    }
+
+    status.outputGpioMode = AISRV_GPIO_OUTPUT_MODE_NONE;
+
     while(1)
     {
         select
         {
             case c_usb :> cmd:
-                HandleCommand(c_usb, cmd, c_acquire);
+                HandleCommand(c_usb, cmd, c_acquire, c_leds);
                 break;
             
             case c_spi :> cmd:
-                HandleCommand(c_spi, cmd, c_acquire);
+                HandleCommand(c_spi, cmd, c_acquire, c_leds);
                 break;
 
             (status.acquireMode == AISRV_ACQUIRE_MODE_STREAM) => default:
@@ -312,6 +427,11 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire)
 
                 // TODO check model status and interp status
                 interp_invoke();
+
+                if(status.outputGpioEn)
+                {
+                    HandleGpio(ie.output_buffer, ie.output_size, c_leds);
+                }
 
                 break;
             }

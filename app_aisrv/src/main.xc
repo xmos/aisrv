@@ -58,7 +58,7 @@ int main(void)
     par 
     {
 
-        on tile[0]: aiengine(c_spi_to_engine, c_usb_to_engine, c_acquire);
+        on tile[0]: aiengine(c_spi_to_engine, c_usb_to_engine, c_acquire, c_leds);
         
         on tile[0]: led_driver(c_leds);
 
@@ -66,7 +66,7 @@ int main(void)
         on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
 #endif
 #if defined(MIPI_INTEGRATION)
-        on tile[1]: mipi_main(i2c[0], c_leds[0], c_leds[1], c_leds[2], c_leds[3], c_acquire);
+        on tile[1]: mipi_main(i2c[0], c_acquire);
 #endif
 
 #if defined(PSOC_INTEGRATION)
