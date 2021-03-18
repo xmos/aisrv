@@ -26,36 +26,44 @@ typedef enum aisrv_cmd
     #include "../../host_python/xcore_ai_ie/aisrv_cmd.py"
     #undef int
 } aisrv_cmd_t;
-    
+   
+typedef enum aisrv_gpio_mode
+{
+    AISRV_GPIO_OUTPUT_MODE_NONE     = 0x00,
+    AISRV_GPIO_OUTPUT_MODE_MAX      = 0x01,
+
+} aisrv_gpio_mode_t;
+
+
 #define STATUS_BYTE_STATUS        (0)
 //#define STATUS_BYTE_ERROR         (1)
 
 typedef enum aisrv_spec {
-    SPEC_WORD_0                   = 0x00,
-    SPEC_WORD_1                   = 0x01,
-    SPEC_INPUT_TENSOR_LENGTH      = 0x02,
-    SPEC_OUTPUT_TENSOR_LENGTH     = 0x03,
-    SPEC_TIMINGS_LENGTH           = 0x04,
-    SPEC_MODEL_TOTAL              = 0x05,      // Up to this one it is the model
-    SPEC_SENSOR_TENSOR_LENGTH     = 0x05,      // From here it is acquistion
-    SPEC_ALL_TOTAL                = 0x06       // All data words.
+    SPEC_WORD_0                     = 0x00,
+    SPEC_WORD_1                     = 0x01,
+    SPEC_INPUT_TENSOR_LENGTH        = 0x02,
+    SPEC_OUTPUT_TENSOR_LENGTH       = 0x03,
+    SPEC_TIMINGS_LENGTH             = 0x04,
+    SPEC_MODEL_TOTAL                = 0x05,      // Up to this one it is the model
+    SPEC_SENSOR_TENSOR_LENGTH       = 0x05,      // From here it is acquistion
+    SPEC_ALL_TOTAL                  = 0x06       // All data words.
 } aisrv_spec_t;
 
 typedef enum aisrv_status
 {
-    AISRV_STATUS_OKAY                 = 0x00,
-    AISRV_STATUS_BUSY                 = 0x01,
-    AISRV_STATUS_SENSING              = 0x02,
-    AISRV_STATUS_ERROR_NO_MODEL       = 0x04,
-    AISRV_STATUS_ERROR_MODEL_ERR      = 0x08,
-    AISRV_STATUS_ERROR_INFER_ERR      = 0x10,
-    AISRV_STATUS_ERROR_BAD_CMD        = 0x20
+    AISRV_STATUS_OKAY               = 0x00,
+    AISRV_STATUS_BUSY               = 0x01,
+    AISRV_STATUS_SENSING            = 0x02,
+    AISRV_STATUS_ERROR_NO_MODEL     = 0x04,
+    AISRV_STATUS_ERROR_MODEL_ERR    = 0x08,
+    AISRV_STATUS_ERROR_INFER_ERR    = 0x10,
+    AISRV_STATUS_ERROR_BAD_CMD      = 0x20
 } aisrv_status_t;
 
 typedef enum aisrv_acquire_mode
 {
-    AISRV_ACQUIRE_MODE_SINGLE         = 0x00,
-    AISRV_ACQUIRE_MODE_STREAM         = 0x01,
+    AISRV_ACQUIRE_MODE_SINGLE       = 0x00,
+    AISRV_ACQUIRE_MODE_STREAM       = 0x01,
 } aisrv_acquire_mode_t;
 
 #ifdef __XC__
@@ -72,5 +80,8 @@ void exit(int);
 #endif
 #define MAX_MODEL_SIZE_EXT_BYTES    (1024000)
 #define NETWORK_NUM_THREADS         (1)
+
+#define AISRV_GPIO_LENGTH           (4)
+
 
 #endif

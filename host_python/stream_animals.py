@@ -19,6 +19,8 @@ from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi
 OUTPUT_SCALE = 1/255.0
 OUTPUT_ZERO_POINT = -128
 
+OUTPUT_THRESH = 50
+
 OBJECT_CLASSES = [
     "tench",
     "goldfish",
@@ -42,6 +44,12 @@ else:
 ie.connect()
 
 ie.start_acquire_stream()
+
+ie.enable_output_gpio()
+ie.set_output_gpio_mode_max()
+
+for i in range(4): #FIXME magic number
+    ie.set_output_gpio_threshold(i, OUTPUT_THRESH)
 
 while True:
     #print("Waiting for inference")
