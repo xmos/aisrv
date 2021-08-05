@@ -18,6 +18,7 @@ typedef struct inference_engine {
     unsigned int input_size;
     unsigned int output_size;
     unsigned int output_times_size;
+    unsigned int operators_size;
     unsigned int * UNSAFE output_times;
 } inference_engine_t;
 
@@ -28,7 +29,7 @@ extern "C" {
     void inference_engine_initialize(inference_engine_t * UNSAFE ie);
     int interp_initialize(inference_engine_t * UNSAFE ie, uint32_t modelSize, uint8_t * UNSAFE model_data);
     aisrv_status_t interp_invoke();
-    void print_profiler_summary();
+    void print_profiler_summary(inference_engine_t * UNSAFE ie);
 #ifdef __cplusplus
 };
 #endif
