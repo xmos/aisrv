@@ -19,7 +19,7 @@ typedef tflite::MicroAllocator micro_allocator_t;
 typedef tflite::MicroErrorReporter error_reporter_t;
 typedef tflite::micro::xcore::XCoreInterpreter interpreter_t;
 typedef tflite::micro::xcore::XCoreProfiler profiler_t;
-typedef tflite::MicroMutableOpResolver<18> resolver_t;
+typedef tflite::MicroMutableOpResolver<24> resolver_t;
 typedef tflite::Model model_t;
 
 // static buffer for interpreter_t class allocation
@@ -111,6 +111,7 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
     resolver->AddSoftmax();
     resolver->AddPad();
     resolver->AddMean();
+    resolver->AddReshape();
     resolver->AddConcatenation();
     resolver->AddFullyConnected();
 
@@ -118,6 +119,7 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
     resolver->AddMaxPool2D();
     resolver->AddAveragePool2D();
     resolver->AddPad();
+    resolver->AddLogistic();
 
     resolver->AddConv2D();
     resolver->AddQuantize();
@@ -156,7 +158,7 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
 
     resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode,
             tflite::ops::micro::xcore::Register_Lookup_8());
-
+/*
     resolver->AddCustom(tflite::ops::micro::xcore::BConv2d_Int8_OpCode,
             tflite::ops::micro::xcore::Register_BConv2D_Int8());
 
@@ -165,7 +167,7 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
 
     resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
             tflite::ops::micro::xcore::Register_BSign_8());
-
+*/
     if(model_data == ie->model_data_ext)
     {
         modelSize = 0;
@@ -212,11 +214,27 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
     return 0;
 }
 
+static const char *index_to_name(int index) {
+    auto* opcodes = model->operator_codes();
+    if (index >= opcodes->size()) {
+        return "Missing registration";
+    }
+    auto* opcode = (*opcodes)[index];
+    auto builtin_code = std::max(opcode->builtin_code(),
+                                 static_cast<tflite::BuiltinOperator>(opcode->deprecated_builtin_code()));
+    if (builtin_code == tflite::BuiltinOperator_CUSTOM) {
+        return opcode->custom_code()->c_str();
+    } else {
+        return tflite::EnumNameBuiltinOperator(
+            tflite::BuiltinOperator(builtin_code));
+    }
+}
+
 void print_profiler_summary(inference_engine *ie)
 {
+    auto* opcodes = model->operator_codes();
     uint32_t total = 0;
     const char *op_name;
-    auto* opcodes = model->operator_codes();
 
     if (!profiler) {
         return;
@@ -231,23 +249,29 @@ void print_profiler_summary(inference_engine *ie)
         {
             const auto* op = (*subgraphs)[0]->operators()->Get(i);
             const size_t index = op->opcode_index();
-            if (index >= opcodes->size()) {
-                op_name = "Missing registration";
-            } else {
-                auto* opcode = (*opcodes)[index];
-                auto builtin_code = std::max(opcode->builtin_code(),
-                                             static_cast<tflite::BuiltinOperator>(opcode->deprecated_builtin_code()));
-                if (builtin_code == tflite::BuiltinOperator_CUSTOM) {
-                    op_name = opcode->custom_code()->c_str();
-                } else {
-                    op_name = tflite::EnumNameBuiltinOperator(
-                        tflite::BuiltinOperator(builtin_code));
-                }
-            }
+            op_name = index_to_name(index);
 
             total += times[i];
             printf("Operator %3d %-20s took %5lu ms\n", i, op_name, times[i]/100000);
         }
     }
     printf("TOTAL %lu microseconds\n", total);
+
+    for (size_t index = 0; index < opcodes->size(); index++) {
+        uint64_t time = 0;
+        for (size_t i = 0; i < ie->operators_size; ++i)
+        {
+            if (i < count) 
+            {
+                const auto* op = (*subgraphs)[0]->operators()->Get(i);
+                if (index == op->opcode_index()) {
+                    time += times[i];
+                }
+            }
+        }
+        op_name = index_to_name(index);
+
+        printf("Operator-class %-20s took %5lu ms %3d%%\n",
+               op_name, time/100000, (int)(100*(uint64_t)time/total));
+    }
 }

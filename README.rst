@@ -23,7 +23,8 @@ Adding operators
 ----------------
 
 Edit app_aisrv/src/inference_engine.cc and add operators to the resolver as
-appropriate.
+appropriate. Don't forget to extend the resolver vector length, in the
+declaration of ``resolver_s``.
 
 Compiling
 ---------
