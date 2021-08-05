@@ -1,6 +1,7 @@
 #include <xs1.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <print.h>
 #include "aiengine.h"
 #include "aisrv.h"
 #include "inference_engine.h"
@@ -219,7 +220,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire, chanend c_leds
             {
                 trans_status = interp_invoke();
                 //print_output();
-                print_profiler_summary();
+                print_profiler_summary(&ie);
 
                 if(status.outputGpioEn)
                 {
@@ -396,6 +397,7 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4]
     status.haveModel = 0;
     status.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
 
+    printstr("Ready\n");
     for(size_t i = 0; i< AISRV_GPIO_LENGTH; i++)
     {
         status.outputGpioThresh[i] = -128;

@@ -7,12 +7,11 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
-#include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
-#include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
+#include "xcore_ops.h"
+#include "xcore_interpreter.h"
+#include "xcore_profiler.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
-#include "tensorflow/lite/version.h"
 #include "xcore_device_memory.h"
 
 // shorthand typedefs
@@ -42,7 +41,8 @@ int kTensorArenaSize = INT_MEM_SIZE_BYTES ;
 __attribute__((section(".ExtMem_data")))
 uint8_t model_data_ext[MAX_MODEL_SIZE_EXT_BYTES] __attribute__((aligned(4)));
 
-uint8_t inferenceMem[INT_MEM_SIZE_BYTES]; __attribute__((aligned(4)));
+__attribute__((section(".ExtMem_data")))
+uint8_t inferenceMem[INT_MEM_SIZE_BYTES] __attribute__((aligned(4)));
 uint8_t *model_data_int = inferenceMem;
 uint8_t *kTensorArena = inferenceMem;
 
@@ -102,7 +102,7 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
     {
         printf("Model provided is schema version %u not equal "
                "to supported version %d.",
-               model->version(), TFLITE_SCHEMA_VERSION);
+               (uint) model->version(), TFLITE_SCHEMA_VERSION);
         return 1;
     }
 
@@ -112,6 +112,17 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
     resolver->AddPad();
     resolver->AddMean();
     resolver->AddConcatenation();
+    resolver->AddFullyConnected();
+
+    resolver->AddAdd();
+    resolver->AddMaxPool2D();
+    resolver->AddAveragePool2D();
+    resolver->AddPad();
+
+    resolver->AddConv2D();
+    resolver->AddQuantize();
+    resolver->AddDepthwiseConv2D();
+    resolver->AddDequantize();
     
     resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
             tflite::ops::micro::xcore::Register_Add_8());
@@ -188,6 +199,7 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
         TF_LITE_REPORT_ERROR(reporter, "AllocateTensors() failed");
         return 2;
     }
+    ie->operators_size = model->subgraphs()->Get(0)->operators()->size();
 
     // Obtain pointers to the model's input and output tensors.
     ie->input_buffer = (unsigned char *)(interpreter->input(0)->data.raw);
@@ -195,39 +207,46 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
     ie->output_buffer = (unsigned char *)(interpreter->output(0)->data.raw);
     ie->output_size = interpreter->output(0)->bytes;
     ie->output_times = (unsigned int *) xcore_profiler.GetEventDurations();
-    ie->output_times_size = interpreter->operators_size();
+    ie->output_times_size = ie->operators_size;
     
     return 0;
 }
 
-void print_profiler_summary() 
+void print_profiler_summary(inference_engine *ie)
 {
-    uint32_t count = 0;
-    uint32_t const *times = nullptr;
-    const char *op_name;
     uint32_t total = 0;
+    const char *op_name;
+    auto* opcodes = model->operator_codes();
 
-    if (profiler) 
-    {
-        count = profiler->GetNumEvents();
-        times = profiler->GetEventDurations();
+    if (!profiler) {
+        return;
     }
+    uint32_t count = profiler->GetNumEvents();
+    uint32_t const *times = profiler->GetEventDurations();
+    auto* subgraphs = model->subgraphs();
 
-    for (size_t i = 0; i < interpreter->operators_size(); ++i) 
+    for (size_t i = 0; i < ie->operators_size; ++i)
     {
         if (i < count) 
         {
-            tflite::NodeAndRegistration node_and_reg =
-                interpreter->node_and_registration(static_cast<int>(i));
-            const TfLiteRegistration *registration = node_and_reg.registration;
-            if (registration->builtin_code == tflite::BuiltinOperator_CUSTOM) {
-                op_name = registration->custom_name;
+            const auto* op = (*subgraphs)[0]->operators()->Get(i);
+            const size_t index = op->opcode_index();
+            if (index >= opcodes->size()) {
+                op_name = "Missing registration";
             } else {
-                op_name = tflite::EnumNameBuiltinOperator(
-                        tflite::BuiltinOperator(registration->builtin_code));
+                auto* opcode = (*opcodes)[index];
+                auto builtin_code = std::max(opcode->builtin_code(),
+                                             static_cast<tflite::BuiltinOperator>(opcode->deprecated_builtin_code()));
+                if (builtin_code == tflite::BuiltinOperator_CUSTOM) {
+                    op_name = opcode->custom_code()->c_str();
+                } else {
+                    op_name = tflite::EnumNameBuiltinOperator(
+                        tflite::BuiltinOperator(builtin_code));
+                }
             }
+
             total += times[i];
-            printf("Operator %d, %s took %lu microseconds\n", i, op_name, times[i]);
+            printf("Operator %3d %-20s took %5lu ms\n", i, op_name, times[i]/100000);
         }
     }
     printf("TOTAL %lu microseconds\n", total);

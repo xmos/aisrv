@@ -229,8 +229,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
                 unsigned pktLength;
                 XUD_GetBuffer(ep_out, (data, uint8_t[]), pktLength);
        
-                printf("Received: %d bytes\n", pktLength);
-                
                 size_t i = 0;
                 for(i = 0; i < (pktLength/4); i++)
                 {
