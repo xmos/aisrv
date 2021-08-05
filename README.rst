@@ -8,7 +8,7 @@ Project to run inference on xCORE with input data/model supplied via control int
 
 Note, this project is currently pre-release quality, the following is required to build/use.
 
-- ``lib_xud`` on branch DEV/XS3
+- ``lib_xud`` on branch master
 - ``lib_nn`` on branch develop
 - ``lib_tflite_micro`` on branch master (to be changed)
 - ``lib_mipi`` on branch master
@@ -16,7 +16,14 @@ Note, this project is currently pre-release quality, the following is required t
 - ``lib_xassert`` on branch develop
 - ``lib_xlogging`` on branch develop
 
-Note, dependencies should be cloned to the same level as the aisrv repo
+Note, dependencies should be cloned to the same level as the aisrv repo.
+``lib_tflite_micro`` shold be cloned with ``--recursive``
+
+Adding operators
+----------------
+
+Edit app_aisrv/src/inference_engine.cc and add operators to the resolver as
+appropriate.
 
 Compiling
 ---------
@@ -37,12 +44,6 @@ And in another window::
   python3 send_model.py usb ext ../model/model_quant.tflite
   python3 send_picture_float.py usb ostrich.png 
   python3 send_picture_float.py usb goldfish.png 
-
-Adding operators
-----------------
-
-Edit app_aisrv/src/inference_engine.cc and add operators to the resolver as
-appropriate.
 
 Development
 -----------
