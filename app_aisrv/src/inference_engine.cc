@@ -233,7 +233,7 @@ static const char *index_to_name(int index) {
 void print_profiler_summary(inference_engine *ie)
 {
     auto* opcodes = model->operator_codes();
-    uint32_t total = 0;
+    uint64_t total = 0;
     const char *op_name;
 
     if (!profiler) {
@@ -255,7 +255,7 @@ void print_profiler_summary(inference_engine *ie)
             printf("Operator %3d %-20s took %5lu ms\n", i, op_name, times[i]/100000);
         }
     }
-    printf("TOTAL %lu microseconds\n", total);
+    printf("TOTAL %llu microseconds\n", total);
 
     for (size_t index = 0; index < opcodes->size(); index++) {
         uint64_t time = 0;
@@ -271,7 +271,7 @@ void print_profiler_summary(inference_engine *ie)
         }
         op_name = index_to_name(index);
 
-        printf("Operator-class %-20s took %5lu ms %3d%%\n",
+        printf("Operator-class %-20s took %5llu ms %3d%%\n",
                op_name, time/100000, (int)(100*(uint64_t)time/total));
     }
 }
