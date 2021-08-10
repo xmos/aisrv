@@ -14,37 +14,25 @@
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "xcore_device_memory.h"
 
-// shorthand typedefs
-typedef tflite::MicroAllocator micro_allocator_t;
-typedef tflite::MicroErrorReporter error_reporter_t;
-typedef tflite::micro::xcore::XCoreInterpreter interpreter_t;
-typedef tflite::micro::xcore::XCoreProfiler profiler_t;
-typedef tflite::MicroMutableOpResolver<24> resolver_t;
-typedef tflite::Model model_t;
+struct tflite_micro_objects {
+    tflite::MicroErrorReporter error_reporter;
+    tflite::micro::xcore::XCoreProfiler xcore_profiler;
+    uint8_t interpreter_buffer[sizeof(tflite::micro::xcore::XCoreInterpreter)];
+    tflite::MicroMutableOpResolver<MAX_OPERATORS> resolver;
+    
+    tflite::micro::xcore::XCoreInterpreter *interpreter;
+    const tflite::Model *model;
+};
 
-// static buffer for interpreter_t class allocation
-uint8_t interpreter_buffer[sizeof(interpreter_t)];
-
-// static variables
-static error_reporter_t error_reporter_s;
-static error_reporter_t *reporter = nullptr;
-
-static resolver_t resolver_s;
-static resolver_t *resolver = nullptr;
-static profiler_t profiler_s;
-static profiler_t *profiler = nullptr;
-static interpreter_t *interpreter = nullptr;
-static const model_t *model = nullptr;
-
-int kTensorArenaSize = INT_MEM_SIZE_BYTES ;
+static struct tflite_micro_objects s0;
 
 __attribute__((section(".ExtMem_data")))
-uint8_t model_data_ext[MAX_MODEL_SIZE_EXT_BYTES] __attribute__((aligned(4)));
+uint8_t data_ext[MAX_MODEL_SIZE_EXT_BYTES] __attribute__((aligned(4)));
 
 __attribute__((section(".ExtMem_data")))
-uint8_t inferenceMem[INT_MEM_SIZE_BYTES] __attribute__((aligned(4)));
-uint8_t *model_data_int = inferenceMem;
-uint8_t *kTensorArena = inferenceMem;
+uint8_t data_int[INT_MEM_SIZE_BYTES] __attribute__((aligned(4)));
+
+/* This needs moving to somewhere, preferably an error reporter */
 
 size_t debug_log_index = 0;
 char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
@@ -58,56 +46,16 @@ extern "C" void DebugLog(const char* s)
         debug_log_index = 0;
 }
 
-aisrv_status_t interp_invoke() 
-{
-    // Run inference, and report any error
-    TfLiteStatus invoke_status = interpreter->Invoke();
-
-    if (invoke_status != kTfLiteOk) 
-    {
-        TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
-        return AISRV_STATUS_ERROR_INFER_ERR;
-    }
-
-    return AISRV_STATUS_OKAY;
-}
-
 void inference_engine_initialize(inference_engine *ie)
 {
-    ie->model_data_int = model_data_int;    
-    ie->model_data_ext = model_data_ext;    
-}
-int count = 0;
+    // First initialise the structure with the three memory objects
+    // internal memory, external memory, and TFLM objects.
+    ie->tflm = &s0;
+    ie->model_data_int = data_int;
+    ie->model_data_ext = data_ext;
 
-int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_data) 
-{
-    // Set up logging
-    static tflite::MicroErrorReporter error_reporter;
-    reporter = &error_reporter;
-
-    if (resolver == nullptr) 
-    {
-        resolver = &resolver_s;
-    }
-
-    // Set up profiling.
-    static tflite::micro::xcore::XCoreProfiler xcore_profiler;
-    profiler = &xcore_profiler;
-   
-   
-    // Map the model into a usable data structure. This doesn't involve any
-    // copying or parsing, it's a very lightweight operation.
-    model = tflite::GetModel(model_data);
-    if (model->version() != TFLITE_SCHEMA_VERSION)
-    {
-        printf("Model provided is schema version %u not equal "
-               "to supported version %d.",
-               (uint) model->version(), TFLITE_SCHEMA_VERSION);
-        return 1;
-    }
-
-
-    // This pulls in all the operation implementations we expect to need.
+    // Now add all the operators that we need
+    auto *resolver = &ie->tflm->resolver;
     resolver->AddSoftmax();
     resolver->AddPad();
     resolver->AddMean();
@@ -168,54 +116,94 @@ int interp_initialize(inference_engine *ie, uint32_t modelSize, uint8_t *model_d
     resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
             tflite::ops::micro::xcore::Register_BSign_8());
 */
+}
+
+int inference_engine_load_model(inference_engine *ie, uint32_t modelSize, uint8_t *model_data) 
+{
+   
+    // Map the model into a usable data structure. This doesn't involve any
+    // copying or parsing, it's a very lightweight operation.
+    ie->tflm->model = tflite::GetModel(model_data);
+    uint model_version = ie->tflm->model->version();
+    if (model_version != TFLITE_SCHEMA_VERSION)
+    {
+        printf("Model provided is schema version %u not equal "
+               "to supported version %d.",
+               model_version, TFLITE_SCHEMA_VERSION);
+        return 1;
+    }
+
+    // Now work out where the tensor arena goes
+    uint8_t *kTensorArena = ie->model_data_int;
+    int kTensorArenaSize = INT_MEM_SIZE_BYTES;
+    
     if(model_data == ie->model_data_ext)
     {
-        modelSize = 0;
+        kTensorArena = ie->model_data_int;
+        kTensorArenaSize = INT_MEM_SIZE_BYTES;
     }
     else
     {
         modelSize = (modelSize + 3) & ~0x03; // Align 4
+        kTensorArena = ie->model_data_int + modelSize; 
+        kTensorArenaSize = INT_MEM_SIZE_BYTES - modelSize;
     }
     
-    kTensorArena = inferenceMem + modelSize; 
-    kTensorArenaSize = sizeof(inferenceMem) - modelSize;
    
-    if (interpreter) 
+    if (ie->tflm->interpreter) 
     {
         // Delete existing interpreter
-        delete interpreter;  // NOTE: interpreter must be deleted before resolver and reporter
+        delete ie->tflm->interpreter;  // NOTE: interpreter must be deleted before resolver and reporter
         
         // Need to memset the arena to 0 otherwise assertion in xcore_planning.cc 
         memset(kTensorArena, 0, kTensorArenaSize);
     }
 
     // Build an interpreter to run the model with
-     interpreter = new (interpreter_buffer)
-      interpreter_t(model, *resolver, kTensorArena, kTensorArenaSize, reporter,
-                    true, profiler);
+     ie->tflm->interpreter = new (ie->tflm->interpreter_buffer)
+      tflite::micro::xcore::XCoreInterpreter(ie->tflm->model,
+                                             ie->tflm->resolver,
+                                             kTensorArena, kTensorArenaSize,
+                                             &ie->tflm->error_reporter,
+                                             true,
+                                             &ie->tflm->xcore_profiler);
 
     // Allocate memory from the kTensorArena for the model's tensors.
-    TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
+    TfLiteStatus allocate_tensors_status = ie->tflm->interpreter->AllocateTensors();
     if (allocate_tensors_status != kTfLiteOk)
     {
-        TF_LITE_REPORT_ERROR(reporter, "AllocateTensors() failed");
+        TF_LITE_REPORT_ERROR(&ie->tflm->error_reporter, "AllocateTensors() failed");
         return 2;
     }
-    ie->operators_size = model->subgraphs()->Get(0)->operators()->size();
+    ie->operators_size = ie->tflm->model->subgraphs()->Get(0)->operators()->size();
 
     // Obtain pointers to the model's input and output tensors.
-    ie->input_buffer = (unsigned char *)(interpreter->input(0)->data.raw);
-    ie->input_size = interpreter->input(0)->bytes;
-    ie->output_buffer = (unsigned char *)(interpreter->output(0)->data.raw);
-    ie->output_size = interpreter->output(0)->bytes;
-    ie->output_times = (unsigned int *) xcore_profiler.GetEventDurations();
+    ie->input_buffer = (unsigned char *)(ie->tflm->interpreter->input(0)->data.raw);
+    ie->input_size = ie->tflm->interpreter->input(0)->bytes;
+    ie->output_buffer = (unsigned char *)(ie->tflm->interpreter->output(0)->data.raw);
+    ie->output_size = ie->tflm->interpreter->output(0)->bytes;
+    ie->output_times = (unsigned int *) ie->tflm->xcore_profiler.GetEventDurations();
     ie->output_times_size = ie->operators_size;
     
     return 0;
 }
 
-static const char *index_to_name(int index) {
-    auto* opcodes = model->operator_codes();
+aisrv_status_t interp_invoke(inference_engine *ie)
+{
+    // Run inference, and report any error
+    TfLiteStatus invoke_status = ie->tflm->interpreter->Invoke();
+
+    if (invoke_status != kTfLiteOk) 
+    {
+        TF_LITE_REPORT_ERROR(&ie->tflm->error_reporter, "Invoke failed\n");
+        return AISRV_STATUS_ERROR_INFER_ERR;
+    }
+
+    return AISRV_STATUS_OKAY;
+}
+
+static const char *index_to_name(inference_engine *ie, int index) {
+    auto* opcodes = ie->tflm->model->operator_codes();
     if (index >= opcodes->size()) {
         return "Missing registration";
     }
@@ -232,16 +220,13 @@ static const char *index_to_name(int index) {
 
 void print_profiler_summary(inference_engine *ie)
 {
-    auto* opcodes = model->operator_codes();
+    auto* opcodes = ie->tflm->model->operator_codes();
     uint64_t total = 0;
     const char *op_name;
 
-    if (!profiler) {
-        return;
-    }
-    uint32_t count = profiler->GetNumEvents();
-    uint32_t const *times = profiler->GetEventDurations();
-    auto* subgraphs = model->subgraphs();
+    uint32_t count = ie->tflm->xcore_profiler.GetNumEvents();
+    uint32_t const *times = ie->tflm->xcore_profiler.GetEventDurations();
+    auto* subgraphs = ie->tflm->model->subgraphs();
 
     for (size_t i = 0; i < ie->operators_size; ++i)
     {
@@ -249,7 +234,7 @@ void print_profiler_summary(inference_engine *ie)
         {
             const auto* op = (*subgraphs)[0]->operators()->Get(i);
             const size_t index = op->opcode_index();
-            op_name = index_to_name(index);
+            op_name = index_to_name(ie, index);
 
             total += times[i];
             printf("Operator %3d %-20s took %5lu ms\n", i, op_name, times[i]/100000);
@@ -269,7 +254,7 @@ void print_profiler_summary(inference_engine *ie)
                 }
             }
         }
-        op_name = index_to_name(index);
+        op_name = index_to_name(ie, index);
 
         printf("Operator-class %-20s took %5llu ms %3d%%\n",
                op_name, time/100000, (int)(100*(uint64_t)time/total));

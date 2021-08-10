@@ -80,6 +80,7 @@ void exit(int);
 #endif
 #define MAX_MODEL_SIZE_EXT_BYTES    (10224000)
 #define NETWORK_NUM_THREADS         (1)
+#define MAX_OPERATORS               (24)
 
 #define AISRV_GPIO_LENGTH           (4)
 
