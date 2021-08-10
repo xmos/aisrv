@@ -187,8 +187,6 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
 }
 
 
-int8_t rgbImage[RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH];
-
 #pragma unsafe arrays
 void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend c_acquire)
 {
@@ -204,9 +202,11 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
         unsafe 
         {
             fc++;
+            if (fc % 24 == 0) printintln(fc);
+#if 0
             if (fc > 20 && (fc %100) == 0 ) {
-                for(int y = 0; y < 240; y += 32) {
-                    for(int x = 0; x < 640; x += 32) {
+                for(int y = 0; y < 480; y ++) {
+                    for(int x = 0; x < 300; x ++) {
                         timer tmr;
                         int t0;
                         printf("%d ", (((int8_t)(decoupler_r -> full_image)[y][x*2])^0x00)+128);
@@ -215,8 +215,9 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
                     }
                     printf("\n");
                 }
+                printf("\n");
             }
-                            
+#endif
         
             lineCount = 0;
             index = 0;
@@ -226,7 +227,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
             {
                 case c_acquire :> cmd:
 
-                    send_array(c_acquire, (rgbImage, uint32_t[]), RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH);
+                    send_array(c_acquire, (decoupler_r -> full_image, uint32_t[]), RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH);
 
                     break;
 
