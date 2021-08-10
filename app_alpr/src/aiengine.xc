@@ -386,6 +386,7 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire, chanend c_leds
     }
 }
 
+uint32_t tmp[300*480*2/4];
 
 void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4])
 {
@@ -394,6 +395,9 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4]
 
     unsafe { inference_engine_initialize(&ie); }
 
+    ie.input_size = 480 * 300 * 2;
+    unsafe { ie.input_buffer = tmp; }
+    
     status.haveModel = 0;
     status.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
 
