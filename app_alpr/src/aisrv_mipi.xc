@@ -12,9 +12,7 @@
 #include "gc0310.h"
 #include "mipi.h"
 #include "debayer.h"
-#include "usleep.h"
 #include "yuv_to_rgb.h"
-#include "get_time.h"
 #include "aisrv.h"
 
 typedef enum {
@@ -82,7 +80,7 @@ uint32_t frame_time = 0, line_time = 0;
 
 struct decoupler_buffer 
 {
-    uint8_t full_image[480][300*2];
+    uint8_t full_image[300*3*300];
     int serial;
 } decoupler[1];
 
@@ -137,17 +135,17 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     } 
                     else if (header == 0x1E) // YUV422
                     {
-                        if (grabbing) {
-                            memcpy(decoupler_r->full_image[linesSaved], pt+340, 300*2);
-                        }
-                        linesSaved++;
-                        if (linesSaved == 480) 
-                        {
-                            if (grabbing) 
+                        if (grabbing && lineCount >= 90 && lineCount < 390) {
+                            memcpy((decoupler_r->full_image, uint8_t[300][600])[linesSaved], pt+340, 300*2);
+                            linesSaved++;
+                            if (linesSaved == 300) 
                             {
-                                outuchar(c_decoupler, 0);
+                                if (grabbing) 
+                                {
+                                    outuchar(c_decoupler, 0);
+                                }
+                                linesSaved = 0;
                             }
-                            linesSaved = 0;
                         }
                         lineCount++;
                         if(pt[640*2] != 0) 
@@ -191,9 +189,8 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
 void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend c_acquire)
 {
 
-    int index = 0;
-    int lineCount = 0;
     int fc = 0;
+    unsigned cmd;
     outuchar(c_debayerer, IMAGER_SAMPLE);
     
     while(1)
@@ -202,30 +199,28 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
         unsafe 
         {
             fc++;
-            if (fc % 24 == 0) printintln(fc);
-#if 0
-            if (fc > 20 && (fc %100) == 0 ) {
-                for(int y = 0; y < 480; y ++) {
-                    for(int x = 0; x < 300; x ++) {
-                        timer tmr;
-                        int t0;
-                        printf("%d ", (((int8_t)(decoupler_r -> full_image)[y][x*2])^0x00)+128);
-                        tmr :> t0;
-                        tmr when timerafter(t0+100) :> void;
-                    }
-                    printf("\n");
-                }
-                printf("\n");
-            }
-#endif
+            if (fc % 24 == 0) { printint(fc); printchar(' '); printintln(frame_time); }
         
-            lineCount = 0;
-            index = 0;
-            unsigned cmd;
 
             select
             {
                 case c_acquire :> cmd:
+                    for(int y = 299; y >= 0; y --) {
+                        for(int x = 299; x >= 0; x --) {
+                            int Y = (decoupler_r -> full_image, uint8_t[300][600])[y][x*2];
+                            int UV0 = (decoupler_r -> full_image, int8_t[300][600])[y][(x == 0 ? y == 0 ? 5 : 3 : x*2 - 1)]; // 2 is correct but has been overwritten - 5 is the next V value.
+                            int UV1 = (decoupler_r -> full_image, int8_t[300][600])[y][x*2+1];
+                            int U, V;
+                            if (x & 1) {
+                                U = UV0; V = UV1;
+                            } else {
+                                U = UV1; V = UV0;
+                            }
+                            (decoupler_r -> full_image, int8_t[300][900])[y][x*3+0] = Y-128;
+                            (decoupler_r -> full_image, int8_t[300][900])[y][x*3+1] = U-128;
+                            (decoupler_r -> full_image, int8_t[300][900])[y][x*3+2] = V-128;
+                        }
+                    }
 
                     send_array(c_acquire, (decoupler_r -> full_image, uint32_t[]), RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH);
 
@@ -239,9 +234,9 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
     }
 }
 
-#define TEST_DEMUX_DATATYPE (0x1E)
+#define TEST_DEMUX_DATATYPE (0x00)
 #define TEST_DEMUX_MODE     (0x00)     // bias
-#define TEST_DEMUX_EN       (1)
+#define TEST_DEMUX_EN       (0)
 #define DELAY_MIPI_CLK      (1)
 
 on tile[1]: port p_reset_camera = XS1_PORT_1P;
