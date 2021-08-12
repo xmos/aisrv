@@ -23,8 +23,8 @@ extern "C" void DebugLog(const char* s)
 }
 
 void inference_engine_initialize(inference_engine *ie,
-                                 uint8_t data_tensor_arena[], uint32_t n_tensor_arena,
-                                 uint8_t data_ext[], uint32_t n_ext,
+                                 uint32_t data_tensor_arena[], uint32_t n_tensor_arena,
+                                 uint32_t data_ext[], uint32_t n_ext,
                                  struct tflite_micro_objects *tflmo)
 {
     // First initialise the structure with the three memory objects
@@ -40,12 +40,12 @@ void inference_engine_initialize(inference_engine *ie,
     TFLM_RESOLVER;
 }
 
-int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint8_t *model_data) 
+int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint32_t *model_data) 
 {
    
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
-    ie->tflm->model = tflite::GetModel(model_data);
+    ie->tflm->model = tflite::GetModel((uint8_t *)model_data);
     uint model_version = ie->tflm->model->version();
     if (model_version != TFLITE_SCHEMA_VERSION)
     {
@@ -56,7 +56,7 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
     }
 
     // Now work out where the tensor arena goes
-    uint8_t *kTensorArena = ie->model_data_tensor_arena;
+    uint8_t *kTensorArena = (uint8_t *) ie->model_data_tensor_arena;
     int kTensorArenaSize = ie->model_data_tensor_arena_bytes;
     
     if(model_data != ie->model_data_ext)
@@ -95,11 +95,29 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
     ie->operators_size = ie->tflm->model->subgraphs()->Get(0)->operators()->size();
 
     // Obtain pointers to the model's input and output tensors.
-    ie->input_buffer = (unsigned char *)(ie->tflm->interpreter->input(0)->data.raw);
-    ie->input_size = ie->tflm->interpreter->input(0)->bytes;
-    ie->output_buffer = (unsigned char *)(ie->tflm->interpreter->output(0)->data.raw);
-    ie->output_size = ie->tflm->interpreter->output(0)->bytes;
-    ie->output_times = (unsigned int *) ie->tflm->xcore_profiler.GetEventDurations();
+    ie->inputs = ie->tflm->interpreter->inputs_size();
+    ie->input_size = 0;
+    if (ie->inputs > NUM_INPUT_TENSORS) {
+        TF_LITE_REPORT_ERROR(&ie->tflm->error_reporter, "Too many input tensors");
+        return 3;
+    }
+    for(int i = 0; i < ie->inputs; i++) {
+        ie->input_buffers[i] = (uint32_t *)(ie->tflm->interpreter->input(i)->data.raw);
+        ie->input_sizes[i] = ie->tflm->interpreter->input(i)->bytes;
+        ie->input_size += ie->input_sizes[i];
+    }
+    ie->outputs = ie->tflm->interpreter->outputs_size();
+    ie->output_size = 0;
+    if (ie->outputs > NUM_OUTPUT_TENSORS) {
+        TF_LITE_REPORT_ERROR(&ie->tflm->error_reporter, "Too many output tensors %d", ie->outputs);
+        return 4;
+    }
+    for(int i = 0; i < ie->outputs; i++) {
+        ie->output_buffers[i] = (uint32_t *)(ie->tflm->interpreter->output(i)->data.raw);
+        ie->output_sizes[i] = ie->tflm->interpreter->output(i)->bytes;
+        ie->output_size += ie->output_sizes[i];
+    }
+    ie->output_times = (uint32_t *)ie->tflm->xcore_profiler.GetEventDurations();
     ie->output_times_size = ie->operators_size;
     
     return 0;

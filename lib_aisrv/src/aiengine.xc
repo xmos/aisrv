@@ -57,25 +57,16 @@ static inline size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned
 extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
 extern size_t debug_log_length;
 
-static struct aiengine_status
-{
-    unsigned haveModel;
-    unsigned acquireMode;
-    unsigned outputGpioEn;
-    int8_t outputGpioThresh[AISRV_GPIO_LENGTH]; 
-    uint8_t outputGpioMode;
-} status;
-
-static size_t SetModel(inference_engine_t &ie, chanend c, uint8_t * unsafe model_data)
+static size_t SetModel(inference_engine_t &ie, chanend c, uint32_t * unsafe model_data)
 {
     size_t modelSize;
 
     modelSize = receive_array_(c, model_data, 0);
 
     printstr("Model received: "); printintln(modelSize); 
-    status.haveModel = !inference_engine_load_model(&ie, modelSize, model_data);
+    ie.haveModel = !inference_engine_load_model(&ie, modelSize, model_data);
 
-    if(status.haveModel)
+    if(ie.haveModel)
     {
         outuint(c, AISRV_STATUS_OKAY);
         printstr("Model written sucessfully\n");
@@ -91,9 +82,12 @@ static size_t SetModel(inference_engine_t &ie, chanend c, uint8_t * unsafe model
     return modelSize;
 }
 
-void HandleGpio(uint8_t * unsafe outputTensor, size_t length, chanend c_led[AISRV_GPIO_LENGTH])
+static void HandleGpio(inference_engine_t &ie, chanend c_led[AISRV_GPIO_LENGTH])
 {
-    if(status.outputGpioMode == AISRV_GPIO_OUTPUT_MODE_MAX)
+    uint8_t * unsafe outputTensor = (uint8_t *) ie.output_buffers[0];
+    uint32_t length = ie.output_sizes[0];
+    
+    if(ie.outputGpioMode == AISRV_GPIO_OUTPUT_MODE_MAX)
     {
         int8_t max = 0;
         size_t maxi = 0;
@@ -119,7 +113,7 @@ void HandleGpio(uint8_t * unsafe outputTensor, size_t length, chanend c_led[AISR
         /* Note, we do not raise an IO for output tensor values outside the GPIO range */
         if(maxi < AISRV_GPIO_LENGTH)
         {
-            outuchar(c_led[maxi], (uint8_t) (((int8_t) outputTensor[maxi]) > status.outputGpioThresh[maxi]));
+            outuchar(c_led[maxi], (uint8_t) (((int8_t) outputTensor[maxi]) > ie.outputGpioThresh[maxi]));
             outct(c_led[maxi], XS1_CT_END);
         }
     }
@@ -130,13 +124,16 @@ void HandleGpio(uint8_t * unsafe outputTensor, size_t length, chanend c_led[AISR
             if(i == AISRV_GPIO_LENGTH)
                 break;
         
-            outuchar(c_led[i], (uint8_t) (((int8_t) outputTensor[i]) > status.outputGpioThresh[i]));
+            outuchar(c_led[i], (uint8_t) (((int8_t) outputTensor[i]) > ie.outputGpioThresh[i]));
             outct(c_led[i], XS1_CT_END);
         }
     }
 }
 
-static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, chanend c_acquire, chanend c_leds[AISRV_GPIO_LENGTH])
+static void HandleCommand(inference_engine_t &ie, chanend c,
+                          aisrv_cmd_t cmd,
+                          uint32_t tensor_num,
+                          chanend c_acquire, chanend c_leds[AISRV_GPIO_LENGTH])
 {
     uint32_t data[MAX_PACKET_SIZE_WORDS]; 
 
@@ -184,10 +181,10 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
 
         case CMD_SET_INPUT_TENSOR:
 
-             // TODO check size vs input_size
-            size_t size = receive_array_(c, ie.input_buffer, !status.haveModel);
+             // TODO check size vs input_sizes[tensor_num]
+            size_t size = receive_array_(c, ie.input_buffers[tensor_num], !ie.haveModel);
         
-            if(status.haveModel)
+            if(ie.haveModel)
             {
                 outuint(c, AISRV_STATUS_OKAY);
                 outct(c, XS1_CT_END);
@@ -207,7 +204,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
             /* TODO remove the need for this */
             size_t size = receive_array_(c, data, 0);
                 
-            if(status.haveModel)
+            if(ie.haveModel)
             {
                 printstr("Inferencing...\n");
                 trans_status = interp_invoke(&ie);
@@ -215,9 +212,9 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
                 //print_output();
                 print_profiler_summary(&ie);
 
-                if(status.outputGpioEn)
+                if(ie.outputGpioEn)
                 {
-                    HandleGpio(ie.output_buffer, ie. output_size, c_leds);
+                    HandleGpio(ie, c_leds);
                 }
             }
             else
@@ -230,14 +227,14 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
             outuint(c, trans_status);
             outct(c, XS1_CT_END);
             break;
-        
+#if 0
         case CMD_GET_OUTPUT_TENSOR_LENGTH:
 
             // TODO use a send array function 
-            if(status.haveModel)
+            if(ie.haveModel)
             {
                 c <: (unsigned) AISRV_STATUS_OKAY;
-                send_array(c, &ie.output_size, sizeof(ie.output_size));
+                send_array(c, &ie.output_sizes, sizeof(ie.output_sizes));
             }
             else
             {
@@ -249,10 +246,10 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
          case CMD_GET_INPUT_TENSOR_LENGTH:
             
             // TODO use a send array function 
-            if(status.haveModel)
+            if(ie.haveModel)
             {
                 c <: (unsigned) AISRV_STATUS_OKAY;
-                send_array(c, &ie.input_size, sizeof(ie.input_size));
+                send_array(c, &ie.input_sizes, sizeof(ie.input_sizes));
             }
             else
             {
@@ -260,15 +257,16 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
             }
 
             break;
+#endif
 
         case CMD_GET_OUTPUT_TENSOR:
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, ie.output_buffer, ie.output_size);
+            send_array(c, ie.output_buffers[tensor_num], ie.output_sizes[tensor_num]);
             break;
         
         case CMD_GET_INPUT_TENSOR:
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, ie.input_buffer, ie.input_size);
+            send_array(c, ie.input_buffers[tensor_num], ie.input_sizes[tensor_num]);
             break;
             
         case CMD_GET_TIMINGS: 
@@ -286,8 +284,8 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
         case CMD_START_ACQUIRE_STREAM:
 
             size_t size = receive_array_(c, data, 0);
-            //status.acquireMode = (data, unsigned[])[0];
-            status.acquireMode = AISRV_ACQUIRE_MODE_STREAM;
+            //ie.acquireMode = (data, unsigned[])[0];
+            ie.acquireMode = AISRV_ACQUIRE_MODE_STREAM;
             
             aisrv_status_t trans_status = AISRV_STATUS_OKAY;
             outuint(c, trans_status);
@@ -297,7 +295,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
 
         case CMD_GET_ACQUIRE_MODE:
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, &status.acquireMode, sizeof(status.acquireMode));
+            send_array(c, &ie.acquireMode, sizeof(ie.acquireMode));
             break;
 
         case CMD_START_ACQUIRE_SINGLE:
@@ -311,7 +309,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
 
             /* Currently we Receive sensor data into sensor_tensor buffer */
             /* TODO check we dont overrun input_buffer */
-            size = receive_array_(c_acquire, (uint32_t * unsafe)ie.input_buffer, 0);
+            size = receive_array_(c_acquire, ie.input_buffers[0], 0);
 
             outuint(c, status);
             outct(c, XS1_CT_END);
@@ -319,7 +317,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
 
         case CMD_GET_OUTPUT_GPIO_EN:
                 c <: (unsigned) AISRV_STATUS_OKAY;
-                send_array(c, &ie.output_size, sizeof(status.outputGpioEn));
+                send_array(c, &ie.output_sizes[0], sizeof(ie.outputGpioEn));
             break;
         
         case CMD_SET_OUTPUT_GPIO_EN:
@@ -327,7 +325,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
             aisrv_status_t trans_status = AISRV_STATUS_OKAY;
             size_t size = receive_array_(c, data, 0);
 
-            status.outputGpioEn = data[0];
+            ie.outputGpioEn = data[0];
 
             outuint(c, AISRV_STATUS_OKAY);
             outct(c, XS1_CT_END);
@@ -349,7 +347,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
             {
                 if(index < AISRV_GPIO_LENGTH)
                 {
-                    status.outputGpioThresh[index] = thresh;                
+                    ie.outputGpioThresh[index] = thresh;                
                 }
                 outuint(c, AISRV_STATUS_OKAY);
                 outct(c, XS1_CT_END);
@@ -359,14 +357,14 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
         
         case CMD_GET_OUTPUT_GPIO_THRESH:
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, &status.outputGpioThresh, sizeof(status.outputGpioThresh));
+            send_array(c, &ie.outputGpioThresh, sizeof(ie.outputGpioThresh));
             break;
 
         case CMD_SET_OUTPUT_GPIO_MODE:
 
             size_t size = receive_array_(c, data, 0);
             
-            status.outputGpioMode = data[0];
+            ie.outputGpioMode = data[0];
              
             outuint(c, AISRV_STATUS_OKAY);
             outct(c, XS1_CT_END);
@@ -387,43 +385,47 @@ uint32_t tflite_disabled_image[RAW_IMAGE_HEIGHT*RAW_IMAGE_WIDTH*RAW_IMAGE_DEPTH/
 void aiengine(inference_engine_t &ie, chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4])
 {
     aisrv_cmd_t cmd = CMD_NONE;
-    size_t length = 0;
+    uint32_t tensor_num = 0;
 
 #if defined(TFLM_DISABLED)
-    ie.input_size = sizeof(tflite_disabled_image);
+    ie.input_sizes[0]  = sizeof(tflite_disabled_image);
+    ie.output_sizes[0] = sizeof(tflite_disabled_image);
+    ie.input_size  = sizeof(tflite_disabled_image);
     ie.output_size = sizeof(tflite_disabled_image);
     ie.output_times_size = 40;
     unsafe {
-        ie.input_buffer = tflite_disabled_image;
-        ie.output_buffer = tflite_disabled_image;
+        ie.input_buffers[0] = tflite_disabled_image;
+        ie.output_buffers[0] = tflite_disabled_image;
         ie.output_times = tflite_disabled_image;
     }
 #endif
     
-    status.haveModel = 0;
-    status.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
+    ie.haveModel = 0;
+    ie.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
 
     printstr("Ready\n");
     for(size_t i = 0; i< AISRV_GPIO_LENGTH; i++)
     {
-        status.outputGpioThresh[i] = -128;
+        ie.outputGpioThresh[i] = -128;
     }
 
-    status.outputGpioMode = AISRV_GPIO_OUTPUT_MODE_NONE;
+    ie.outputGpioMode = AISRV_GPIO_OUTPUT_MODE_NONE;
 
     while(1)
     {
         select
         {
             case c_usb :> cmd:
-                HandleCommand(ie, c_usb, cmd, c_acquire, c_leds);
+                c_usb :> tensor_num;
+                HandleCommand(ie, c_usb, cmd, tensor_num, c_acquire, c_leds);
                 break;
             
             case c_spi :> cmd:
-                HandleCommand(ie, c_spi, cmd, c_acquire, c_leds);
+                c_spi :> tensor_num;
+                HandleCommand(ie, c_spi, cmd, tensor_num, c_acquire, c_leds);
                 break;
 
-            (status.acquireMode == AISRV_ACQUIRE_MODE_STREAM) => default:
+            (ie.acquireMode == AISRV_ACQUIRE_MODE_STREAM) => default:
             {  
                 size_t size;
 
@@ -431,14 +433,14 @@ void aiengine(inference_engine_t &ie, chanend c_usb, chanend c_spi, chanend c_ac
                 c_acquire <: (unsigned) CMD_START_ACQUIRE_SINGLE;
 
                 /* TODO check we dont overrun input_buffer */
-                size = receive_array_(c_acquire, (uint32_t * unsafe)ie.input_buffer, 0);
+                size = receive_array_(c_acquire, ie.input_buffers[0], 0);
 
                 // TODO check model status and interp status
                 interp_invoke(&ie);
 
-                if(status.outputGpioEn)
+                if(ie.outputGpioEn)
                 {
-                    HandleGpio(ie.output_buffer, ie.output_size, c_leds);
+                    HandleGpio(ie, c_leds);
                 }
 
                 break;

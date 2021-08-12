@@ -218,20 +218,20 @@ class xcore_ai_ie(ABC):
         
         return int.from_bytes(read_data, byteorder = "little", signed=True)
    
-    def read_output_tensor(self):
+    def read_output_tensor(self, tensor_num = 0, engine_num = 0):
 
         # Retrieve result from device
-        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length, tensor_num = tensor_num, engine_num = engine_num)
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
 
         return self.bytes_to_ints(data_read)
 
-    def read_input_tensor(self):
+    def read_input_tensor(self, tensor_num = 0, engine_num = 0):
 
         # Retrieve result from device
-        data_read = self._upload_data(aisrv_cmd.CMD_GET_INPUT_TENSOR, self.input_length)
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_INPUT_TENSOR, self.input_length, tensor_num = tensor_num, engine_num = engine_num)
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
@@ -370,13 +370,14 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self._timeout = timeout
         super().__init__()
 
-    def _download_data(self, cmd, data_bytes):
+    def _download_data(self, cmd, data_bytes, tensor_num = 0, engine_num = 0):
     
         import usb
         
         try:
             # TODO rm this extra CMD packet
-            self._out_ep.write(bytes([cmd]))
+            print(bytes([cmd, engine_num, tensor_num]))
+            self._out_ep.write(bytes([cmd, engine_num, tensor_num]))
        
             #data_bytes = bytes([cmd]) + data_bytes
 
@@ -390,13 +391,13 @@ class xcore_ai_ie_usb(xcore_ai_ie):
                 #print("USB error, IN/OUT pipe halted")
                 raise IOError()
    
-    def _upload_data(self, cmd, length, sign = False):
+    def _upload_data(self, cmd, length, sign = False, tensor_num = 0, engine_num = 0):
         
         import usb
         read_data = []
 
         try:  
-            self._out_ep.write(bytes([cmd]), self._timeout)
+            self._out_ep.write(bytes([cmd, engine_num, tensor_num]), self._timeout)
             buff = usb.util.create_buffer(self._max_block_size)
         
             while True:
@@ -460,57 +461,57 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             print("Connected to AISRV via USB")
 
     # TODO move to super()
-    def start_inference(self):
+    def start_inference(self, engine_num = 0):
 
         # Send cmd
-        self._out_ep.write(bytes([aisrv_cmd.CMD_START_INFER]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_INFER, engine_num, 0]), 1000)
 
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
 
     # TODO move to super()
-    def start_acquire_single(self):
+    def start_acquire_single(self, engine_num = 0):
 
         # Send cmd
-        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_SINGLE]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_SINGLE, engine_num, 0]), 1000)
 
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
 
     # TODO move to super()
-    def start_acquire_stream(self):
+    def start_acquire_stream(self, engine_num = 0):
 
         # Send cmd
-        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_STREAM]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_STREAM, engine_num, 0]), 1000)
 
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
 
     #TODO move to super()
-    def enable_output_gpio(self):
+    def enable_output_gpio(self, engine_num = 0):
 
-        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN, engine_num, 0]), 1000)
         self._out_ep.write(bytes([1]), 1000)
     
     #TODO move to super()
-    def disable_output_gpio(self):
+    def disable_output_gpio(self, engine_num = 0):
 
-        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN, engine_num, 0]), 1000)
         self._out_ep.write(bytes([0]), 1000)
 
     def set_output_gpio_threshold(self, index, threshold):
         
-        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_THRESH]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_THRESH, engine_num, 0]), 1000)
         self._out_ep.write(bytes([index, threshold]), 1000)
 
-    def set_output_gpio_mode_max(self):
+    def set_output_gpio_mode_max(self, engine_num = 0):
         
-        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE, engine_num, 0]), 1000)
         self._out_ep.write(bytes([1]), 1000)
 
-    def set_output_gpio_mode_none(self):
+    def set_output_gpio_mode_none(self, engine_num = 0):
         
-        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE]), 1000)
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE, engine_num, 0]), 1000)
         self._out_ep.write(bytes([0]), 1000)
 
 

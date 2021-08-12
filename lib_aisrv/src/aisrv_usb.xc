@@ -151,7 +151,7 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_data)
 unsafe
 {
 // TODO Move to USB file
-void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
+void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c_engine[], chanend c_ep0)
 {
     int32_t data[MAX_PACKET_SIZE_WORDS];
 
@@ -159,7 +159,9 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
     XUD_ep ep_in  = XUD_InitEp(c_ep_in);
 
     aisrv_cmd_t cmd = CMD_NONE;
-
+    uint32_t engine_num = 0;
+    uint32_t tensor_num = 0;
+    
     int stalled_in = 0;
     int stalled_out = 0;
 
@@ -182,39 +184,20 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
 
         /* Get command */
         XUD_GetBuffer(ep_out, (data, uint8_t[]), length);
-                
-        cmd = (uint8_t) data[0];
 
         if(length != CMD_LENGTH_BYTES)
         {
             printstr("Bad cmd length: "); printintln(length);
             continue;
         }
+                
+        cmd        = (data, uint8_t[])[0];
+        engine_num = (data, uint8_t[])[1];
+        tensor_num = (data, uint8_t[])[2];
 
-        /* Pass on command */
-        c <: cmd;
-
-        #if 0
-        printstr("CMD: ");
-        switch(cmd)
-        {
-            case CMD_SET_MODEL:
-                printstr("SET_MODEL\n");
-                break;
-            
-            case CMD_GET_SPEC:
-                printstr("GET_SPEC\n");
-                break;
-
-            case CMD_GET_DEBUG_LOG:
-                printstr("GET_DEBUG_LOG\n");
-                break;
-
-            default:
-                printstr("%x\n", cmd);
-                break;
-        }
-        #endif
+        /* Pass on command and tensor number to the appropriate engine*/
+        c_engine[engine_num] <: (int) cmd;
+        c_engine[engine_num] <: tensor_num;
        
         /* Check cmd write bit */
         if(cmd & 0x80)
@@ -227,25 +210,25 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
                 size_t i = 0;
                 for(i = 0; i < (pktLength/4); i++)
                 {
-                    outuint(c, data[i]);
+                    outuint(c_engine[engine_num], data[i]);
                 }
               
                 if(pktLength != MAX_PACKET_SIZE)
                 {
                     i *= 4;
-                    outct(c, XS1_CT_END);
+                    outct(c_engine[engine_num], XS1_CT_END);
                     while(i < pktLength)
                     {
-                        outuchar(c, (data, uint8_t[])[i++]);
+                        outuchar(c_engine[engine_num], (data, uint8_t[])[i++]);
                     }
-                    outct(c, XS1_CT_END);
+                    outct(c_engine[engine_num], XS1_CT_END);
                     break;
                 }
             }
 
             aisrv_status_t status;
-            status = inuint(c);
-            chkct(c, XS1_CT_END);
+            status = inuint(c_engine[engine_num]);
+            chkct(c_engine[engine_num], XS1_CT_END);
 
             if(status != AISRV_STATUS_OKAY)
             {
@@ -261,14 +244,14 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
             /* Read command */
             aisrv_status_t status = AISRV_STATUS_OKAY;
            
-            c :> status;
+            c_engine[engine_num] :> status;
 
             if(status == AISRV_STATUS_OKAY)
             {
                 size_t i = 0;
-                while(!testct(c))
+                while(!testct(c_engine[engine_num]))
                 {
-                    data[i++] = inuint(c); 
+                    data[i++] = inuint(c_engine[engine_num]); 
 
                     if(i == MAX_PACKET_SIZE_WORDS)
                     {
@@ -277,15 +260,15 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
                     } 
                 }
 
-                chkct(c, XS1_CT_END);
+                chkct(c_engine[engine_num], XS1_CT_END);
                 i *= 4;
 
-                while(!testct(c))
+                while(!testct(c_engine[engine_num]))
                 {
-                    (data, uint8_t[])[i++] = inuchar(c);
+                    (data, uint8_t[])[i++] = inuchar(c_engine[engine_num]);
                 }
                 
-                chkct(c, XS1_CT_END);
+                chkct(c_engine[engine_num], XS1_CT_END);
                 
                 XUD_SetBuffer(ep_in, (data, uint8_t[]), i);
             }

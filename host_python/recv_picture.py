@@ -27,24 +27,17 @@ for arg in sys.argv[1:]:
     ie.start_inference()
     np_img = np.asarray(raw_img).reshape(INPUT_SHAPE)
     np_img = np_img + np.asarray([128,0,0])
-    print(np_img[:,:,0])
-    print(np_img[:,:,1])
-    print(np_img[:,:,2])
     conversion = np.asarray([[1.0, 0.0, 1.14],[1.0, -0.39, -0.58], [1.0, 2.03, 0.0]])
-    conversion = conversion.T
-    rgb = np.dot(np_img, conversion)
+    rgb = np.dot(np_img, conversion.T)
     rgb = rgb / 255.0
     rgb = np.clip(rgb, 0.0, 1.0)
-#    print(rgb)
     pyplot.imshow(rgb)
     pyplot.show()
     
-    cv2.imwrite(arg + 'Y.png', np_img[:, :, 0])      # Just Y
-    cv2.imwrite(arg + 'U.png', np_img[:, :, 1]+128)  # Just U
-    cv2.imwrite(arg + 'V.png', np_img[:, :, 2]+128)  # Just V
     cv2.imwrite(arg + 'RGB.png', cv2.cvtColor((rgb*255).astype(np.uint8), cv2.COLOR_RGB2BGR))  # RGB version
-    x = ie.read_output_tensor()
-    print('Got output tensor of length', len(x))
+    x0 = ie.read_output_tensor(tensor_num = 0)
+    x1 = ie.read_output_tensor(tensor_num = 1)
+    print('Got output tensors of lengths ', len(x0), len(x1))
     times = ie.read_times()
         
     print("Time per layer: "+ str(times))

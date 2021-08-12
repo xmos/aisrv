@@ -64,18 +64,28 @@ struct tflite_micro_objects {
 struct tflite_micro_objects;
 
 typedef struct inference_engine {
-    unsigned char * UNSAFE model_data_tensor_arena;  // Tensor arena always goes here
-    unsigned char * UNSAFE model_data_ext;           // Model goes in tensor_arena or in ext.
-    unsigned char * UNSAFE output_buffer;
-    unsigned char * UNSAFE input_buffer;
+    uint32_t * UNSAFE model_data_tensor_arena;  // Tensor arena always goes here
+    uint32_t * UNSAFE model_data_ext;           // Model goes in tensor_arena or in ext.
+    uint32_t outputs;                            // Number of output tensors
+    uint32_t inputs;                             // Number of input tensors
+    uint32_t * UNSAFE output_buffers[NUM_OUTPUT_TENSORS];
+    uint32_t * UNSAFE input_buffers[NUM_INPUT_TENSORS];
+    uint32_t output_sizes[NUM_OUTPUT_TENSORS];
+    uint32_t input_sizes[NUM_INPUT_TENSORS];
+    uint32_t output_size;
+    uint32_t input_size;
     uint32_t model_data_tensor_arena_bytes;
     uint32_t model_data_ext_bytes;
-    unsigned int input_size;
-    unsigned int output_size;
-    unsigned int output_times_size;
-    unsigned int operators_size;
-    unsigned int * UNSAFE output_times;
+    uint32_t output_times_size;
+    uint32_t operators_size;
+    uint32_t * UNSAFE output_times;
     struct tflite_micro_objects * UNSAFE tflm;
+// status for the engine to maintain
+    uint32_t haveModel;
+    uint32_t acquireMode;
+    uint32_t outputGpioEn;
+    int8_t outputGpioThresh[AISRV_GPIO_LENGTH]; 
+    uint8_t outputGpioMode;
 } inference_engine_t;
 
 
@@ -83,10 +93,10 @@ typedef struct inference_engine {
 extern "C" {
 #endif
     void inference_engine_initialize(inference_engine_t * UNSAFE ie,
-                                     uint8_t data_tensor_arena[], uint32_t n_int,
-                                     uint8_t data_ext[], uint32_t n_ext,
+                                     uint32_t data_tensor_arena[], uint32_t n_int,
+                                     uint32_t data_ext[], uint32_t n_ext,
                                      struct tflite_micro_objects * UNSAFE tflmo);
-    int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t modelSize, uint8_t * UNSAFE model_data);
+    int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t modelSize, uint32_t * UNSAFE model_data);
     aisrv_status_t interp_invoke(inference_engine_t * UNSAFE ie);
     void print_profiler_summary(inference_engine_t * UNSAFE ie);
 #ifdef __cplusplus
