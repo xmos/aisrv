@@ -363,7 +363,7 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
 class xcore_ai_ie_usb(xcore_ai_ie):
 
-    def __init__(self, timeout = 300000):
+    def __init__(self, timeout = 500000):
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None
