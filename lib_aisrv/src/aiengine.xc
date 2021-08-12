@@ -222,7 +222,9 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
             }
             else
             {
+#if !defined(TFLM_DISABLED)
                 trans_status = AISRV_STATUS_ERROR_NO_MODEL;
+#endif
             }
 
             outuint(c, trans_status);
@@ -378,15 +380,25 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
     }
 }
 
-uint32_t tmp[300*300*3/4];
+#if defined(TFLM_DISABLED)
+uint32_t tflite_disabled_image[RAW_IMAGE_HEIGHT*RAW_IMAGE_WIDTH*RAW_IMAGE_DEPTH/4];
+#endif
 
 void aiengine(inference_engine_t &ie, chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4])
 {
     aisrv_cmd_t cmd = CMD_NONE;
     size_t length = 0;
 
-    ie.input_size = 300 * 300 * 3;
-    unsafe { ie.input_buffer = tmp; }
+#if defined(TFLM_DISABLED)
+    ie.input_size = sizeof(tflite_disabled_image);
+    ie.output_size = sizeof(tflite_disabled_image);
+    ie.output_times_size = 40;
+    unsafe {
+        ie.input_buffer = tflite_disabled_image;
+        ie.output_buffer = tflite_disabled_image;
+        ie.output_times = tflite_disabled_image;
+    }
+#endif
     
     status.haveModel = 0;
     status.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
