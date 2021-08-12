@@ -12,4 +12,8 @@
 #define RAW_IMAGE_WIDTH  (300)
 #define RAW_IMAGE_DEPTH  (3)
 
+#define SENSOR_IMAGE_HEIGHT (480)
+#define SENSOR_IMAGE_WIDTH  (640)
+#define SENSOR_IMAGE_DEPTH  (2)          // YUV: YU  YV  YU  YV  ...
+
 #endif

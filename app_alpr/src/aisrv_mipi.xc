@@ -43,14 +43,14 @@ void exit(int);
 uint32_t statusError = 0, headerError = 0, lineCountError = 0, pixelCountError = 0;
 uint64_t pixelCounter = 0;
 #pragma unsafe arrays
-void MipiDecoupler(chanend c, chanend c_kill, chanend c_line) 
+void MipiDecoupler(chanend c, chanend c_kill, chanend c_line)
 {
     unsigned tailSize, ourWordCount, mipiHeader;
     int line = 0;
     
     unsafe 
     {
-        while(1) 
+        while(1)
         {
             // Send out a buffer pointer to receiver thread 
             uint8_t * unsafe pt = mipiBuffer[line];
@@ -64,7 +64,7 @@ void MipiDecoupler(chanend c, chanend c_kill, chanend c_line)
             if(mipiHeader & 0x30) {
                 ourWordCount = inuint(c);
                 tailSize = inuint(c);
-                if (ourWordCount != 320 && tailSize != 0) 
+                if (ourWordCount != 320 && tailSize != 0)
                 {
                     printintln(ourWordCount);
                     printintln(tailSize);
@@ -80,7 +80,7 @@ uint32_t frame_time = 0, line_time = 0;
 
 struct decoupler_buffer 
 {
-    uint8_t full_image[300*3*300];
+    uint8_t full_image[RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH];
     int serial;
 } decoupler[1];
 
@@ -89,23 +89,25 @@ unsafe
     struct decoupler_buffer * unsafe decoupler_r = decoupler;
 }
 
+#define START_X       ((SENSOR_IMAGE_WIDTH  - RAW_IMAGE_WIDTH)  / 2)
+#define START_Y       ((SENSOR_IMAGE_HEIGHT - RAW_IMAGE_HEIGHT) / 2)
+#define END_Y          (SENSOR_IMAGE_HEIGHT - START_Y)
+
 #pragma unsafe arrays
 
 
-void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*chanend c_l0*/) 
+void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*chanend c_l0*/)
 {
     int line = 0;
     int lineCount = 0;
-    int last_sof = 0, last_line = 0, now = 0;
+    int last_sof = 0, now = 0;
     int linesSaved = 0;
-    int decoupleCount = 0;
     int errors = 0;
     int grabbing = 0;
     uint8_t new_grabbing = 0;
-    int fc = 0;
     unsafe 
     {
-        while(1) 
+        while(1)
         {
             uint8_t * unsafe pt = mipiBuffer[line];
             uint8_t header_byte;
@@ -117,9 +119,6 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     {
                         lineCount = 0;
                         grabbing = new_grabbing;
-                        //outuchar(c_l0, fc);
-                        //outct(c_l0, 1);
-                        //fc = ~fc;
                     } 
                     else if (header == 1) // End of frame
                     {   
@@ -127,20 +126,22 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                         uint32_t * unsafe ft = &frame_time;
                         *ft = now - last_sof;
                         last_sof = now;
-                        if (lineCount != 480) 
+                        if (lineCount != SENSOR_IMAGE_HEIGHT)
                         {
                             lineCountError++;
                         }
-                        pixelCounter += (640*480);
+                        pixelCounter += (SENSOR_IMAGE_WIDTH*SENSOR_IMAGE_HEIGHT);
                     } 
                     else if (header == 0x1E) // YUV422
                     {
-                        if (grabbing && lineCount >= 90 && lineCount < 390) {
-                            memcpy((decoupler_r->full_image, uint8_t[300][600])[linesSaved], pt+340, 300*2);
+                        if (grabbing &&
+                            lineCount >= START_Y &&
+                            lineCount < END_Y) {
+                            memcpy((decoupler_r->full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[linesSaved], pt+START_X*2, RAW_IMAGE_WIDTH*2);
                             linesSaved++;
-                            if (linesSaved == 300) 
+                            if (linesSaved == RAW_IMAGE_HEIGHT)
                             {
-                                if (grabbing) 
+                                if (grabbing)
                                 {
                                     outuchar(c_decoupler, 0);
                                 }
@@ -148,14 +149,14 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                             }
                         }
                         lineCount++;
-                        if(pt[640*2] != 0) 
+                        if(pt[SENSOR_IMAGE_HEIGHT*SENSOR_IMAGE_DEPTH] != 0)
                         {
                             statusError++;
                         }
                     } 
                     else if (header == 0x12)  // Embedded data - ignore
                     { 
-                        if(pt[640*2] != 0) 
+                        if(pt[SENSOR_IMAGE_HEIGHT*SENSOR_IMAGE_DEPTH] != 0)
                         {
                             statusError++;
                         }
@@ -169,7 +170,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                         }
                     }
                     int error = header_byte & 0xc0;
-                    if (error) 
+                    if (error)
                     {
                         headerError++;
                     }
@@ -205,20 +206,20 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
             select
             {
                 case c_acquire :> cmd:
-                    for(int y = 299; y >= 0; y --) {
-                        for(int x = 299; x >= 0; x --) {
-                            int Y = (decoupler_r -> full_image, uint8_t[300][600])[y][x*2];
-                            int UV0 = (decoupler_r -> full_image, int8_t[300][600])[y][(x == 0 ? y == 0 ? 5 : 3 : x*2 - 1)]; // 2 is correct but has been overwritten - 5 is the next V value.
-                            int UV1 = (decoupler_r -> full_image, int8_t[300][600])[y][x*2+1];
+                    for(int y = RAW_IMAGE_HEIGHT-1; y >= 0; y --) {
+                        for(int x = RAW_IMAGE_WIDTH-1; x >= 0; x --) {
+                            int Y = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2];
+                            int UV0 = (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][(x == 0 ? y == 0 ? 5 : 3 : x*2 - 1)]; // 2 is correct but has been overwritten - 5 is the next V value.
+                            int UV1 = (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2+1];
                             int U, V;
                             if (x & 1) {
                                 U = UV0; V = UV1;
                             } else {
                                 U = UV1; V = UV0;
                             }
-                            (decoupler_r -> full_image, int8_t[300][900])[y][x*3+0] = Y-128;
-                            (decoupler_r -> full_image, int8_t[300][900])[y][x*3+1] = U-128;
-                            (decoupler_r -> full_image, int8_t[300][900])[y][x*3+2] = V-128;
+                            (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+0] = Y-128;
+                            (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+1] = U-128;
+                            (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+2] = V-128;
                         }
                     }
 
@@ -266,7 +267,7 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_acquire)
     start_clock(clk_mipi);
     write_node_config_reg(tile[MIPI_TILE], XS1_SSWITCH_MIPI_DPHY_CFG3_NUM ,
                           0x3E42);
-    if (gc0310_stream_start(i2c) != 0) 
+    if (gc0310_stream_start(i2c) != 0)
     {
         printf("Stream start failed\n");
     }

@@ -11,7 +11,13 @@ from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi
 
 ie = xcore_ai_ie_usb()
 ie.connect()
-INPUT_SHAPE = (300,300,3)
+
+input_length = ie.input_length
+input_shape_channels = 3
+input_shape_spatial =  int(np.sqrt(input_length/input_shape_channels))
+INPUT_SHAPE = (input_shape_spatial, input_shape_spatial, input_shape_channels)
+
+print("Input shape: " + str(INPUT_SHAPE) + " inferred from length " + str(input_length) + " and depth " + str(input_shape_channels))
 
 # Get image from device
 for arg in sys.argv[1:]:
