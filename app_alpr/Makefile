@@ -18,23 +18,22 @@ APP_NAME = app_alpr
 # If the variable XCC_MAP_FLAGS is set it overrides the flags passed to 
 # xcc for the final link (mapping) stage.
 
-SHARED_FLAGS  = -report \
+APP_SHARED_FLAGS  = -report \
 -O3 -fcomment-asm -fxscope -mcmodel=large  -Wno-xcore-fptrgroup -save-temps \
 -Wno-unknown-pragmas \
 -Wno-bidirectional-buffered-port \
 -g \
 -DTF_LITE_STATIC_MEMORY \
 -DXCORE \
--DENABLE_USB -DXUD_CORE_CLOCK=700
-
+-DENABLE_USB -DXUD_CORE_CLOCK=700 #-DTFLM_DISABLED
 
 SOURCE_DIRS = src
 
 # The USED_MODULES variable lists other module used by the application. 
-USED_MODULES = lib_i2c lib_xud lib_mipi # lib_tflite_micro
+USED_MODULES = lib_aisrv lib_i2c lib_xud lib_mipi lib_tflite_micro
 
-XCC_FLAGS = $(SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 -DUSB_TILE=tile[0]
-XCC_CPP_FLAGS = $(SHARED_FLAGS) -std=c++11 -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
+XCC_FLAGS = $(APP_SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 -DUSB_TILE=tile[0]
+XCC_CPP_FLAGS = $(APP_SHARED_FLAGS) -std=c++11 -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
 
 #=============================================================================
 # The following part of the Makefile includes the common build infrastructure
