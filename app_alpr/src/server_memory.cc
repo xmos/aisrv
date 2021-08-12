@@ -17,7 +17,7 @@ static struct tflite_micro_objects s0;
 // otherwise xgdb spends hours loading this array
 // TODO - fix when bug is fixed.
 __attribute__((section(".ExtMem_data")))
-uint8_t data_ext[16 + 0 * TENSOR_ARENA_BYTES] __attribute__((aligned(4)));
+uint32_t data_ext[16 + 0 * TENSOR_ARENA_BYTES/sizeof(int)];
 #endif
 
 void inference_engine_initialize_with_memory(inference_engine_t *ie) {
