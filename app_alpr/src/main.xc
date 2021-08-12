@@ -7,12 +7,12 @@
 #include <xscope.h>
 #include <xclib.h>
 #include <stdint.h>
-#include "acquire.h"
 #include "spi.h"
 #include "spibuffer.h"
 #include "aiengine.h"
 #include "aisrv.h"
 #include "inference_engine.h"
+#include "server_memory.h"
 #include "leds.h"
 
 #include "aisrv_mipi.h"
@@ -47,6 +47,7 @@ int main(void)
     chan c_leds[4], c_spi_to_buffer, c_spi_to_engine, c_usb_to_engine, c_acquire_to_buffer;
     chan c_usb_ep0_dat;
     chan c_acquire;
+
 #if defined(I2C_INTEGRATION)
     i2c_master_if i2c[1];
 #endif
@@ -58,7 +59,11 @@ int main(void)
     par 
     {
 
-        on tile[0]: aiengine(c_spi_to_engine, c_usb_to_engine, c_acquire, c_leds);
+        on tile[0]: {
+            inference_engine_t ie;
+            unsafe { inference_engine_initialize_with_memory(&ie); }
+            aiengine(ie, c_spi_to_engine, c_usb_to_engine, c_acquire, c_leds);
+        }
         
         on tile[0]: led_driver(c_leds);
 
@@ -93,7 +98,6 @@ int main(void)
                                        mem);
                     spi_buffer(c_spi_to_buffer, c_spi_to_engine,
                                c_acquire_to_buffer, mem);
-                    //acquire(c_acquire_to_buffer, c_acquire_to_sensor, mem);
                 }
             }
         }

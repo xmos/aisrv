@@ -378,15 +378,15 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
     }
 }
 
-// uint32_t tmp[300*300*3/4];
+uint32_t tmp[300*300*3/4];
 
 void aiengine(inference_engine_t &ie, chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4])
 {
     aisrv_cmd_t cmd = CMD_NONE;
     size_t length = 0;
 
-//    ie.input_size = 300 * 300 * 3;
-//    unsafe { ie.input_buffer = tmp; }
+    ie.input_size = 300 * 300 * 3;
+    unsafe { ie.input_buffer = tmp; }
     
     status.haveModel = 0;
     status.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
