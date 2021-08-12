@@ -22,20 +22,25 @@ extern "C" void DebugLog(const char* s)
         debug_log_index = 0;
 }
 
-void inference_engine_initialize(inference_engine *ie, uint8_t data_int[], uint32_t n_int, uint8_t data_ext[], uint32_t n_ext, struct tflite_micro_objects *tflmo)
+void inference_engine_initialize(inference_engine *ie,
+                                 uint8_t data_tensor_arena[], uint32_t n_tensor_arena,
+                                 uint8_t data_ext[], uint32_t n_ext,
+                                 struct tflite_micro_objects *tflmo)
 {
     // First initialise the structure with the three memory objects
     // internal memory, external memory, and TFLM objects.
     ie->tflm = tflmo;
-    ie->model_data_int = data_int;
-    ie->model_data_ext = data_ext;
+    ie->model_data_tensor_arena = data_tensor_arena;
+    ie->model_data_ext          = data_ext;
+    ie->model_data_tensor_arena_bytes = n_tensor_arena;
+    ie->model_data_ext_bytes          = n_ext;
 
     // Now add all the operators that we need
     auto *resolver = &ie->tflm->resolver;
     TFLM_RESOLVER;
 }
 
-int inference_engine_load_model(inference_engine *ie, uint32_t modelSize, uint8_t *model_data) 
+int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint8_t *model_data) 
 {
    
     // Map the model into a usable data structure. This doesn't involve any
@@ -51,19 +56,14 @@ int inference_engine_load_model(inference_engine *ie, uint32_t modelSize, uint8_
     }
 
     // Now work out where the tensor arena goes
-    uint8_t *kTensorArena = ie->model_data_int;
-    int kTensorArenaSize = INT_MEM_SIZE_BYTES;
+    uint8_t *kTensorArena = ie->model_data_tensor_arena;
+    int kTensorArenaSize = ie->model_data_tensor_arena_bytes;
     
-    if(model_data == ie->model_data_ext)
+    if(model_data != ie->model_data_ext)
     {
-        kTensorArena = ie->model_data_int;
-        kTensorArenaSize = INT_MEM_SIZE_BYTES;
-    }
-    else
-    {
-        modelSize = (modelSize + 3) & ~0x03; // Align 4
-        kTensorArena = ie->model_data_int + modelSize; 
-        kTensorArenaSize = INT_MEM_SIZE_BYTES - modelSize;
+        uint32_t model_ints = (model_bytes + 3) & ~0x03; // Align 4
+        kTensorArena     += model_ints; 
+        kTensorArenaSize -= model_ints;
     }
     
    
@@ -188,7 +188,7 @@ char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute_
 void print_profiler_summary(inference_engine *ie) {}
 extern "C" void DebugLog(const char* s) {}
 
-void inference_engine_initialize(inference_engine *ie, uint8_t data_int[], uint32_t n_int, uint8_t data_ext[], uint32_t n_ext, struct tflite_micro_object *tflmo) {}
+void inference_engine_initialize(inference_engine *ie, uint8_t data_tensor_arena[], uint32_t n_int, uint8_t data_ext[], uint32_t n_ext, struct tflite_micro_object *tflmo) {}
 
 int inference_engine_load_model(inference_engine *ie, uint32_t modelSize, uint8_t *model_data) {
     printf("Inference engine disabled, model not loaded\n");

@@ -59,8 +59,8 @@ class xcore_ai_ie(ABC):
             print("Downloading model to external memory")
             cmd = aisrv_cmd.CMD_SET_MODEL_EXT
         else:
-            print("Downloading model to internal SRAM")
-            cmd = aisrv_cmd.CMD_SET_MODEL_INT
+            print("Downloading model to first part of tensor memory")
+            cmd = aisrv_cmd.CMD_SET_MODEL_ARENA
 
         try:
             # Download model to device

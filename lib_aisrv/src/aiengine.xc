@@ -158,8 +158,8 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
             send_array(c, spec, SPEC_MODEL_TOTAL*sizeof(uint32_t));
             break;
 
-        case CMD_SET_MODEL_INT:
-            modelSize = SetModel(ie, c, ie.model_data_int);
+        case CMD_SET_MODEL_ARENA:
+            modelSize = SetModel(ie, c, ie.model_data_tensor_arena);
             break;
 
         case CMD_SET_MODEL_EXT:
@@ -167,11 +167,11 @@ static void HandleCommand(inference_engine_t &ie, chanend c, aisrv_cmd_t cmd, ch
             break;
 
         /* TODO debug only = remove for production */
-        case CMD_GET_MODEL_INT:
+        case CMD_GET_MODEL_ARENA:
            
             /* TODO bad status if no model */
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, ie.model_data_int, modelSize);
+            send_array(c, ie.model_data_tensor_arena, modelSize);
             break;
 
         /* TODO debug only = remove for production */

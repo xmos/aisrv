@@ -9,8 +9,8 @@ CMD_START_INFER                 = int(0x84)
 
 CMD_GET_OUTPUT_TENSOR           = int(0x05)
 
-CMD_GET_MODEL_INT               = int(0x06)    
-CMD_SET_MODEL_INT               = int(0x86)
+CMD_GET_MODEL_ARENA             = int(0x06)    
+CMD_SET_MODEL_ARENA             = int(0x86)
 CMD_GET_MODEL_EXT               = int(0x07)    
 CMD_SET_MODEL_EXT               = int(0x87)
 

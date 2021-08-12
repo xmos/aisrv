@@ -9,15 +9,15 @@ if sys.argv[1] == 'usb':
 elif sys.argv[1] == 'spi':
     ie = xcore_ai_ie_spi()
 else:
-    print("only usb or spi supported")
+    print("Only usb or spi supported")
     exit(1)
 
 if sys.argv[2] == 'ext':
     ext_mem = True
-elif sys.argv[2] == 'int':
+elif sys.argv[2] == 'arena':
     ext_mem = False
 else:
-    print("only ext or int (external or internal memory) supported")
+    print("Only ext or arena (external memory or tensor arena) supported")
     exit(1)
 
 ie.connect()

@@ -64,10 +64,12 @@ struct tflite_micro_objects {
 struct tflite_micro_objects;
 
 typedef struct inference_engine {
-    unsigned char * UNSAFE model_data_int;
-    unsigned char * UNSAFE model_data_ext;
+    unsigned char * UNSAFE model_data_tensor_arena;  // Tensor arena always goes here
+    unsigned char * UNSAFE model_data_ext;           // Model goes in tensor_arena or in ext.
     unsigned char * UNSAFE output_buffer;
     unsigned char * UNSAFE input_buffer;
+    uint32_t model_data_tensor_arena_bytes;
+    uint32_t model_data_ext_bytes;
     unsigned int input_size;
     unsigned int output_size;
     unsigned int output_times_size;
@@ -81,7 +83,7 @@ typedef struct inference_engine {
 extern "C" {
 #endif
     void inference_engine_initialize(inference_engine_t * UNSAFE ie,
-                                     uint8_t data_int[], uint32_t n_int,
+                                     uint8_t data_tensor_arena[], uint32_t n_int,
                                      uint8_t data_ext[], uint32_t n_ext,
                                      struct tflite_micro_objects * UNSAFE tflmo);
     int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t modelSize, uint8_t * UNSAFE model_data);
