@@ -13,4 +13,6 @@
 #define SENSOR_IMAGE_WIDTH  (640)
 #define SENSOR_IMAGE_DEPTH  (2)          // YUV: YU  YV  YU  YV  ...
 
+#define NUM_OUTPUT_TENSORS  (2)
+#define NUM_INPUT_TENSORS   (1)
 #endif

@@ -12,7 +12,7 @@
 #endif
 
 #define AISRV_CMD_WRITE_BIT_MASK    (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
-#define CMD_LENGTH_BYTES            (1)
+#define CMD_LENGTH_BYTES            (3)    // CMD, Tile, Tensor
 #define MAX_PACKET_SIZE             (512)
 #define MAX_PACKET_SIZE_WORDS       (MAX_PACKET_SIZE / 4)
 #define INFERENCE_ENGINE_ID         (0x12345678)//0x633
@@ -68,7 +68,7 @@ typedef enum aisrv_acquire_mode
 } aisrv_acquire_mode_t;
 
 #ifdef __XC__
-void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0);
+void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c_engine[], chanend c_ep0);
 void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_dat);
 void exit(int);
 #endif

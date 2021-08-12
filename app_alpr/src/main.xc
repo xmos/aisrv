@@ -44,7 +44,7 @@ on tile[0]: port p_sda = XS1_PORT_1O;
 
 int main(void) 
 {
-    chan c_leds[4], c_spi_to_buffer, c_spi_to_engine, c_usb_to_engine, c_acquire_to_buffer;
+    chan c_leds[4], c_spi_to_buffer, c_spi_to_engine, c_usb_to_engine[1], c_acquire_to_buffer;
     chan c_usb_ep0_dat;
     chan c_acquire;
 
@@ -62,7 +62,7 @@ int main(void)
         on tile[0]: {
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory(&ie); }
-            aiengine(ie, c_spi_to_engine, c_usb_to_engine, c_acquire, c_leds);
+            aiengine(ie, c_usb_to_engine[0], c_spi_to_engine, c_acquire, c_leds);
         }
         
         on tile[0]: led_driver(c_leds);
