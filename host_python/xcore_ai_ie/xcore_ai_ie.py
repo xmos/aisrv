@@ -376,7 +376,6 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         
         try:
             # TODO rm this extra CMD packet
-            print(bytes([cmd, engine_num, tensor_num]))
             self._out_ep.write(bytes([cmd, engine_num, tensor_num]))
        
             #data_bytes = bytes([cmd]) + data_bytes
