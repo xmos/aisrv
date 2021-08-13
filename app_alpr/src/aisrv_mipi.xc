@@ -80,7 +80,7 @@ uint32_t frame_time = 0, line_time = 0;
 
 struct decoupler_buffer 
 {
-    uint8_t full_image[RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH];
+    uint32_t full_image[RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH / sizeof(uint32_t)];
     int serial;
 } decoupler[1];
 
@@ -119,6 +119,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     {
                         lineCount = 0;
                         grabbing = new_grabbing;
+                        new_grabbing = 0;
                     } 
                     else if (header == 1) // End of frame
                     {   
@@ -141,11 +142,9 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                             linesSaved++;
                             if (linesSaved == RAW_IMAGE_HEIGHT)
                             {
-                                if (grabbing)
-                                {
-                                    outuchar(c_decoupler, 0);
-                                }
+                                outuchar(c_decoupler, 0);
                                 linesSaved = 0;
+                                grabbing = 0;
                             }
                         }
                         lineCount++;
@@ -176,9 +175,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     }
                     break;
                 case inuchar_byref(c_decoupler, new_grabbing):
-                    if (new_grabbing == 0) {
-                        grabbing = 0;
-                    }
+                    new_grabbing = 1;
                     break;
             }
         }
@@ -192,51 +189,51 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
 
     int fc = 0;
     unsigned cmd;
-    outuchar(c_debayerer, IMAGER_SAMPLE);
     
     while(1)
     {
-        int decoupleCount = inuchar(c_debayerer);
+        c_acquire :> cmd;                            // Please grab image
+        outuchar(c_debayerer, IMAGER_SAMPLE);        // Tell collector to grab image
+        int decoupleCount = inuchar(c_debayerer);    // Image collector ready
         unsafe 
         {
             fc++;
-            if (fc % 24 == 0) { printint(fc); printchar(' '); printintln(frame_time); }
-        
+            printint(fc); printchar(' '); printintln(frame_time);
 
-            select
-            {
-                case c_acquire :> cmd:
-                    for(int y = RAW_IMAGE_HEIGHT-1; y >= 0; y --) {
-                        for(int x = RAW_IMAGE_WIDTH-1; x >= 0; x --) {
-                            int Y = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2];
-                            int UV0 = (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][(x == 0 ? y == 0 ? 5 : 3 : x*2 - 1)]; // 2 is correct but has been overwritten - 5 is the next V value.
-                            int UV1 = (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2+1];
-                            int U, V;
-                            if (x & 1) {
-                                U = UV0; V = UV1;
-                            } else {
-                                U = UV1; V = UV0;
-                            }
-                            (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+0] = Y-128;
-                            (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+1] = U-128;
-                            (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+2] = V-128;
-                        }
+            for(int y = RAW_IMAGE_HEIGHT-1; y >= 0; y --) {   // TODO: Use vector unit
+                for(int x = RAW_IMAGE_WIDTH-1; x >= 0; x --) {
+                    int Y = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2];
+                    int UV0 = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][(x == 0 ? y == 0 ? 5 : 3 : x*2 - 1)]; // 2 is correct but has been overwritten - 5 is the next V value.
+                    int UV1 = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2+1];
+                    int U, V;
+                    if (x & 1) {
+                        U = UV0; V = UV1;
+                    } else {
+                        U = UV1; V = UV0;
                     }
+                    Y -= 128;
+                    U -= 128;
+                    V -= 128;
+                    int R = Y + ((          292 * V) >> 8);
+                    int G = Y - ((100 * U + 148 * V) >> 8);
+                    int B = Y + ((520 * U          ) >> 8);
+                    if (R < -128) R = -128; if (R > 127) R = 127;
+                    if (G < -128) G = -128; if (G > 127) G = 127;
+                    if (B < -128) B = -128; if (B > 127) B = 127;
+                    (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+0] = R;
+                    (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+1] = G;
+                    (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+2] = B;
+                }
+            }
 
-                    send_array(c_acquire, (decoupler_r -> full_image, uint32_t[]), RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH);
+            send_array(c_acquire, decoupler_r -> full_image, RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH);
 
-                    break;
-
-                default:
-                    break;
-            } 
-            outuchar(c_debayerer, IMAGER_SAMPLE);
         }
     }
 }
 
-#define TEST_DEMUX_DATATYPE (0x00)
-#define TEST_DEMUX_MODE     (0x00)     // bias
+#define TEST_DEMUX_DATATYPE (0)
+#define TEST_DEMUX_MODE     (0) // (0x80)     // bias
 #define TEST_DEMUX_EN       (0)
 #define DELAY_MIPI_CLK      (1)
 
@@ -274,7 +271,9 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_acquire)
     
     par 
     {
-        MipiReceive(tile[MIPI_TILE], 1, c, p_mipi_rxd, p_mipi_rxa, c_kill, TEST_DEMUX_EN, TEST_DEMUX_DATATYPE, TEST_DEMUX_MODE, MIPI_CLK_DIV, MIPI_CFG_CLK_DIV);
+        MipiReceive(tile[MIPI_TILE], 1, c, p_mipi_rxd, p_mipi_rxa, c_kill,
+                    TEST_DEMUX_EN, TEST_DEMUX_DATATYPE, TEST_DEMUX_MODE,
+                    MIPI_CLK_DIV, MIPI_CFG_CLK_DIV);
         MipiDecoupler(c, c_kill, c_img);
 
         MipiImager(c_img, c_ctrl, null);
