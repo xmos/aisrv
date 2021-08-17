@@ -7,20 +7,7 @@
 
 #if !defined(TFLM_DISABLED)
 
-
-/* This needs moving to somewhere, preferably an error reporter */
-
-size_t debug_log_index = 0;
-char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
-
-extern "C" void DebugLog(const char* s) 
-{ 
-    strcpy(&debug_log_buffer[debug_log_index*MAX_DEBUG_LOG_LENGTH], s);
-    printf("%s", &debug_log_buffer[debug_log_index*MAX_DEBUG_LOG_LENGTH]);
-    debug_log_index++; 
-    if(debug_log_index == MAX_DEBUG_LOG_ENTRIES) 
-        debug_log_index = 0;
-}
+extern "C" void DebugLog(const char* s) { printf("%s", s); }  // Not sure why we need this
 
 void inference_engine_initialize(inference_engine *ie,
                                  uint32_t data_tensor_arena[], uint32_t n_tensor_arena,
@@ -34,7 +21,7 @@ void inference_engine_initialize(inference_engine *ie,
     ie->model_data_ext          = data_ext;
     ie->model_data_tensor_arena_bytes = n_tensor_arena;
     ie->model_data_ext_bytes          = n_ext;
-
+    ie->tflm->error_reporter.Init((char *)ie->debug_log_buffer, MAX_DEBUG_LOG_LENGTH);
     // Now add all the operators that we need
     auto *resolver = &ie->tflm->resolver;
     TFLM_RESOLVER;
@@ -49,9 +36,7 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
     uint model_version = ie->tflm->model->version();
     if (model_version != TFLITE_SCHEMA_VERSION)
     {
-        printf("Model provided is schema version %u not equal "
-               "to supported version %d.",
-               model_version, TFLITE_SCHEMA_VERSION);
+        TF_LITE_REPORT_ERROR(&ie->tflm->error_reporter, "Model provided is schema version %u not equal to supported version %d.", model_version, TFLITE_SCHEMA_VERSION);
         return 1;
     }
 
@@ -65,8 +50,7 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
         kTensorArena     += model_ints; 
         kTensorArenaSize -= model_ints;
     }
-    
-   
+
     if (ie->tflm->interpreter) 
     {
         // Delete existing interpreter

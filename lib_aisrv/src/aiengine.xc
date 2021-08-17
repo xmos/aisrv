@@ -54,8 +54,6 @@ static inline size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned
 
     return i;
 }
-extern char debug_log_buffer[MAX_DEBUG_LOG_LENGTH];
-extern size_t debug_log_length;
 
 static size_t SetModel(inference_engine_t &ie, chanend c, uint32_t * unsafe model_data)
 {
@@ -276,7 +274,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
 
         case CMD_GET_DEBUG_LOG:
             c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, (uint32_t * unsafe) debug_log_buffer,  MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES);
+            send_array(c, (uint32_t * unsafe) ie.debug_log_buffer,  MAX_DEBUG_LOG_LENGTH);
             break; 
 
         /* TODO do we need to separate AQUIRE_MODE from INFERENCE_MODE? */
