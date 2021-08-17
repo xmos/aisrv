@@ -252,7 +252,7 @@ class xcore_ai_ie(ABC):
 
         debug_string = self._upload_data(aisrv_cmd.CMD_GET_DEBUG_LOG, 300) #TODO rm magic number
 
-        r = bytearray(debug_string).decode("ascii")
+        r = bytearray(debug_string).decode('utf8', errors='replace')
         return r
 
 

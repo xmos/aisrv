@@ -24,7 +24,7 @@ for arg in sys.argv[1:]:
     print("Reading input tensor into " + sys.argv[1])
     ie.start_acquire_single()
     raw_img = ie.read_input_tensor()
-#    ie.start_inference()
+    ie.start_inference()
     np_img = np.asarray(raw_img).reshape(INPUT_SHAPE)
     rgb = np_img + np.asarray([128,128,128])
     rgb = rgb / 255.0
@@ -33,11 +33,13 @@ for arg in sys.argv[1:]:
     pyplot.show()
     
     cv2.imwrite(arg + 'RGB.png', cv2.cvtColor((rgb*255).astype(np.uint8), cv2.COLOR_RGB2BGR))  # RGB version
-#    x0 = ie.read_output_tensor(tensor_num = 0)
-#    x1 = ie.read_output_tensor(tensor_num = 1)
-#    print('Got output tensors of lengths ', len(x0), len(x1))
-#    times = ie.read_times()
-        
-#    print("Time per layer: "+ str(times))
+    x0 = ie.read_output_tensor(tensor_num = 0)
+    x1 = ie.read_output_tensor(tensor_num = 1)
+    print('Got output tensors of lengths ', len(x0), len(x1))
+    print(x0)
+    print(x1)
+    times = ie.read_times()
+       
+    print("Time per layer: "+ str(times))
 
             

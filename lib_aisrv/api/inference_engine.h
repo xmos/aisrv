@@ -41,15 +41,15 @@
 
 #endif
 
-#include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "xcore_ops.h"
 #include "xcore_interpreter.h"
+#include "xcore_error_reporter.h"
 #include "xcore_profiler.h"
 #include "xcore_device_memory.h"
 
 struct tflite_micro_objects {
-    tflite::MicroErrorReporter error_reporter;
+    tflite::micro::xcore::XCoreErrorReporter error_reporter;
     tflite::micro::xcore::XCoreProfiler xcore_profiler;
     uint8_t interpreter_buffer[sizeof(tflite::micro::xcore::XCoreInterpreter)];
     tflite::MicroMutableOpResolver<TFLM_OPERATORS> resolver;
@@ -86,6 +86,7 @@ typedef struct inference_engine {
     uint32_t outputGpioEn;
     int8_t outputGpioThresh[AISRV_GPIO_LENGTH]; 
     uint8_t outputGpioMode;
+    uint32_t debug_log_buffer[MAX_DEBUG_LOG_LENGTH / sizeof(uint32_t)]; // aligned
 } inference_engine_t;
 
 

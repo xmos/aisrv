@@ -14,7 +14,13 @@
     resolver->AddConv2D(); \
     resolver->AddQuantize(); \
     resolver->AddDepthwiseConv2D(); \
-    resolver->AddDequantize();
+    resolver->AddDequantize(); \
+    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_V2_OpCode, \
+               tflite::ops::micro::xcore::Register_Conv2D_V2()); \
+    resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode, \
+            tflite::ops::micro::xcore::Register_FullyConnected_8()); \
+    resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode, \
+            tflite::ops::micro::xcore::Register_Lookup_8());
 #if 0
                                                                     \
     resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode, \
@@ -31,12 +37,9 @@
             tflite::ops::micro::xcore::Register_Conv2D_Deep()); \
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode, \
             tflite::ops::micro::xcore::Register_Conv2D_Depthwise()); \
-    resolver->AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode, \
-            tflite::ops::micro::xcore::Register_FullyConnected_8()); \
     resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode, \
             tflite::ops::micro::xcore::Register_Conv2D_1x1()); \
     resolver->AddCustom(tflite::ops::micro::xcore::Pad_OpCode, \
             tflite::ops::micro::xcore::Register_Pad()); \
-    resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode, \
-            tflite::ops::micro::xcore::Register_Lookup_8());
+
 #endif

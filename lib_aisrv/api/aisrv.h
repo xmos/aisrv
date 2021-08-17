@@ -17,8 +17,7 @@
 #define MAX_PACKET_SIZE_WORDS       (MAX_PACKET_SIZE / 4)
 #define INFERENCE_ENGINE_ID         (0x12345678)//0x633
 #define DUMMY_CLOCKS                (16)
-#define MAX_DEBUG_LOG_LENGTH        (100)
-#define MAX_DEBUG_LOG_ENTRIES       (3)
+#define MAX_DEBUG_LOG_LENGTH        (400)
 
 
 typedef enum aisrv_cmd

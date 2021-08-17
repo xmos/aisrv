@@ -26,8 +26,7 @@ try:
     ie.download_model_file(sys.argv[3], ext_mem = ext_mem)
 except AISRVError:
     print("Device reported an error")
-    debug_string = ie.read_debug_log()
-    print("Debug log from device: " +  str(debug_string))
-
+debug_string = ie.read_debug_log()
+print("Debug log from device: " +  str(debug_string))
 
 
