@@ -162,7 +162,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     } 
                     else 
                     {                     
-                        printf("# ******** %02x\n", header);
+                        printstr("# ********"); printhexln(header);
                         errors++;
                         if (errors > 10) {
                             exit(1);
@@ -266,7 +266,7 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_acquire)
                           0x3E42);
     if (gc0310_stream_start(i2c) != 0)
     {
-        printf("Stream start failed\n");
+        printstr("Stream start failed\n");
     }
     
     par 

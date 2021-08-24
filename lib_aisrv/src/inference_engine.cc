@@ -1,5 +1,6 @@
 // Copyright (c) 2021, XMOS Ltd, All rights reserved
 #include "aisrv.h"
+#include "print.h"
 #include "inference_engine.h"
 #include <cstddef>
 #include <cstdint>
@@ -7,7 +8,7 @@
 
 #if !defined(TFLM_DISABLED)
 
-extern "C" void DebugLog(const char* s) { printf("%s", s); }  // Not sure why we need this
+extern "C" void DebugLog(const char* s) { while (*s) { printchar(*s); s++; }}  // Not sure why we need this
 
 void inference_engine_initialize(inference_engine *ie,
                                  uint32_t data_tensor_arena[], uint32_t n_tensor_arena,
