@@ -4,6 +4,16 @@ app_alpr: license plate app
 Env/Dependencies etc
 --------------------
 
+The short instructions:
+
+  * clone the aisrv_installers repo::
+
+       git clone git@github0.xmos.com:xmos-int/aisrv_installers.git
+
+  * You will find ``aisrv`` inside it.
+
+The long instructions:
+
   * clone the aisrv repo::
 
        git clone  git@github.com:xmos/aisrv.git
@@ -19,11 +29,11 @@ Env/Dependencies etc
        git clone git@github.com:xmos/lib_xassert.git
        git clone git@github.com:xmos/lib_xud.git
 
-       (cd lib_nn && git checkout 384396b6331d4df2768b2f1617afb9eb34b518c7)
-
   * Strictly speaking you don't need lib_logging, lib_xassert, and lib_i2c
     as they will be loaded automatically on xmake
-    
+
+After this, set up python:
+
   * pip install --upgrade pip
   * pyenv install 3.7.7
   * virtualenv -p /Users/<username>/.pyenv/versions/3.7.7/bin/python3.7 venv
