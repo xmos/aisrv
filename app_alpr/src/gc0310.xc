@@ -431,10 +431,10 @@ static int i2c_write(client interface i2c_master_if i2c, int reg, int value) {
     i2c_regop_res_t result, res2;  
     result = i2c.write_reg(GC0310_I2C_ADDR, reg, value);
     if (result != I2C_REGOP_SUCCESS) {
-        printf("Failed on address %02x value %02x\n", reg, value);
+//        printf("Failed on address %02x value %02x\n", reg, value);
         uint8_t val2;
         val2 = i2c.read_reg(GC0310_I2C_ADDR, reg, res2);
-        printf("%02x %02x %02x %02x %d %d\n", GC0310_I2C_ADDR, reg, value, val2, res2, result);
+//        printf("%02x %02x %02x %02x %d %d\n", GC0310_I2C_ADDR, reg, value, val2, res2, result);
     }
     return result != I2C_REGOP_SUCCESS ? (reg == 0xfe ? 0 : -1) : 0;
 }
