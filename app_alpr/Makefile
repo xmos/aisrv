@@ -3,7 +3,7 @@
 # or a valid argument for the --target option when compiling.
 
 # In this case, the target depends on the build configuration.
-TARGET = XCORE-AI-EXPLORER-800.xn
+TARGET = XCORE-AI-EXPLORER-700.xn
 
 # The APP_NAME variable determines the name of the final .xe file. It should
 # not include the .xe postfix. If left blank the name will default to 
