@@ -59,6 +59,8 @@ static size_t SetModel(inference_engine_t &ie, chanend c, uint32_t * unsafe mode
 {
     size_t modelSize;
 
+    inference_engine_unload_model(&ie);
+
     modelSize = receive_array_(c, model_data, 0);
 
     printstr("Model received: "); printintln(modelSize); 
@@ -137,7 +139,6 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
 
     static size_t modelSize = 0;
 
-    printhexln(cmd);
     switch(cmd)
     {
         case CMD_GET_SPEC:

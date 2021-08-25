@@ -28,8 +28,23 @@ void inference_engine_initialize(inference_engine *ie,
     TFLM_RESOLVER;
 }
 
+void inference_engine_unload_model(inference_engine *ie)
+{
+    if (ie->tflm->interpreter)
+    {
+        delete ie->tflm->interpreter;
+        ie->tflm->interpreter = nullptr;
+    }
+}
+
 int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint32_t *model_data) 
 {
+
+    if (ie->tflm->interpreter)
+    {
+        TF_LITE_REPORT_ERROR(&ie->tflm->error_reporter, "Model not unloaded");
+        return 9;
+    }
    
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
@@ -51,24 +66,18 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
         kTensorArena     += model_ints; 
         kTensorArenaSize -= model_ints;
     }
-
-    if (ie->tflm->interpreter) 
-    {
-        // Delete existing interpreter
-        delete ie->tflm->interpreter;  // NOTE: interpreter must be deleted before resolver and reporter
         
-        // Need to memset the arena to 0 otherwise assertion in xcore_planning.cc 
-        memset(kTensorArena, 0, kTensorArenaSize);
-    }
+    // Need to memset the arena to 0 otherwise assertion in xcore_planning.cc 
+    memset(kTensorArena, 0, kTensorArenaSize);
 
     // Build an interpreter to run the model with
-     ie->tflm->interpreter = new (ie->tflm->interpreter_buffer)
-      tflite::micro::xcore::XCoreInterpreter(ie->tflm->model,
-                                             ie->tflm->resolver,
-                                             kTensorArena, kTensorArenaSize,
-                                             &ie->tflm->error_reporter,
-                                             true,
-                                             &ie->tflm->xcore_profiler);
+    ie->tflm->interpreter = new (ie->tflm->interpreter_buffer)
+        tflite::micro::xcore::XCoreInterpreter(ie->tflm->model,
+                                               ie->tflm->resolver,
+                                               kTensorArena, kTensorArenaSize,
+                                               &ie->tflm->error_reporter,
+                                               true,
+                                               &ie->tflm->xcore_profiler);
 
     // Allocate memory from the kTensorArena for the model's tensors.
     TfLiteStatus allocate_tensors_status = ie->tflm->interpreter->AllocateTensors();
