@@ -14,6 +14,7 @@
 #include "debayer.h"
 #include "yuv_to_rgb.h"
 #include "aisrv.h"
+#include "aisrv_mipi.h"
 
 typedef enum {
     IMAGER_SAMPLE = 1,

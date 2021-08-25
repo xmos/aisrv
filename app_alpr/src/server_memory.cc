@@ -11,7 +11,7 @@
 static struct tflite_micro_objects s0;
 
 
-#define TENSOR_ARENA_BYTES          (10224000)
+#define TENSOR_ARENA_BYTES          (20224000)
 
 // Because of bug in xgdb we make this array tiny, knowing we own external memory
 // otherwise xgdb spends hours loading this array
