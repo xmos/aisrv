@@ -97,6 +97,7 @@ extern "C" {
                                      uint32_t data_tensor_arena[], uint32_t n_int,
                                      uint32_t data_ext[], uint32_t n_ext,
                                      struct tflite_micro_objects * UNSAFE tflmo);
+    void inference_engine_unload_model(inference_engine_t * UNSAFE ie);
     int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t modelSize, uint32_t * UNSAFE model_data);
     aisrv_status_t interp_invoke(inference_engine_t * UNSAFE ie);
     void print_profiler_summary(inference_engine_t * UNSAFE ie);
