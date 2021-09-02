@@ -16,6 +16,7 @@
 #include "leds.h"
 
 #include "aisrv_mipi.h"
+#include "hm0360.h"
 
 #ifdef ENABLE_USB
 #include "xud.h"
@@ -27,22 +28,18 @@ XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, X
 XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 #endif
 
-#if defined(I2C_INTEGRATION)
 on tile[0]: port p_scl = XS1_PORT_1A;
 on tile[0]: port p_sda = XS1_PORT_1D;
-#endif
 
 on tile[0]: port p_rst_wifi = XS1_PORT_8D;
 
 int main(void) 
 {
-    chan c_leds[4], c_spi_to_buffer, c_spi_to_engine, c_usb_to_engine[2], c_acquire_to_buffer;
+    chan c_usb_to_engine[2], c_engine_0_to_1;
     chan c_usb_ep0_dat;
     chan c_acquire;
 
-#if defined(I2C_INTEGRATION)
     i2c_master_if i2c[1];
-#endif
 
 #ifdef ENABLE_USB
     chan c_ep_out[EP_COUNT_OUT], c_ep_in[EP_COUNT_IN];
@@ -53,23 +50,29 @@ int main(void)
         on tile[1]: {
             inference_engine_t ie;
             unsafe { inference_engine_0_initialize_with_memory(&ie); }
-            aiengine(ie, c_usb_to_engine[0], c_spi_to_engine, c_acquire, c_leds);   // Needs camera
+            ie.chainToNext = 1;
+            aiengine(ie, c_usb_to_engine[0], null, c_engine_0_to_1, c_acquire, null);   // Needs camera
         }
         on tile[0]: {
             p_rst_wifi <: 0;
             inference_engine_t ie;
             unsafe { inference_engine_1_initialize_with_memory(&ie); }
-            aiengine(ie, c_usb_to_engine[1], c_spi_to_engine, c_acquire, c_leds);
+            aiengine(ie, c_usb_to_engine[1], c_engine_0_to_1, null, null, null);
         }
         
-        on tile[0]: led_driver(c_leds);
 
-#if defined(I2C_INTEGRATION)
         on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
-#endif
-#if defined(MIPI_INTEGRATION)
-        on tile[1]: mipi_main(i2c[0], c_acquire);
-#endif
+        on tile[0]: {
+            hm0360_reset();
+        }
+        on tile[1]: {
+            timer tmr; int t;
+            tmr :> t;
+            tmr when timerafter(t + 500000) :> void;
+            hm0360_monolith_init();
+            hm0360_stream_start(i2c[0]);
+            hm0360_main(i2c[0], c_acquire);
+        }
 
 
 #ifdef ENABLE_USB

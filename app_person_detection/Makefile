@@ -8,7 +8,7 @@ TARGET = XCORE-AI-EXPLORER-700.xn
 # The APP_NAME variable determines the name of the final .xe file. It should
 # not include the .xe postfix. If left blank the name will default to 
 # the project name
-APP_NAME = app_alpr
+APP_NAME = app_person_detection
 
 # The flags passed to xcc when building the application
 # You can also set the following to override flags for a particular language:
@@ -19,21 +19,25 @@ APP_NAME = app_alpr
 # xcc for the final link (mapping) stage.
 
 APP_SHARED_FLAGS  = -report \
--O3 -fcomment-asm -fxscope -mcmodel=large  -Wno-xcore-fptrgroup -save-temps \
--Wno-unknown-pragmas \
--Wno-bidirectional-buffered-port \
--g \
--DTF_LITE_STATIC_MEMORY \
--DXCORE \
--DENABLE_USB -DXUD_CORE_CLOCK=700 #-DTFLM_DISABLED
+					-O3 -fcomment-asm -fxscope -mcmodel=large  -Wno-xcore-fptrgroup -save-temps \
+					-Wno-unknown-pragmas \
+					-Wno-bidirectional-buffered-port \
+					-g \
+					-DTF_LITE_STATIC_MEMORY \
+					-DXCORE \
+                    -DBGGR \
+                    -DR_CORRECTION=1.4 \
+                    -DG_CORRECTION=1.0 \
+                    -DB_CORRECTION=1.4 \
+					-DENABLE_USB -DXUD_CORE_CLOCK=700 #-DTFLM_DISABLED
 
 SOURCE_DIRS = src
 
 # The USED_MODULES variable lists other module used by the application. 
-USED_MODULES = lib_aisrv lib_i2c lib_xud lib_mipi lib_tflite_micro
+USED_MODULES = lib_aisrv lib_i2c lib_xud lib_tflite_micro lib_mipi
 
-XCC_FLAGS = $(APP_SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 -DUSB_TILE=tile[0]
-XCC_CPP_FLAGS = $(APP_SHARED_FLAGS) -std=c++11 -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
+XCC_FLAGS = $(APP_SHARED_FLAGS) -DI2C_INTEGRATION=1 -DUSB_TILE=tile[1]
+XCC_CPP_FLAGS = $(APP_SHARED_FLAGS) -std=c++11 -DI2C_INTEGRATION=1 
 
 #=============================================================================
 # The following part of the Makefile includes the common build infrastructure
