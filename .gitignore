@@ -6,6 +6,7 @@
 
 */build/*
 */.build*/*
+*/bin/*
 venv/*
 *.pyc
 host_python/xcore_ai_ie.egg-info/PKG-INFO
