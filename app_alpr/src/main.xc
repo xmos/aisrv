@@ -14,6 +14,7 @@
 #include "inference_engine.h"
 #include "server_memory.h"
 #include "leds.h"
+#include "box_calculation.h"
 
 #include "aisrv_mipi.h"
 
@@ -41,10 +42,50 @@ on tile[0]: port p_scl = XS1_PORT_1N;
 on tile[0]: port p_sda = XS1_PORT_1O;
 #endif
 
+extern size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned ignore);
+
+void director(chanend to_0, chanend to_1) {
+    uint32_t classes[2*MAX_BOXES / sizeof(uint32_t)];
+    uint32_t boxes[4*MAX_BOXES / sizeof(uint32_t)];
+    uint32_t bbox[4];
+    
+    while(1) {
+        int status;
+        timer tmr; int t0;
+        tmr :> t0;
+        tmr when timerafter(t0+200000000) :> void;
+        to_0 <: CMD_GET_OUTPUT_TENSOR;
+        to_0 <: 0;
+    to_0 :> status;
+        if (status != AISRV_STATUS_OKAY) {
+            printstr("** err ");
+            printintln(status);
+            continue;
+        }
+        unsafe {
+            receive_array_(to_0, (uint32_t * unsafe) classes, 0);
+        }
+
+        to_0 <: CMD_GET_OUTPUT_TENSOR;
+        to_0 <: 1;
+    to_0 :> int _;
+        unsafe {
+            receive_array_(to_0, (uint32_t * unsafe) boxes, 0);
+        }
+
+        box_calculation(bbox, (classes, int8_t[]), (boxes, int8_t[]));
+
+        for(int i = 0 ; i < 4; i++) {
+            printint(bbox[i]);
+            printchar(' ');
+        }
+        printchar('\n');
+    }
+}
 
 int main(void) 
 {
-    chan c_leds[4], c_spi_to_buffer, c_spi_to_engine, c_usb_to_engine[1], c_acquire_to_buffer;
+    chan c_usb_to_engine[2], c_director_to_engine_0, c_director_to_engine_1;
     chan c_usb_ep0_dat;
     chan c_acquire;
 
@@ -61,12 +102,19 @@ int main(void)
 
         on tile[0]: {
             inference_engine_t ie;
-            unsafe { inference_engine_initialize_with_memory(&ie); }
-            aiengine(ie, c_usb_to_engine[0], null, null, c_acquire, c_leds);
-        }
-        
-        on tile[0]: led_driver(c_leds);
+            unsafe { inference_engine_initialize_with_memory_1(&ie); }
+            aiengine(ie, c_usb_to_engine[1], c_director_to_engine_1, null, c_acquire, null);
+        } 
 
+        on tile[1]: {
+            inference_engine_t ie;
+            unsafe { inference_engine_initialize_with_memory_0(&ie); }
+            aiengine(ie, c_usb_to_engine[0], c_director_to_engine_0, null, null, null);
+        }
+
+        on tile[1]: {
+            director(c_director_to_engine_0, c_director_to_engine_1);
+        }
 #if defined(I2C_INTEGRATION)
         on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
 #endif
