@@ -48,7 +48,7 @@ class xcore_ai_ie(ABC):
     def connect(self):
         pass
 
-    def download_model(self, model_bytes, ext_mem = False):
+    def download_model(self, model_bytes, ext_mem = False, engine_num = 0):
         
         assert type(model_bytes) == bytearray
         
@@ -64,7 +64,7 @@ class xcore_ai_ie(ABC):
 
         try:
             # Download model to device
-            self._download_data(cmd, model_bytes)
+            self._download_data(cmd, model_bytes, engine_num = engine_num)
         except IOError:
             #print("Error from device during model download (likely issue with model)")
             self._clear_error()
@@ -72,7 +72,7 @@ class xcore_ai_ie(ABC):
 
         try:
             # Update lengths
-            self._input_length, self._output_length, self._timings_length = self._read_spec()
+            self._input_length, self._output_length, self._timings_length = self._read_spec(engine_num = engine_num)
         
         except IOError:
             #print("Error from device during spec upload (likely issue with model)")
@@ -133,17 +133,17 @@ class xcore_ai_ie(ABC):
     def _clear_error(self):
         pass
 
-    def read_times(self):
+    def read_times(self, engine_num = 0):
       
-        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length*4)
+        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length*4, engine_num = engine_num)
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
-    def download_model_file(self, model_file, ext_mem = False):
+    def download_model_file(self, model_file, ext_mem = False, engine_num = 0):
     
         with open(model_file, "rb") as input_fd:
             model_data = input_fd.read()
-            self.download_model(bytearray(model_data), ext_mem = ext_mem)
+            self.download_model(bytearray(model_data), ext_mem = ext_mem, engine_num = engine_num)
 
     def bytes_to_ints(self, data_bytes, bpi=1):
 
@@ -185,14 +185,14 @@ class xcore_ai_ie(ABC):
        input_length, output_length, timings_length  = self._read_spec()
        return timings_length
 
-    def write_input_tensor(self, raw_img):
+    def write_input_tensor(self, raw_img, tensor_num = 0, engine_num = 0):
         
-        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img)
+        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img, tensor_num = tensor_num, engine_num = engine_num)
 
     # TODO decide if want to keep read spec or not
-    def _read_spec(self):
+    def _read_spec(self, engine_num = 0):
         
-        spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
+        spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length, engine_num = engine_num)
 
         assert len(spec) == self._spec_length
 
