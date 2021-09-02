@@ -62,7 +62,7 @@ int main(void)
         on tile[0]: {
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory(&ie); }
-            aiengine(ie, c_usb_to_engine[0], c_spi_to_engine, c_acquire, c_leds);
+            aiengine(ie, c_usb_to_engine[0], null, null, c_acquire, c_leds);
         }
         
         on tile[0]: led_driver(c_leds);

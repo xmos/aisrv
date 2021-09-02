@@ -194,6 +194,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
     while(1)
     {
         c_acquire :> cmd;                            // Please grab image
+        c_acquire :> cmd;                            // And grab address - unused in this app
         outuchar(c_debayerer, IMAGER_SAMPLE);        // Tell collector to grab image
         int decoupleCount = inuchar(c_debayerer);    // Image collector ready
         unsafe 
