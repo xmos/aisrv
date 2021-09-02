@@ -82,21 +82,24 @@ typedef struct inference_engine {
     struct tflite_micro_objects * UNSAFE tflm;
 // status for the engine to maintain
     uint32_t haveModel;
+    uint32_t chainToNext;
     uint32_t acquireMode;
     uint32_t outputGpioEn;
     int8_t outputGpioThresh[AISRV_GPIO_LENGTH]; 
     uint8_t outputGpioMode;
     uint32_t debug_log_buffer[MAX_DEBUG_LOG_LENGTH / sizeof(uint32_t)]; // aligned
+    uint32_t modelSize;
 } inference_engine_t;
 
 
 #ifdef __cplusplus
+tflite::MicroMutableOpResolver<TFLM_OPERATORS> *
+     inference_engine_initialize(inference_engine_t * UNSAFE ie,
+                                 uint32_t data_tensor_arena[], uint32_t n_int,
+                                 uint32_t data_ext[], uint32_t n_ext,
+                                 struct tflite_micro_objects * UNSAFE tflmo);
 extern "C" {
 #endif
-    void inference_engine_initialize(inference_engine_t * UNSAFE ie,
-                                     uint32_t data_tensor_arena[], uint32_t n_int,
-                                     uint32_t data_ext[], uint32_t n_ext,
-                                     struct tflite_micro_objects * UNSAFE tflmo);
     void inference_engine_unload_model(inference_engine_t * UNSAFE ie);
     int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t modelSize, uint32_t * UNSAFE model_data);
     aisrv_status_t interp_invoke(inference_engine_t * UNSAFE ie);
