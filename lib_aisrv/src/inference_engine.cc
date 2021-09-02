@@ -10,13 +10,15 @@
 
 extern "C" void DebugLog(const char* s) { while (*s) { printchar(*s); s++; }}  // Not sure why we need this
 
-void inference_engine_initialize(inference_engine *ie,
+tflite::MicroMutableOpResolver<TFLM_OPERATORS> *
+     inference_engine_initialize(inference_engine *ie,
                                  uint32_t data_tensor_arena[], uint32_t n_tensor_arena,
                                  uint32_t data_ext[], uint32_t n_ext,
                                  struct tflite_micro_objects *tflmo)
 {
     // First initialise the structure with the three memory objects
     // internal memory, external memory, and TFLM objects.
+    memset(ie, 0, sizeof(*ie));
     ie->tflm = tflmo;
     ie->model_data_tensor_arena = data_tensor_arena;
     ie->model_data_ext          = data_ext;
@@ -25,7 +27,7 @@ void inference_engine_initialize(inference_engine *ie,
     ie->tflm->error_reporter.Init((char *)ie->debug_log_buffer, MAX_DEBUG_LOG_LENGTH);
     // Now add all the operators that we need
     auto *resolver = &ie->tflm->resolver;
-    TFLM_RESOLVER;
+    return resolver;
 }
 
 void inference_engine_unload_model(inference_engine *ie)
@@ -76,7 +78,6 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
                                                ie->tflm->resolver,
                                                kTensorArena, kTensorArenaSize,
                                                &ie->tflm->error_reporter,
-                                               true,
                                                &ie->tflm->xcore_profiler);
 
     // Allocate memory from the kTensorArena for the model's tensors.
@@ -169,7 +170,7 @@ void print_profiler_summary(inference_engine *ie)
             printf("Operator %3d %-20s took %5lu ms\n", i, op_name, times[i]/100000);
         }
     }
-    printf("TOTAL %llu microseconds\n", total);
+    printf("TOTAL %llu ticks\n", total);
 
     for (size_t index = 0; index < opcodes->size(); index++) {
         uint64_t time = 0;
@@ -186,7 +187,7 @@ void print_profiler_summary(inference_engine *ie)
         op_name = index_to_name(ie, index);
 
         printf("Operator-class %-20s took %5llu ms %3d%%\n",
-               op_name, time/100000, (int)(100*(uint64_t)time/total));
+               op_name, time/100000, (int)(100*time/total));
     }
 }
 
