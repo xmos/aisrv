@@ -1,14 +1,11 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdint.h>
-
-#define MAX_BOXES 460
+#include "box_calculation.h"
 
 float anchors[MAX_BOXES][4] = {
 #include "anchors.h"
 };
-
-
 
 void single_box(uint32_t outputs[4], int8_t be[4], float anchor[4]) {
     float box_encoding[4];
