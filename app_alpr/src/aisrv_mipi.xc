@@ -81,7 +81,7 @@ uint32_t frame_time = 0, line_time = 0;
 
 struct decoupler_buffer 
 {
-    uint32_t full_image[RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH / sizeof(uint32_t)];
+    uint32_t full_image[RAW_IMAGE_WIDTH * (RAW_IMAGE_HEIGHT) * RAW_IMAGE_DEPTH / sizeof(uint32_t)];
     int serial;
 } decoupler[1];
 
@@ -93,6 +93,8 @@ unsafe
 #define START_X       ((SENSOR_IMAGE_WIDTH  - RAW_IMAGE_WIDTH)  / 2)
 #define START_Y       ((SENSOR_IMAGE_HEIGHT - RAW_IMAGE_HEIGHT) / 2)
 #define END_Y          (SENSOR_IMAGE_HEIGHT - START_Y)
+
+#define V_OFFSET      (RAW_IMAGE_HEIGHT/2)
 
 #pragma unsafe arrays
 
@@ -106,6 +108,10 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
     int errors = 0;
     int grabbing = 0;
     uint8_t new_grabbing = 0;
+    int start_x = START_X;
+    int start_y = START_Y;
+    int end_y = END_Y;
+    int width = RAW_IMAGE_WIDTH;
     unsafe 
     {
         while(1)
@@ -137,14 +143,14 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     else if (header == 0x1E) // YUV422
                     {
                         if (grabbing &&
-                            lineCount >= START_Y &&
-                            lineCount < END_Y) {
-                            memcpy((decoupler_r->full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[linesSaved], pt+START_X*2, RAW_IMAGE_WIDTH*2);
+                            lineCount >= start_y &&
+                            lineCount < end_y) {
+                            memcpy((decoupler_r->full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[linesSaved+V_OFFSET], pt+start_x*2, width*2);
                             linesSaved++;
-                            if (linesSaved == RAW_IMAGE_HEIGHT)
+                            if (linesSaved == (end_y - start_y))
                             {
-                                outuchar(c_decoupler, 0);
                                 linesSaved = 0;
+                                outuchar(c_decoupler, 0);
                                 grabbing = 0;
                             }
                         }
@@ -176,6 +182,11 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     }
                     break;
                 case inuchar_byref(c_decoupler, new_grabbing):
+                    start_x = inuint(c_decoupler);
+                    int end_x = inuint(c_decoupler);
+                    start_y = inuint(c_decoupler);
+                    end_y = inuint(c_decoupler);
+                    width = end_x - start_x;
                     new_grabbing = 1;
                     break;
             }
@@ -190,46 +201,71 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
 
     int fc = 0;
     unsigned cmd;
+    int start_x, end_x, start_y, end_y, required_width, required_height;
+    
+    c_acquire :> cmd;                            // And grab address - unused in this app
+    c_acquire :> start_x;
+    c_acquire :> end_x;
+    c_acquire :> start_y;
+    c_acquire :> end_y;
+    c_acquire :> required_width;
+    c_acquire :> required_height;
+    outuchar(c_debayerer, IMAGER_SAMPLE);        // Tell collector to grab image
+    outuint(c_debayerer, start_x);               // Tell collector size
+    outuint(c_debayerer, end_x);                 // Tell collector size
+    outuint(c_debayerer, start_y);               // Tell collector size
+    outuint(c_debayerer, end_y);                 // Tell collector size
+    int decoupleCount = inuchar(c_debayerer);    // Image collector ready
+    unsafe 
+    {
+        fc++;
+        printint(fc); printchar(' '); printintln(frame_time);
+        // TODO: do this properly, VPU & gaussian
+        for(int oy = 0 ; oy < required_height; oy ++) {
+            for(int ox = 0; ox < required_width; ox ++) {
+                int x = ox * (end_x - start_x) / required_width;
+                int y = oy * (end_y - start_y) / required_height + V_OFFSET;
+                int Y = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2];
+                int UV0 = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][(x == 0 ? y == 0 ? 5 : 3 : x*2 - 1)]; // 2 is correct but has been overwritten - 5 is the next V value.
+                int UV1 = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2+1];
+                int U, V;
+                if ((x & 1) != (start_x & 1)) {
+                    U = UV0; V = UV1;
+                } else {
+                    U = UV1; V = UV0;
+                }
+                Y -= 128;
+                U -= 128;
+                V -= 128;
+                int R = Y + ((          292 * V) >> 8);
+                int G = Y - ((100 * U + 148 * V) >> 8);
+                int B = Y + ((520 * U          ) >> 8);
+                if (R < -128) R = -128; if (R > 127) R = 127;
+                if (G < -128) G = -128; if (G > 127) G = 127;
+                if (B < -128) B = -128; if (B > 127) B = 127;
+                (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT*3*RAW_IMAGE_WIDTH])[oy * required_width * 3 + ox*3+0] = R;
+                (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT*3*RAW_IMAGE_WIDTH])[oy * required_width * 3 + ox*3+1] = G;
+                (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT*3*RAW_IMAGE_WIDTH])[oy * required_width * 3 + ox*3+2] = B;
+            }
+        }
+
+        send_array(c_acquire, decoupler_r -> full_image, required_width * required_height * 3);
+
+    }
+}
+
+void acquire_command_handler(chanend c_debayerer, client interface i2c_master_if i2c, chanend c_acquire[], int n_acquire)
+{
+
+    int fc = 0;
+    unsigned cmd;
     
     while(1)
     {
-        c_acquire :> cmd;                            // Please grab image
-        c_acquire :> cmd;                            // And grab address - unused in this app
-        outuchar(c_debayerer, IMAGER_SAMPLE);        // Tell collector to grab image
-        int decoupleCount = inuchar(c_debayerer);    // Image collector ready
-        unsafe 
-        {
-            fc++;
-            printint(fc); printchar(' '); printintln(frame_time);
-
-            for(int y = RAW_IMAGE_HEIGHT-1; y >= 0; y --) {   // TODO: Use vector unit
-                for(int x = RAW_IMAGE_WIDTH-1; x >= 0; x --) {
-                    int Y = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2];
-                    int UV0 = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][(x == 0 ? y == 0 ? 5 : 3 : x*2 - 1)]; // 2 is correct but has been overwritten - 5 is the next V value.
-                    int UV1 = (decoupler_r -> full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[y][x*2+1];
-                    int U, V;
-                    if (x & 1) {
-                        U = UV0; V = UV1;
-                    } else {
-                        U = UV1; V = UV0;
-                    }
-                    Y -= 128;
-                    U -= 128;
-                    V -= 128;
-                    int R = Y + ((          292 * V) >> 8);
-                    int G = Y - ((100 * U + 148 * V) >> 8);
-                    int B = Y + ((520 * U          ) >> 8);
-                    if (R < -128) R = -128; if (R > 127) R = 127;
-                    if (G < -128) G = -128; if (G > 127) G = 127;
-                    if (B < -128) B = -128; if (B > 127) B = 127;
-                    (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+0] = R;
-                    (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+1] = G;
-                    (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT][3*RAW_IMAGE_WIDTH])[y][x*3+2] = B;
-                }
-            }
-
-            send_array(c_acquire, decoupler_r -> full_image, RAW_IMAGE_WIDTH * RAW_IMAGE_HEIGHT * RAW_IMAGE_DEPTH);
-
+        select {
+            case (int i = 0; i < n_acquire; i++) c_acquire[i] :> cmd:
+                ImagerUser(c_debayerer, i2c, c_acquire[i]);
+                break;
         }
     }
 }
@@ -241,7 +277,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
 
 on tile[1]: port p_reset_camera = XS1_PORT_1P;
 
-void mipi_main(client interface i2c_master_if i2c, chanend c_acquire)
+void mipi_main(client interface i2c_master_if i2c, chanend c_acquire[], int n_acquire)
 {
     chan c;
     chan c_kill, c_img, c_ctrl;
@@ -279,7 +315,7 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_acquire)
         MipiDecoupler(c, c_kill, c_img);
 
         MipiImager(c_img, c_ctrl, null);
-        ImagerUser(c_ctrl, i2c, c_acquire);
+        acquire_command_handler(c_ctrl, i2c, c_acquire, n_acquire);
     }
     i2c.shutdown();
 }
