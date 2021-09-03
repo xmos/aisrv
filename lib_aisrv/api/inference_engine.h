@@ -93,11 +93,13 @@ typedef struct inference_engine {
 
 
 #ifdef __cplusplus
+#ifndef TFLM_DISABLED
 tflite::MicroMutableOpResolver<TFLM_OPERATORS> *
      inference_engine_initialize(inference_engine_t * UNSAFE ie,
                                  uint32_t data_tensor_arena[], uint32_t n_int,
                                  uint32_t data_ext[], uint32_t n_ext,
                                  struct tflite_micro_objects * UNSAFE tflmo);
+#endif
 extern "C" {
 #endif
     void inference_engine_unload_model(inference_engine_t * UNSAFE ie);

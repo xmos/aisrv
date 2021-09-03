@@ -28,7 +28,7 @@ void send_array(chanend c, uint32_t * unsafe array, unsigned size)
 }
 
 /* TODO add bounds checking */
-static inline size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned ignore)
+size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned ignore)
 {
     size_t i = 0;
     
@@ -279,8 +279,12 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
 #endif
 
         case CMD_GET_OUTPUT_TENSOR:
-            c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, ie.output_buffers[tensor_num], ie.output_sizes[tensor_num]);
+            if (ie.output_sizes[tensor_num] != 0) {
+                c <: (unsigned) AISRV_STATUS_OKAY;
+                send_array(c, ie.output_buffers[tensor_num], ie.output_sizes[tensor_num]);
+            } else {
+                c <: (unsigned) AISRV_STATUS_ERROR_NO_MODEL;
+            }
             break;
         
         case CMD_GET_INPUT_TENSOR:
@@ -324,11 +328,22 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
             size_t size = receive_array_(c, data, 0);
 
             aisrv_status_t status = AISRV_STATUS_OKAY;
-            c_acquire <: (unsigned) CMD_START_ACQUIRE_SINGLE;
-            c_acquire <: (unsigned) ie.input_buffers[0];
+            if(ie.haveModel)
+            {
+                c_acquire <: (unsigned) CMD_START_ACQUIRE_SINGLE;
+                c_acquire <: (unsigned) ie.input_buffers[0];
 
-            /* TODO check we dont overrun input_buffer */
-            size = receive_array_(c_acquire, ie.input_buffers[0], 0);
+                for(int i = 0; i < 6; i += 1) {
+                    c_acquire <: (unsigned) ((data, uint16_t[])[i]);
+                }
+
+                /* TODO check we dont overrun input_buffer */
+                size = receive_array_(c_acquire, ie.input_buffers[0], 0);
+            }
+            else
+            {
+                status = AISRV_STATUS_ERROR_NO_MODEL;
+            }
 
             outuint(c, status);
             outct(c, XS1_CT_END);
@@ -398,7 +413,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
 }
 
 #if defined(TFLM_DISABLED)
-uint32_t tflite_disabled_image[RAW_IMAGE_HEIGHT*RAW_IMAGE_WIDTH*RAW_IMAGE_DEPTH/4];
+uint32_t tflite_disabled_image[240*240*3/4];
 #endif
 
 void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
@@ -470,3 +485,51 @@ void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
 }
 } // unsafe
 
+
+extern size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned ignore);
+
+int aisrv_local_get_output_tensor(chanend to, int tensor_num, uint32_t *data) {
+    int status;
+    to <: CMD_GET_OUTPUT_TENSOR;
+    to <: tensor_num;
+    to :> status;
+    if (status != AISRV_STATUS_OKAY) {
+        printstr("** err ");
+        printintln(status);
+        return 1;
+    }
+    unsafe {
+        receive_array_(to, (uint32_t * unsafe) data, 0);
+    }
+    return 0;
+}
+
+int aisrv_local_acquire_single(chanend to, int sx, int ex, int sy, int ey, int rw, int rh) {
+    uint16_t data[6] = {sx, ex, sy, ey, rw, rh};
+    int status;
+    to <: CMD_START_ACQUIRE_SINGLE;
+    to <: 0;
+    send_array(to, (data, uint32_t[]), 12);
+    status = inuint(to); chkct(to, 1);
+    if (status != AISRV_STATUS_OKAY) {
+        printstr("** err ");
+        printintln(status);
+        return 1;
+    }
+    return 0;
+}
+
+int aisrv_local_start_inference(chanend to) {
+    uint32_t data[1];
+    int status;
+    to <: CMD_START_INFER;
+    to <: 0;
+    send_array(to, (data, uint32_t[]), 0);
+    status = inuint(to); chkct(to, 1);
+    if (status != AISRV_STATUS_OKAY) {
+        printstr("** err ");
+        printintln(status);
+        return 1;
+    }
+    return 0;
+}
