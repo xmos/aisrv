@@ -469,13 +469,18 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         self._out_ep.write(bytes([]), 1000)
 
     # TODO move to super()
-    def start_acquire_single(self, engine_num = 0):
+    def start_acquire_single(self, sx, ex, sy, ey, rw, rh, engine_num = 0):
 
         # Send cmd
         self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_SINGLE, engine_num, 0]), 1000)
-
-        # Send out a 0 length packet 
-        self._out_ep.write(bytes([]), 1000)
+        def tobytes(l):
+            o = []
+            for i in l:
+                o.append( i & 0xff )
+                o.append( (i>>8) & 0xff )
+            return bytes(o)
+        # Send out packet with coordinates 
+        self._out_ep.write(tobytes([sx, ex, sy, ey, rw, rh]), 1000)
 
     # TODO move to super()
     def start_acquire_stream(self, engine_num = 0):
