@@ -78,6 +78,7 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
                                                ie->tflm->resolver,
                                                kTensorArena, kTensorArenaSize,
                                                &ie->tflm->error_reporter,
+                                               true,
                                                &ie->tflm->xcore_profiler);
 
     // Allocate memory from the kTensorArena for the model's tensors.
@@ -195,8 +196,7 @@ void print_profiler_summary(inference_engine *ie)
 
 // STUBS for when TFLM is disabled.
 
-size_t debug_log_index = 0;
-char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
+void inference_engine_unload_model(inference_engine *ie) {}
 
 void print_profiler_summary(inference_engine *ie) {}
 extern "C" void DebugLog(const char* s) {}
