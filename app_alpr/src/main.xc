@@ -42,44 +42,70 @@ on tile[0]: port p_scl = XS1_PORT_1N;
 on tile[0]: port p_sda = XS1_PORT_1O;
 #endif
 
-extern size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned ignore);
+#define WIDTH_ON_SENSOR 320
+#define HEIGHT_ON_SENSOR 320
+#define ORIGIN_X_INSIDE_SENSOR ((640 - WIDTH_ON_SENSOR)/2)
+#define ORIGIN_Y_INSIDE_SENSOR ((480 - HEIGHT_ON_SENSOR)/2)
 
 void director(chanend to_0, chanend to_1) {
     uint32_t classes[2*MAX_BOXES / sizeof(uint32_t)];
     uint32_t boxes[4*MAX_BOXES / sizeof(uint32_t)];
+    uint32_t ocr_classes[66 * 16 / sizeof(uint32_t)];
     uint32_t bbox[4];
-    
+    char ocr_outputs[17];
     while(1) {
         int status;
         timer tmr; int t0;
         tmr :> t0;
         tmr when timerafter(t0+200000000) :> void;
-        to_0 <: CMD_GET_OUTPUT_TENSOR;
-        to_0 <: 0;
-    to_0 :> status;
-        if (status != AISRV_STATUS_OKAY) {
-            printstr("** err ");
-            printintln(status);
+        if (aisrv_local_acquire_single(to_0,
+                                       ORIGIN_X_INSIDE_SENSOR,
+                                       ORIGIN_X_INSIDE_SENSOR + WIDTH_ON_SENSOR,
+                                       ORIGIN_Y_INSIDE_SENSOR,
+                                       ORIGIN_Y_INSIDE_SENSOR + HEIGHT_ON_SENSOR,
+                                       160, 160)) {
             continue;
         }
-        unsafe {
-            receive_array_(to_0, (uint32_t * unsafe) classes, 0);
+        if (aisrv_local_start_inference(to_0)) {
+            continue;
         }
-
-        to_0 <: CMD_GET_OUTPUT_TENSOR;
-        to_0 <: 1;
-    to_0 :> int _;
-        unsafe {
-            receive_array_(to_0, (uint32_t * unsafe) boxes, 0);
+        if (aisrv_local_get_output_tensor(to_0, 0, classes)) {
+            continue;
         }
-
-        box_calculation(bbox, (classes, int8_t[]), (boxes, int8_t[]));
+        if (aisrv_local_get_output_tensor(to_0, 1, boxes)) {
+            continue;
+        }
+        int val = box_calculation(bbox, (classes, int8_t[]), (boxes, int8_t[]), 320, 320);
 
         for(int i = 0 ; i < 4; i++) {
             printint(bbox[i]);
             printchar(' ');
         }
+        printint(val);
         printchar('\n');
+        if (aisrv_local_acquire_single(to_1,
+                                       ORIGIN_X_INSIDE_SENSOR + bbox[0],
+                                       ORIGIN_X_INSIDE_SENSOR + bbox[1],
+                                       ORIGIN_Y_INSIDE_SENSOR + bbox[2],
+                                       ORIGIN_Y_INSIDE_SENSOR + bbox[3],
+                                       128, 32)) {
+            continue;
+        }
+        if (aisrv_local_start_inference(to_1)) {
+            continue;
+        }
+        if (aisrv_local_get_output_tensor(to_1, 0, ocr_classes)) {
+            continue;
+        }
+        int len = ocr_calculation(ocr_outputs, (ocr_classes, int8_t [16][66]));
+        printstr(">>>");
+        for(int i = 0; i < len; i++) {
+            printchar(ocr_outputs[i]);
+        }
+        printstr("<<<\n");
+        printstr("Grabbed\n");
+        tmr :> t0;
+        tmr when timerafter(t0+2000000000) :> void;
     }
 }
 
@@ -87,7 +113,7 @@ int main(void)
 {
     chan c_usb_to_engine[2], c_director_to_engine_0, c_director_to_engine_1;
     chan c_usb_ep0_dat;
-    chan c_acquire;
+    chan c_acquire[2];
 
 #if defined(I2C_INTEGRATION)
     i2c_master_if i2c[1];
@@ -103,13 +129,13 @@ int main(void)
         on tile[0]: {
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory_1(&ie); }
-            aiengine(ie, c_usb_to_engine[1], c_director_to_engine_1, null, c_acquire, null);
+            aiengine(ie, c_usb_to_engine[1], c_director_to_engine_1, null, c_acquire[1], null);
         } 
 
         on tile[1]: {
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory_0(&ie); }
-            aiengine(ie, c_usb_to_engine[0], c_director_to_engine_0, null, null, null);
+            aiengine(ie, c_usb_to_engine[0], c_director_to_engine_0, null, c_acquire[0], null);
         }
 
         on tile[1]: {
@@ -119,7 +145,7 @@ int main(void)
         on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
 #endif
 #if defined(MIPI_INTEGRATION)
-        on tile[1]: mipi_main(i2c[0], c_acquire);
+        on tile[1]: mipi_main(i2c[0], c_acquire, 2);
 #endif
 
 #if defined(PSOC_INTEGRATION)
