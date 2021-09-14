@@ -53,6 +53,7 @@ print("Inferred input shape: " + str(INPUT_SHAPE))
 
 raw_img = None
 
+engine_num=1
 # Send image to device
 for arg in sys.argv[1:]:
         print("Setting input tensor via " + arg )
@@ -75,16 +76,16 @@ for arg in sys.argv[1:]:
                 raw_img = raw_file.read()
                 raw_file.close()
             
-            ie.write_input_tensor(raw_img)
+            ie.write_input_tensor(raw_img, engine_num = engine_num)
                 
         except KeyboardInterrupt:
             pass
 
         print("Sending start inference command")
-        ie.start_inference()
+        ie.start_inference(engine_num = engine_num)
 
         print("Waiting for inference")
-        output_data_int = ie.read_output_tensor()
+        output_data_int = ie.read_output_tensor(engine_num = engine_num)
         output_data_int = np.asarray(output_data_int)
         output_data = np.reshape(output_data_int, (16,66,1))
 
