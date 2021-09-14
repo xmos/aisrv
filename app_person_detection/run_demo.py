@@ -59,6 +59,16 @@ ie = xcore_ai_ie_usb()
 
 ie.connect()
 
+
+#intermediate = ie.read_input_tensor(tensor_num = 0, engine_num=1)
+#intermediate = np.asarray(intermediate)
+##intermediate *= 0
+#intermediate = intermediate[:2000]
+#print(len(intermediate))
+#ie.write_input_tensor(bytes(intermediate), tensor_num = 0, engine_num=1)
+ie.start_inference(engine_num=1)
+
+
 input_length = ie.input_length
 print("READING INPUT TENSOR LENGTH FROM DEVICE: " + str(input_length))
 
