@@ -65,7 +65,7 @@ void MipiDecoupler(chanend c, chanend c_kill, chanend c_line)
             if(mipiHeader & 0x30) {
                 ourWordCount = inuint(c);
                 tailSize = inuint(c);
-                if (ourWordCount != 320 && tailSize != 0)
+                if (ourWordCount != (SENSOR_IMAGE_WIDTH/2) && tailSize != 0)
                 {
                     printintln(ourWordCount);
                     printintln(tailSize);
@@ -198,7 +198,6 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
 #pragma unsafe arrays
 void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend c_acquire)
 {
-
     int fc = 0;
     unsigned cmd;
     int start_x, end_x, start_y, end_y, required_width, required_height;
@@ -215,7 +214,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
     outuint(c_debayerer, end_x);                 // Tell collector size
     outuint(c_debayerer, start_y);               // Tell collector size
     outuint(c_debayerer, end_y);                 // Tell collector size
-    int decoupleCount = inuchar(c_debayerer);    // Image collector ready
+    inuchar(c_debayerer);                        // Wait for image collector ready
     unsafe 
     {
         fc++;
@@ -256,15 +255,26 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
 
 void acquire_command_handler(chanend c_debayerer, client interface i2c_master_if i2c, chanend c_acquire[], int n_acquire)
 {
-
-    int fc = 0;
     unsigned cmd;
     
     while(1)
     {
         select {
             case (int i = 0; i < n_acquire; i++) c_acquire[i] :> cmd:
-                ImagerUser(c_debayerer, i2c, c_acquire[i]);
+                if (cmd == CMD_START_ACQUIRE_SINGLE) {
+                    ImagerUser(c_debayerer, i2c, c_acquire[i]);
+                } else if (cmd == CMD_START_ACQUIRE_SET_I2C) {
+                    int i2c_address, i2c_register, i2c_value;
+                    c_acquire[i] :> i2c_address;
+                    c_acquire[i] :> i2c_register;
+                    c_acquire[i] :> i2c_value;
+                    printhex(i2c_address); printchar(' ');
+                    printhex(i2c_register); printchar(' ');
+                    printhex(i2c_value); printchar('\n');
+                    i2c.write_reg(i2c_address, i2c_register, i2c_value);
+                } else {
+                    printstr("Unknown acquire command\n");
+                }
                 break;
         }
     }

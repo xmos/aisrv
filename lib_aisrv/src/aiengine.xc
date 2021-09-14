@@ -321,6 +321,21 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
             send_array(c, &ie.acquireMode, sizeof(ie.acquireMode));
             break;
 
+        case CMD_START_ACQUIRE_SET_I2C:
+
+            /* Note currently receive extra 0 length */
+            /* TODO remove the need for this */
+            size_t size = receive_array_(c, data, 0);
+            c_acquire <: (unsigned) CMD_START_ACQUIRE_SET_I2C;
+            for(int i = 0; i < 3; i++) {
+                c_acquire <: (unsigned) ((data, uint8_t[])[i]);
+            }
+            
+            aisrv_status_t trans_status = AISRV_STATUS_OKAY;
+            outuint(c, trans_status);
+            outct(c, XS1_CT_END);
+            break;
+            
         case CMD_START_ACQUIRE_SINGLE:
 
             /* Note currently receive extra 0 length */

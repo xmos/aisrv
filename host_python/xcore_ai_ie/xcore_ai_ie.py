@@ -482,6 +482,18 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         # Send out packet with coordinates 
         self._out_ep.write(tobytes([sx, ex, sy, ey, rw, rh]), 1000)
 
+    def acquire_set_i2c(self, i2c_address, reg_address, reg_value, engine_num = 0):
+
+        # Send cmd
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_SET_I2C, engine_num, 0]), 1000)
+        def tobytes(l):
+            o = []
+            for i in l:
+                o.append( i & 0xff )
+            return bytes(o)
+        # Send out packet with coordinates 
+        self._out_ep.write(tobytes([i2c_address, reg_address, reg_value]), 1000)
+
     # TODO move to super()
     def start_acquire_stream(self, engine_num = 0):
 
