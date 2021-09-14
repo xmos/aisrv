@@ -10,7 +10,7 @@
 #if !defined(TFLM_DISABLED)
 
 #define TENSOR_ARENA_0_BYTES          (396000) // should be 396000
-#define TENSOR_ARENA_1_BYTES          (391000) // should be 379000
+#define TENSOR_ARENA_1_BYTES          (396000) // should be 379000
 uint32_t data_0[TENSOR_ARENA_0_BYTES/sizeof(int)];
 uint32_t data_1[TENSOR_ARENA_1_BYTES/sizeof(int)];
 #endif
