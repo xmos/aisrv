@@ -5,8 +5,14 @@
 #define RAW_IMAGE_WIDTH  (320)
 #define RAW_IMAGE_DEPTH  (3)
 
+#ifdef GC2145
+#define SENSOR_IMAGE_HEIGHT (1200)
+#define SENSOR_IMAGE_WIDTH  (1600)
+#else
 #define SENSOR_IMAGE_HEIGHT (480)
 #define SENSOR_IMAGE_WIDTH  (640)
+#endif
+
 #define SENSOR_IMAGE_DEPTH  (2)          // YUV: YU  YV  YU  YV  ...
 
 #include "i2c.h"

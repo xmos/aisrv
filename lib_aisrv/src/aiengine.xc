@@ -138,7 +138,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
                           uint32_t tensor_num,
                           chanend ?c_acquire, chanend (&?c_leds)[AISRV_GPIO_LENGTH])
 {
-    uint32_t data[MAX_PACKET_SIZE_WORDS]; 
+    uint32_t data[MAX_PACKET_SIZE_WORDS];
     switch(cmd)
     {
         case CMD_GET_SPEC:
@@ -343,7 +343,11 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
             size_t size = receive_array_(c, data, 0);
 
             aisrv_status_t status = AISRV_STATUS_OKAY;
-            if(ie.haveModel)
+            if(ie.haveModel
+#if defined(TFLM_DISABLED)
+               || 1
+#endif
+                )
             {
                 c_acquire <: (unsigned) CMD_START_ACQUIRE_SINGLE;
                 c_acquire <: (unsigned) ie.input_buffers[0];
@@ -427,21 +431,21 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
     }
 }
 
-#if defined(TFLM_DISABLED)
-uint32_t tflite_disabled_image[240*240*3/4];
-#endif
-
 void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
-              chanend ?c_push, chanend ?c_acquire, chanend (&?c_leds)[4])
+              chanend ?c_push, chanend ?c_acquire, chanend (&?c_leds)[4]
+#if defined(TFLM_DISABLED)
+              , uint32_t tflite_disabled_image[], uint32_t sizeof_tflite_disabled_image
+#endif
+    )
 {
     aisrv_cmd_t cmd = CMD_NONE;
     uint32_t tensor_num = 0;
 
 #if defined(TFLM_DISABLED)
-    ie.input_sizes[0]  = sizeof(tflite_disabled_image);
-    ie.output_sizes[0] = sizeof(tflite_disabled_image);
-    ie.input_size  = sizeof(tflite_disabled_image);
-    ie.output_size = sizeof(tflite_disabled_image);
+    ie.input_sizes[0]  = sizeof_tflite_disabled_image;
+    ie.output_sizes[0] = sizeof_tflite_disabled_image;
+    ie.input_size  = sizeof_tflite_disabled_image;
+    ie.output_size = sizeof_tflite_disabled_image;
     ie.output_times_size = 40;
     unsafe {
         ie.input_buffers[0] = tflite_disabled_image;

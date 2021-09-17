@@ -9,7 +9,11 @@
 #include <math.h>
 #include "assert.h"
 #include "i2c.h"
+#ifdef GC2145
+#include "gc2145.h"
+#else
 #include "gc0310.h"
+#endif
 #include "mipi.h"
 #include "debayer.h"
 #include "yuv_to_rgb.h"
@@ -103,7 +107,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
 {
     int line = 0;
     int lineCount = 0;
-    int last_sof = 0, now = 0;
+    int last_sof = 0, now = 0, last_line = 0;
     int linesSaved = 0;
     int errors = 0;
     int grabbing = 0;
@@ -159,6 +163,10 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                         {
                             statusError++;
                         }
+                        asm volatile("gettime %0" : "=r" (now));
+                        uint32_t * unsafe lt = &line_time;
+                        *lt = now - last_line;
+                        last_line = now;
                     } 
                     else if (header == 0x12)  // Embedded data - ignore
                     { 
@@ -218,7 +226,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
     unsafe 
     {
         fc++;
-        printint(fc); printchar(' '); printintln(frame_time);
+        printint(fc); printchar(' '); printintln(frame_time); printchar(' '); printintln(line_time);
         // TODO: do this properly, VPU & gaussian
         for(int oy = 0 ; oy < required_height; oy ++) {
             for(int ox = 0; ox < required_width; ox ++) {
@@ -311,8 +319,17 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_acquire[], int n_ac
     set_pad_delay(p_mipi_rxa, 1);
     start_clock(clk_mipi);
     write_node_config_reg(tile[MIPI_TILE], XS1_SSWITCH_MIPI_DPHY_CFG3_NUM ,
-                          0x3E42);
+#ifdef GC2145
+                          0x7E42  // two lanes
+#else
+                          0x3E42  // one lane
+#endif
+        );
+#ifdef GC2145
+    if (gc2145_stream_start(i2c) != 0)
+#else
     if (gc0310_stream_start(i2c) != 0)
+#endif
     {
         printstr("Stream start failed\n");
     }
