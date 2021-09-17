@@ -5,7 +5,11 @@
 #include "inference_engine.h"
 
 void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
-              chanend ?c_push, chanend ?c_acquire, chanend (&?c_leds)[4]);
+              chanend ?c_push, chanend ?c_acquire, chanend (&?c_leds)[4]
+#if defined(TFLM_DISABLED)
+              , uint32_t tflite_disabled_image[], uint32_t sizeof_tflite_disabled_image
+#endif
+              );
 
 extern size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned ignore);
 

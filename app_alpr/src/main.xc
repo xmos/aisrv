@@ -53,6 +53,7 @@ void director(chanend to_0, chanend to_1) {
     uint32_t ocr_classes[66 * 16 / sizeof(uint32_t)];
     uint32_t bbox[4];
     char ocr_outputs[17];
+//    return;
     while(1) {
         int status;
         timer tmr; int t0;
@@ -109,6 +110,12 @@ void director(chanend to_0, chanend to_1) {
     }
 }
 
+
+#if defined(TFLM_DISABLED)
+extern uint32_t tflite_disabled_image[320*320*3/4];
+uint32_t tflite_disabled_image_1[1];
+#endif
+
 int main(void) 
 {
     chan c_usb_to_engine[2], c_director_to_engine_0, c_director_to_engine_1;
@@ -129,13 +136,21 @@ int main(void)
         on tile[0]: {
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory_1(&ie); }
-            aiengine(ie, c_usb_to_engine[1], c_director_to_engine_1, null, c_acquire[1], null);
+            aiengine(ie, c_usb_to_engine[1], c_director_to_engine_1, null, c_acquire[1], null
+#if defined(TFLM_DISABLED)
+                     , tflite_disabled_image_1, sizeof(tflite_disabled_image_1)
+#endif
+                );
         } 
 
         on tile[1]: {
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory_0(&ie); }
-            aiengine(ie, c_usb_to_engine[0], c_director_to_engine_0, null, c_acquire[0], null);
+            aiengine(ie, c_usb_to_engine[0], c_director_to_engine_0, null, c_acquire[0], null
+#if defined(TFLM_DISABLED)
+                     , tflite_disabled_image, sizeof(tflite_disabled_image)
+#endif
+                );
         }
 
         on tile[1]: {

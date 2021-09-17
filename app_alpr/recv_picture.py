@@ -13,7 +13,7 @@ ie = xcore_ai_ie_usb()
 ie.connect()
 
 #INPUT_SHAPE = (32, 128, 3)
-INPUT_SHAPE = (160, 160, 3)
+INPUT_SHAPE = (320, 320, 3)
 #INPUT_SHAPE = (16, 66, 1)
 
 print("Input shape: " + str(INPUT_SHAPE))
@@ -21,7 +21,7 @@ print("Input shape: " + str(INPUT_SHAPE))
 # Get image from device
 #ie.acquire_set_i2c(0x3C, 0xfe, 0x00)
 #ie.acquire_set_i2c(0x3C, 0x84, 0x01)
-ie.start_acquire_single(160, 480, 80, 400, 160, 160)
+ie.start_acquire_single(160, 480, 80, 400, 320, 320)
 #ythoraw_img = ie.read_input_tensor(engine_num = 1)
 raw_img = ie.read_input_tensor(engine_num = 0)
 print(len(raw_img))

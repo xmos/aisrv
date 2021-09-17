@@ -11,7 +11,7 @@
 
 
 #define TENSOR_ARENA_BYTES_0        (20224000)
-#define TENSOR_ARENA_BYTES_1          (356000)
+#define TENSOR_ARENA_BYTES_1          (364000)
 
 // Because of bug in xgdb we make this array tiny, knowing we own external memory
 // otherwise xgdb spends hours loading this array
@@ -61,3 +61,8 @@ void inference_engine_initialize_with_memory_1(inference_engine_t *ie) {
 
 #endif
 }
+
+#if defined(TFLM_DISABLED)
+__attribute__((section(".ExtMem_data")))
+uint32_t tflite_disabled_image[320*320*3/4];
+#endif
