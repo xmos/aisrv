@@ -87,15 +87,6 @@ void transform_line_vpu(int8_t outp[3][160], uint8_t line[], int8_t coefficients
 #endif   
 }
 
-uint8_t morph(uint8_t x) {
-    int z = x;
-    z = z - 128;
-    if (z < 0) {
-        z += 256;
-    }
-    return z;
-}
-
 uint8_t inputs[38400] = {
     #include "yuv.h"
 };
@@ -109,6 +100,7 @@ uint8_t gaussian[65] = {
 };
 
 #define MAX_OUTPUT_WIDTH   160
+#define MAX_OUTPUT_HEIGHT   160
 
 int round_down(int multiplier) {
     int v = (multiplier + 256) >> 9;
@@ -122,14 +114,19 @@ static void calculate_ratios(int &ratio, int &ratio_inverse, int in_points, int 
     ratio_inverse = 65536 * (out_points - 1) / (in_points - 1); // in Q.16 format
 }
 
+#define MAX_WINDOW_SIZE  5
+
 static int mkgaussian(int window_val[], int i, int start_x, int &pos_centre, int &int_pos_centre, int ratio, int ratio_inverse) {
     int window_width = (ratio >> 16) + 1;
+    if (window_width > MAX_WINDOW_SIZE / 2) {
+        window_width = MAX_WINDOW_SIZE / 2;
+    }
     int sum = 0;
     pos_centre = i * ratio + (start_x << 16);
     int_pos_centre = pos_centre & 0xFFFF0000;
     for(int window_index = - window_width; window_index <= window_width; window_index++) {
         int pos = pos_centre - (window_index << 16);
-        int64_t l = ((int64_t)(pos - int_pos_centre)) * ratio_inverse;
+        int64_t l = ((int64_t)(pos - int_pos_centre)) * ratio_inverse*2;
         int location_in_window = (l + (1<<27)) >> 28;
         int gauss = 0;
         if (location_in_window >= -32 && location_in_window <= 32) {
@@ -145,14 +142,15 @@ static int mkgaussian(int window_val[], int i, int start_x, int &pos_centre, int
     return window_width;
 }
 
-void build_coefficients_strides(int8_t coefficients[32*MAX_OUTPUT_WIDTH*3],
-                                uint32_t strides[MAX_OUTPUT_WIDTH],
-                                int start_x, int end_x, int points) {
-    memset(coefficients, 0, 32*MAX_OUTPUT_WIDTH*3);
+void build_x_coefficients_strides(int8_t x_coefficients[32*MAX_OUTPUT_WIDTH*3],
+                                  uint32_t strides[MAX_OUTPUT_WIDTH],
+                                  int start_x, int end_x, int points) {
     int ratio, ratio_inverse;
+    int window_val[MAX_WINDOW_SIZE];
+
+    memset(x_coefficients, 0, 32*MAX_OUTPUT_WIDTH*3);
     calculate_ratios(ratio, ratio_inverse, end_x - start_x, points);
-    int window_val[40];
-            // ratio: 1  gaussian width 1
+
     int Y[3] = {64,  64,  64};   // Equal contributions of Y to R, G, and B
     int U[3] = { 0, -25, 127};   // R gets no contribution from U, G and B do
     int V[3] = {73, -37,   0};   // B gets no contribution from V, R and G do
@@ -195,21 +193,21 @@ void build_coefficients_strides(int8_t coefficients[32*MAX_OUTPUT_WIDTH*3],
                     printf("** %d %d %d", coefficient_location_minus_one, coefficient_location, coefficient_location_plus_one);
                     printf("   %d %d\n", rgb, window_index);
                 }
-                coefficients[coefficient_location] += round_down(gauss * Y[rgb]);
+                x_coefficients[coefficient_location] += round_down(gauss * Y[rgb]);
                 int Vval = round_down(gauss * V[rgb]);
                 int Uval = round_down(gauss * U[rgb]);
                 
                 if (base_location & 2) { // blue may overflow to 127+
-                    coefficients[coefficient_location_plus_one] += Uval;
-                    if (coefficients[coefficient_location_plus_one] < 0 && rgb == 2) {
-                        coefficients[coefficient_location_plus_one] = 127;
+                    x_coefficients[coefficient_location_plus_one] += Uval;
+                    if (x_coefficients[coefficient_location_plus_one] < 0 && rgb == 2) {
+                        x_coefficients[coefficient_location_plus_one] = 127;
                     }
-                    coefficients[coefficient_location_minus_one] += Vval;
+                    x_coefficients[coefficient_location_minus_one] += Vval;
                 } else {
-                    coefficients[coefficient_location_plus_one] += Vval;
-                    coefficients[coefficient_location_minus_one] += Uval;
-                    if (coefficients[coefficient_location_minus_one] < 0 && rgb == 2) {
-                        coefficients[coefficient_location_minus_one] = 127;
+                    x_coefficients[coefficient_location_plus_one] += Vval;
+                    x_coefficients[coefficient_location_minus_one] += Uval;
+                    if (x_coefficients[coefficient_location_minus_one] < 0 && rgb == 2) {
+                        x_coefficients[coefficient_location_minus_one] = 127;
                     }
                 }
             }
@@ -218,27 +216,94 @@ void build_coefficients_strides(int8_t coefficients[32*MAX_OUTPUT_WIDTH*3],
 }
 
 
+#define MAX_WINDOW_SIZE  5
+
+void build_y_coefficients_strides(int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE],
+                                  uint32_t strides[MAX_OUTPUT_HEIGHT],
+                                  int start_y, int end_y, int points) {
+    int window_val[MAX_WINDOW_SIZE];
+    int ratio, ratio_inverse;
+    memset(y_coefficients, 0, 16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE);
+    calculate_ratios(ratio, ratio_inverse, end_y - start_y, points);
+    for(int index = 0; index < points; index++) {
+        int pos_centre, int_pos_centre;
+        int window_width = mkgaussian(window_val, index, start_y, pos_centre, int_pos_centre, ratio, ratio_inverse);
+        int top_point = (int_pos_centre >> 16) - window_width;
+        int stride_point = top_point;
+        if (stride_point < 0) {
+            stride_point = 0;
+        }
+        strides[index] = stride_point;
+        for(int window_index = - window_width; window_index <= window_width; window_index++) {
+            int gauss = window_val[window_index + window_width];
+            int base_location = top_point - stride_point + index;
+            if (base_location < 0) {
+                base_location = 0;
+            }
+            for(int l = 0; l < 16; l++) {
+                int ci = (base_location * MAX_WINDOW_SIZE + window_index + window_width)*16 + l;
+                y_coefficients[ci] += (gauss + 2) >> 2;
+                if (y_coefficients[ci] < 0) {
+                    y_coefficients[ci] = 127;
+                }
+            }
+        }
+    }
+}
+
+
+uint8_t morph(uint8_t x) {
+    int z = x;
+    z = z - 128;
+    if (z < 0) {
+        z += 256;
+    }
+    return z;
+}
+
 int main(void) {
     uint8_t line[320];
 //    int8_t outp[3][160];
     int8_t outp2[3][160];
-    int8_t coefficients[32*160*3];
-    uint32_t strides[160];
+    int8_t x_coefficients[32*MAX_OUTPUT_WIDTH*3];
+    int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE];
+    uint32_t x_strides[MAX_OUTPUT_WIDTH];
+    uint32_t y_strides[MAX_OUTPUT_HEIGHT];
 
+
+    for(int y = 0; y < 120; y++) {
+        for(int i = 0; i < 160; i+=2) {
+            int index = (y * 160 + i)*2;
+            inputs[index] = i == y ? 128 : 127;
+            inputs[index+1] = -60+y;
+            inputs[index+2] = i+1 == y ? 128 : 127;
+            inputs[index+3] = -80+i;
+        }
+    }
     
-    build_coefficients_strides(coefficients, strides, 3, 40, 32);
-    if(0)for(int i = 13; i < 16; i++) {
-        printf("**%d\n", strides[i]);
-        for(int j = 0; j < 16; j++) {
-            for(int rgb = 0; rgb < 3; rgb++) {
-                int index = (i & ~0xF)*3 + (i & 0xF);
-                printf(" %4d", coefficients[(index + rgb*16)*32 + j]);
+    build_y_coefficients_strides(y_coefficients, y_strides, 3, 60, 32);
+    if(0)for(int i = 0; i < 16; i++) {
+        printf("**%d\n", y_strides[i]);
+        for(int window = 0; window < MAX_WINDOW_SIZE; window++) {
+            for(int j = 0; j < 16; j++) {
+                printf(" %4d", y_coefficients[(i*5 + window)*16 + j]);
             }
             printf("\n");
         }
         printf("\n");
     }
-//    build_coefficients_strides_5x(coefficients, strides);
+    build_x_coefficients_strides(x_coefficients, x_strides, 3, 40, 32);
+    if(0)for(int i = 13; i < 16; i++) {
+        printf("**%d\n", x_strides[i]);
+        for(int j = 0; j < 16; j++) {
+            for(int rgb = 0; rgb < 3; rgb++) {
+                int index = (i & ~0xF)*3 + (i & 0xF);
+                printf(" %4d", x_coefficients[(index + rgb*16)*32 + j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
     printf("P3\n32 32 255\n");
     int index = 0;
     for(int j = 0; j < 32; j++) {
@@ -247,7 +312,7 @@ int main(void) {
             index++;
         }
 //        transform_line(outp, line);
-        transform_line_vpu(outp2, line, coefficients, strides, 32);
+        transform_line_vpu(outp2, line, x_coefficients, x_strides, 32);
         for(int i = 0; i < 32; i++) {
             printf("%d %d %d ", outp2[0][i]+128,  outp2[1][i]+128,  outp2[2][i]+128);
         }
