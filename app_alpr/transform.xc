@@ -87,6 +87,37 @@ void transform_line_vpu(int8_t outp[3][160], uint8_t line[], int8_t coefficients
 #endif   
 }
 
+void transform_line_y(int8_t outp[160][3],
+                      int8_t inp0[3][160],
+                      int8_t inp1[3][160],
+                      int8_t inp2[3][160],
+                      int8_t inp3[3][160],
+                      int8_t inp4[3][160],
+                      int8_t coefficients[], int nox) {
+    int t0, t1;
+    asm("gettime %0" : "=r" (t0));
+    for(int ox = 0; ox < nox; ox ++) {
+        for(int rgb = 0; rgb < 3; rgb++) {
+            int sum = 0;
+            sum += coefficients[0*16] * inp0[rgb][ox];
+            sum += coefficients[1*16] * inp1[rgb][ox];
+            sum += coefficients[2*16] * inp2[rgb][ox];
+            sum += coefficients[3*16] * inp3[rgb][ox];
+            sum += coefficients[4*16] * inp4[rgb][ox];
+            sum = sum >> 6;
+            if (sum > 127) sum = 127;
+            if (sum < -128) sum = -128;
+            outp[ox][rgb] = sum;
+            if (0 && ox == 0) {
+                printf("%d %d %d %d %d     %d %d %d %d %d", coefficients[0*16], coefficients[1*16], coefficients[2*16], coefficients[3*16], coefficients[4*16]
+                       , inp0[rgb][0], inp1[rgb][0], inp2[rgb][0], inp3[rgb][0], inp4[rgb][4]);
+                printf(" & %08x  %d\n", &outp[ox][0], outp[ox][rgb]);
+            }
+        }
+    }
+    asm("gettime %0" : "=r" (t1));
+}
+
 uint8_t inputs[38400] = {
     #include "yuv.h"
 };
@@ -110,6 +141,7 @@ int round_down(int multiplier) {
 }
 
 static void calculate_ratios(int &ratio, int &ratio_inverse, int in_points, int out_points) {
+//    printf("Points to point: %d to %d\n", in_points - 1, out_points - 1);
     ratio = 65536 * (in_points - 1) / (out_points - 1); // in Q.16 format
     ratio_inverse = 65536 * (out_points - 1) / (in_points - 1); // in Q.16 format
 }
@@ -225,6 +257,7 @@ void build_y_coefficients_strides(int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX
     int ratio, ratio_inverse;
     memset(y_coefficients, 0, 16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE);
     calculate_ratios(ratio, ratio_inverse, end_y - start_y, points);
+//    printf("Ratio %08x\n", ratio);
     for(int index = 0; index < points; index++) {
         int pos_centre, int_pos_centre;
         int window_width = mkgaussian(window_val, index, start_y, pos_centre, int_pos_centre, ratio, ratio_inverse);
@@ -233,7 +266,8 @@ void build_y_coefficients_strides(int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX
         if (stride_point < 0) {
             stride_point = 0;
         }
-        strides[index] = stride_point;
+        strides[index] = stride_point + window_width * 2;
+//        printf("Stride %d: %d\n", index, stride_point);
         for(int window_index = - window_width; window_index <= window_width; window_index++) {
             int gauss = window_val[window_index + window_width];
             int base_location = top_point - stride_point + index;
@@ -242,7 +276,7 @@ void build_y_coefficients_strides(int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX
             }
             for(int l = 0; l < 16; l++) {
                 int ci = (base_location * MAX_WINDOW_SIZE + window_index + window_width)*16 + l;
-                y_coefficients[ci] += (gauss + 2) >> 2;
+                y_coefficients[ci] += (gauss + 4) >> 3;
                 if (y_coefficients[ci] < 0) {
                     y_coefficients[ci] = 127;
                 }
@@ -263,8 +297,8 @@ uint8_t morph(uint8_t x) {
 
 int main(void) {
     uint8_t line[320];
-//    int8_t outp[3][160];
-    int8_t outp2[3][160];
+    int8_t outp[160][3];
+    int8_t outp2[48][3][160];
     int8_t x_coefficients[32*MAX_OUTPUT_WIDTH*3];
     int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE];
     uint32_t x_strides[MAX_OUTPUT_WIDTH];
@@ -280,8 +314,19 @@ int main(void) {
             inputs[index+3] = -80+i;
         }
     }
+    if(0)for(int yyy = 38; yyy<44; yyy++) {
+        build_y_coefficients_strides(y_coefficients, y_strides, 7, yyy, 32);
+        for(int i = 0; i < 32; i++) {
+            for(int window = 0; window < MAX_WINDOW_SIZE; window++) {
+                printf(" %4d", y_coefficients[(i*5 + window)*16 + 0]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
     
-    build_y_coefficients_strides(y_coefficients, y_strides, 3, 60, 32);
+#define YYY 39
+    build_y_coefficients_strides(y_coefficients, y_strides, 7, YYY, 32);
     if(0)for(int i = 0; i < 16; i++) {
         printf("**%d\n", y_strides[i]);
         for(int window = 0; window < MAX_WINDOW_SIZE; window++) {
@@ -292,7 +337,7 @@ int main(void) {
         }
         printf("\n");
     }
-    build_x_coefficients_strides(x_coefficients, x_strides, 3, 40, 32);
+//    build_x_coefficients_strides(x_coefficients, x_strides, 3, 40, 32);
     if(0)for(int i = 13; i < 16; i++) {
         printf("**%d\n", x_strides[i]);
         for(int j = 0; j < 16; j++) {
@@ -305,18 +350,39 @@ int main(void) {
         printf("\n");
     }
     printf("P3\n32 32 255\n");
-    int index = 0;
-    for(int j = 0; j < 32; j++) {
-        for(int i = 0; i < 320; i++) {
-            line[i] = morph(inputs[index]);
-            index++;
-        }
-//        transform_line(outp, line);
-        transform_line_vpu(outp2, line, x_coefficients, x_strides, 32);
+    for(int j = 0; j < 48; j++) {
         for(int i = 0; i < 32; i++) {
-            printf("%d %d %d ", outp2[0][i]+128,  outp2[1][i]+128,  outp2[2][i]+128);
+            outp2[j][0][i] = i == 16 || j == 38 || j == 32 ? 127 : -127;
+            outp2[j][1][i] = (j & 2) ? 127 : -127;
+            outp2[j][2][i] = (j & 4) ? 127 : -127;
         }
-        printf("\n");
+    }
+//        for(int i = 0; i < 320; i++) {
+//            line[i] = morph(inputs[index]);
+//            index++;
+//        }
+//        transform_line(outp, line);
+//        transform_line_vpu(outp2[j], line, x_coefficients, x_strides, 32);
+    memset(outp, 0, sizeof(outp));
+    int ocnt =  0;
+    int yindex = 0;
+    for(int j = 0; j <= YYY+5; j++) {
+        while(j == y_strides[ocnt]) {
+            transform_line_y(outp,
+                             outp2[j >= 4 ? j-4 : 0],
+                             outp2[j >= 3 ? j-3 : 0],
+                             outp2[j >= 2 ? j-2 : 0],
+                             outp2[j >= 1 ? j-1 : 0],
+                             outp2[j-0],
+                             &y_coefficients[yindex], 32);
+            for(int i = 0; i < 32; i++) {
+//            printf("\n& %08x\n", &outp[i][0]);
+                printf("%d %d %d ", outp[i][0]+128,  outp[i][1]+128,  outp[i][2]+128);
+            }
+            printf("\n");
+            ocnt++;
+            yindex += 16*5;
+        }
     }
     return 0;
 }
