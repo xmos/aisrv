@@ -118,6 +118,75 @@ void transform_line_y(int8_t outp[160][3],
     asm("gettime %0" : "=r" (t1));
 }
 
+void transform_line_y_vpu_rgb(int8_t outp[160][3],
+                              int8_t inp0[3][160],
+                              int8_t inp1[3][160],
+                              int8_t inp2[3][160],
+                              int8_t inp3[3][160],
+                              int8_t inp4[3][160],
+                              int8_t coefficients[], int nox, int rgb) {
+    int8_t tmp[32];
+    for(int ox = 0; ox < nox; ox +=16) {
+        asm volatile ("vclrdr");
+        asm volatile ("vldc   %0[0]" :: "r" (&inp0[rgb][ox]));
+        asm volatile ("vlmacc %0[0]" :: "r" (&coefficients[0*16]));
+        asm volatile ("vldc   %0[0]" :: "r" (&inp1[rgb][ox]));
+        asm volatile ("vlmacc %0[0]" :: "r" (&coefficients[1*16]));
+        asm volatile ("vldc   %0[0]" :: "r" (&inp2[rgb][ox]));
+        asm volatile ("vlmacc %0[0]" :: "r" (&coefficients[2*16]));
+        asm volatile ("vldc   %0[0]" :: "r" (&inp3[rgb][ox]));
+        asm volatile ("vlmacc %0[0]" :: "r" (&coefficients[3*16]));
+        asm volatile ("vldc   %0[0]" :: "r" (&inp4[rgb][ox]));
+        asm volatile ("vlmacc %0[0]" :: "r" (&coefficients[4*16]));
+        asm volatile ("vlsat  %0[0]" :: "r" (&shift_8));
+        asm volatile ("vdepth8" :: "r" (&shift_8));
+        asm volatile ("vstr   %0[0]" :: "r" (&tmp));
+        for(int i = 0; i < 16; i++) {
+            outp[ox+i][rgb] = tmp[i];
+        }
+    }
+}
+
+
+extern transform_yyy(int8_t outp[160][3],
+                          int8_t inp0[160],
+                          int8_t inp1[160],
+                          int8_t inp2[160],
+                          int8_t inp3[160],
+                          int8_t inp4[160],
+                     int8_t coefficients[], int nox, int rgb);
+
+void transform_line_y_vpu(int8_t outp[160][3],
+                          int8_t inp0[3][160],
+                          int8_t inp1[3][160],
+                          int8_t inp2[3][160],
+                          int8_t inp3[3][160],
+                          int8_t inp4[3][160],
+                          int8_t coefficients[], int nox) {
+    int t0, t1;
+    int8_t outp2[160][3];
+    asm("gettime %0" : "=r" (t0));
+    for(int rgb = 0; rgb < 3; rgb++) {
+        //transform_line_y_vpu_rgb(outp2, inp0, inp1, inp2, inp3, inp4, coefficients, nox, rgb);
+        transform_yyy(outp,
+                      inp0[rgb],
+                      inp1[rgb],
+                      inp2[rgb],
+                      inp3[rgb],
+                      inp4[rgb],
+                      coefficients, nox/16, rgb);
+    }
+    if (0) for(int i = 0; i < nox; i++) {
+        for(int r = 0; r < 3; r++) {
+            if (outp[i][r] != outp2[i][r]) {
+                printf("Err %d %d   %d %d\n", i, r, outp[i][r], outp2[i][r]);
+            }
+        }
+    }
+    asm("gettime %0" : "=r" (t1));
+    printf("%d\n", t1 - t0);
+}
+
 uint8_t inputs[38400] = {
     #include "yuv.h"
 };
@@ -298,12 +367,14 @@ uint8_t morph(uint8_t x) {
 int main(void) {
     uint8_t line[320];
     int8_t outp[160][3];
+    int8_t outp3[160][3];
     int8_t outp2[48][3][160];
     int8_t x_coefficients[32*MAX_OUTPUT_WIDTH*3];
     int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE];
     uint32_t x_strides[MAX_OUTPUT_WIDTH];
     uint32_t y_strides[MAX_OUTPUT_HEIGHT];
 
+            asm volatile("ldc r11, 0x200; vsetc r11");
 
     for(int y = 0; y < 120; y++) {
         for(int i = 0; i < 160; i+=2) {
@@ -375,6 +446,20 @@ int main(void) {
                              outp2[j >= 1 ? j-1 : 0],
                              outp2[j-0],
                              &y_coefficients[yindex], 32);
+            transform_line_y_vpu(outp3,
+                                 outp2[j >= 4 ? j-4 : 0],
+                                 outp2[j >= 3 ? j-3 : 0],
+                                 outp2[j >= 2 ? j-2 : 0],
+                                 outp2[j >= 1 ? j-1 : 0],
+                                 outp2[j-0],
+                                 &y_coefficients[yindex], 32);
+            for(int i = 0; i < 32; i++) {
+                for(int j = 0; j < 3; j++) {
+                    if (outp3[i][j] != outp[i][j]) {
+                        printf("Diff %d %d   %d %d\n", i, j, outp3[i][j], outp[i][j]);
+                    }
+                }
+            }
             for(int i = 0; i < 32; i++) {
 //            printf("\n& %08x\n", &outp[i][0]);
                 printf("%d %d %d ", outp[i][0]+128,  outp[i][1]+128,  outp[i][2]+128);
