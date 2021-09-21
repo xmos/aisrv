@@ -1,5 +1,7 @@
 #if (MIPI_INTEGRATION == 1)
 
+#define GC2145 1
+
 #include <xs1.h>
 #include <print.h>
 #include <stdio.h>
@@ -19,6 +21,7 @@
 #include "yuv_to_rgb.h"
 #include "aisrv.h"
 #include "aisrv_mipi.h"
+#include "subsample.h"
 
 typedef enum {
     IMAGER_SAMPLE = 1,
@@ -85,8 +88,12 @@ uint32_t frame_time = 0, line_time = 0;
 
 struct decoupler_buffer 
 {
-    uint32_t full_image[RAW_IMAGE_WIDTH * (RAW_IMAGE_HEIGHT) * RAW_IMAGE_DEPTH / sizeof(uint32_t)];
+    int8_t full_image[SUBSAMPLE_MAX_OUTPUT_HEIGHT][SUBSAMPLE_MAX_OUTPUT_WIDTH][3];
     int serial;
+    int8_t x_coefficients[32*SUBSAMPLE_MAX_OUTPUT_WIDTH*3];
+    int8_t y_coefficients[16*SUBSAMPLE_MAX_OUTPUT_HEIGHT*SUBSAMPLE_MAX_WINDOW_SIZE];
+    uint32_t x_strides[SUBSAMPLE_MAX_OUTPUT_WIDTH];
+    uint32_t y_strides[SUBSAMPLE_MAX_OUTPUT_HEIGHT];
 } decoupler[1];
 
 unsafe
@@ -102,13 +109,15 @@ unsafe
 
 #pragma unsafe arrays
 
+int8_t subsample_x_output_buffer[5][3][160];
+
+extern void xor_top_bits(uint8_t * unsafe pt, uint32_t words, uint32_t start_x);
 
 void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*chanend c_l0*/)
 {
     int line = 0;
     int lineCount = 0;
     int last_sof = 0, now = 0, last_line = 0;
-    int linesSaved = 0;
     int errors = 0;
     int grabbing = 0;
     uint8_t new_grabbing = 0;
@@ -116,6 +125,15 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
     int start_y = START_Y;
     int end_y = END_Y;
     int width = RAW_IMAGE_WIDTH;
+    int cur_x_line = 0;
+    int yindex = 0;
+    int output_line_cnt = 0;
+    int required_width, required_height;
+    int8_t *line4 = (int8_t *) subsample_x_output_buffer[0];
+    int8_t *line3 = (int8_t *) subsample_x_output_buffer[1];
+    int8_t *line2 = (int8_t *) subsample_x_output_buffer[2];
+    int8_t *line1 = (int8_t *) subsample_x_output_buffer[3];
+    int8_t *line0 = (int8_t *) subsample_x_output_buffer[4];
     unsafe 
     {
         while(1)
@@ -146,14 +164,41 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     } 
                     else if (header == 0x1E) // YUV422
                     {
-                        if (grabbing &&
-                            lineCount >= start_y &&
-                            lineCount < end_y) {
-                            memcpy((decoupler_r->full_image, uint8_t[RAW_IMAGE_HEIGHT][2*RAW_IMAGE_WIDTH])[linesSaved+V_OFFSET], pt+start_x*2, width*2);
-                            linesSaved++;
-                            if (linesSaved == (end_y - start_y))
+                        if (grabbing) {
+                            int t0, t1;
+                            asm volatile ("gettime %0" : "=r" (t0));
+                            xor_top_bits(pt, 500, start_x);
+                            asm volatile ("gettime %0" : "=r" (t1));
+//                            if (lineCount < 5) printintln(t1 - t0);
+                            subsample_x(subsample_x_output_buffer[cur_x_line], (uint8_t *)pt,
+                                        decoupler_r -> x_coefficients, decoupler_r -> x_strides, required_width);
+                            line4 = line3;
+                            line3 = line2;
+                            line2 = line1;
+                            line1 = line0;
+                            line0 = (int8_t *)&subsample_x_output_buffer[cur_x_line][0][0];
+                            cur_x_line++;
+                            if (cur_x_line == 5) {
+                                cur_x_line = 0;
+                            }
+                            while(lineCount == decoupler_r -> y_strides[output_line_cnt]
+                                && output_line_cnt != required_height) {
+                                subsample_y(decoupler_r->full_image[output_line_cnt],
+                                            line4,
+                                            line3,
+                                            line2,
+                                            line1,
+                                            line0,
+                                            &decoupler_r -> y_coefficients[yindex], required_width);
+//                                for(int i = 0; i < 3; i++) { printint(decoupler_r->full_image[output_line_cnt][0][i]); printchar('+'); } printchar('\n');
+                                output_line_cnt++;
+                                yindex += 16*5;
+//                                printint(output_line_cnt); printchar('-'); printint(lineCount); printchar('='); printintln(decoupler_r -> y_strides[output_line_cnt]);
+                            }
+                            if (output_line_cnt == required_height)
                             {
-                                linesSaved = 0;
+                                output_line_cnt = 0;
+                                yindex = 0;
                                 outuchar(c_decoupler, 0);
                                 grabbing = 0;
                             }
@@ -169,14 +214,14 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                         last_line = now;
                     } 
                     else if (header == 0x12)  // Embedded data - ignore
-                    { 
+                    {
                         if(pt[SENSOR_IMAGE_HEIGHT*SENSOR_IMAGE_DEPTH] != 0)
                         {
                             statusError++;
                         }
-                    } 
+                    }
                     else 
-                    {                     
+                    {
                         printstr("# ********"); printhexln(header);
                         errors++;
                         if (errors > 10) {
@@ -190,10 +235,12 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     }
                     break;
                 case inuchar_byref(c_decoupler, new_grabbing):
-                    start_x = inuint(c_decoupler);
+                    start_x   = inuint(c_decoupler);
                     int end_x = inuint(c_decoupler);
-                    start_y = inuint(c_decoupler);
-                    end_y = inuint(c_decoupler);
+                    start_y   = inuint(c_decoupler);
+                    end_y     = inuint(c_decoupler);
+                    required_width  = inuint(c_decoupler);
+                    required_height = inuint(c_decoupler);
                     width = end_x - start_x;
                     new_grabbing = 1;
                     break;
@@ -217,16 +264,22 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
     c_acquire :> end_y;
     c_acquire :> required_width;
     c_acquire :> required_height;
-    outuchar(c_debayerer, IMAGER_SAMPLE);        // Tell collector to grab image
-    outuint(c_debayerer, start_x);               // Tell collector size
-    outuint(c_debayerer, end_x);                 // Tell collector size
-    outuint(c_debayerer, start_y);               // Tell collector size
-    outuint(c_debayerer, end_y);                 // Tell collector size
-    inuchar(c_debayerer);                        // Wait for image collector ready
     unsafe 
     {
+        build_y_coefficients_strides(decoupler_r -> y_coefficients, decoupler_r -> y_strides, start_y, end_y, required_height);
+        build_x_coefficients_strides(decoupler_r -> x_coefficients, decoupler_r -> x_strides, start_x, end_x, required_width);
+        outuchar(c_debayerer, IMAGER_SAMPLE);        // Tell collector to grab image
+        outuint(c_debayerer, start_x);               // Tell collector size
+        outuint(c_debayerer, end_x);                 // Tell collector size
+        outuint(c_debayerer, start_y);               // Tell collector size
+        outuint(c_debayerer, end_y);                 // Tell collector size
+        outuint(c_debayerer, required_width);        // Tell collector size
+        outuint(c_debayerer, required_height);       // Tell collector size
+        inuchar(c_debayerer);                        // Wait for image collector ready
+        
         fc++;
         printint(fc); printchar(' '); printintln(frame_time); printchar(' '); printintln(line_time);
+#if defined(POST_PROCESS_SUBSAMPLE)
         // TODO: do this properly, VPU & gaussian
         for(int oy = 0 ; oy < required_height; oy ++) {
             for(int ox = 0; ox < required_width; ox ++) {
@@ -255,8 +308,8 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
                 (decoupler_r -> full_image, int8_t[RAW_IMAGE_HEIGHT*3*RAW_IMAGE_WIDTH])[oy * required_width * 3 + ox*3+2] = B;
             }
         }
-
-        send_array(c_acquire, decoupler_r -> full_image, required_width * required_height * 3);
+#endif
+        send_array(c_acquire, (uint32_t*) decoupler_r -> full_image, required_width * required_height * 3);
 
     }
 }

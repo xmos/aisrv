@@ -2,9 +2,9 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
-#define FUNCTION_NAME transform_part_line_vpu_asm
+#define FUNCTION_NAME subsample_x_asm
 
-    .cc_top transform_part_line_vpu_asm.function,transform_part_line_vpu_asm
+    .cc_top subsample_x_asm.function,subsample_x_asm
     .text
     .align 4
 shift_8:
@@ -20,8 +20,6 @@ shift_8:
     .issue_mode  dual
 
 
-//int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A, int32_t output_channel_group)
-
 #define NSTACKWORDS  6
 
     // r0: outp
@@ -30,11 +28,9 @@ shift_8:
     // r3: strides
     // r4: ox
     // r5: indexc
-    
-    // void transform_part_line_vpu(int8_t outp[3][160], uint8_t line[], int8_t coefficients[], uint32_t strides[], int ox, int indexc) {
-    
+        
     .globl FUNCTION_NAME
-    .align 4
+    .align 16
     .type FUNCTION_NAME,@function
 
 FUNCTION_NAME:
@@ -103,7 +99,7 @@ rgbloop:
 
 #undef FUNCTION_NAME
 #undef NSTACKWORDS
-#define FUNCTION_NAME transform_yyy
+#define FUNCTION_NAME subsample_y_asm
 
 
 
@@ -186,7 +182,7 @@ copy_loop:
     .globl FUNCTION_NAME.maxchanends
 .Ltmp1:
     .size FUNCTION_NAME, .Ltmp1-FUNCTION_NAME
-    .cc_bottom transform_part_line_vpu_asm.function
+    .cc_bottom subsample_x_asm.function
 
 #endif
 
