@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <print.h>
 #include <stdint.h>
 #include <string.h>
+#include "subsample.h"
 
 void transform_line(int8_t outp[3][160], uint8_t line[]) {
     for(int ox = 0; ox < 160; ox ++) {
@@ -43,8 +45,8 @@ void p(int8_t x[32]) {
 
 #pragma unsafe arrays
 
-extern void transform_part_line_vpu_asm(int8_t outp[3][160], uint8_t line[], int8_t coefficients[], uint32_t strides[], int ox, int indexc);
-void transform_part_line_vpu(int8_t outp[3][160], uint8_t line[], int8_t coefficients[], uint32_t strides[], int ox, int indexc) {
+extern void subsample_x_asm(int8_t outp[3][SUBSAMPLE_MAX_OUTPUT_WIDTH], uint8_t line[], int8_t coefficients[], uint32_t strides[], int ox, int indexc);
+void transform_part_line_vpu(int8_t outp[3][SUBSAMPLE_MAX_OUTPUT_WIDTH], uint8_t line[], int8_t coefficients[], uint32_t strides[], int ox, int indexc) {
 #pragma loop unroll(3)
     for(int rgb = 0; rgb < 3; rgb++) {
         asm volatile("vclrdr");
@@ -60,42 +62,24 @@ void transform_part_line_vpu(int8_t outp[3][160], uint8_t line[], int8_t coeffic
     }
 }
 
-void transform_line_vpu(int8_t outp[3][160], uint8_t line[], int8_t coefficients[], uint32_t strides[], int nox) {
-    int8_t outp2[3][160];
-    int t0, t1;
-    memset(outp2, 0xff, 3*160);
-    asm("gettime %0" : "=r" (t0));
-    for(int ox = 0; ox < 80; ox ++) {
-        (line, uint32_t[])[ox] ^= 0x80808080;
-    }
+#pragma unsafe arrays
+void subsample_x(int8_t outp[3][SUBSAMPLE_MAX_OUTPUT_WIDTH], uint8_t line[], int8_t coefficients[], uint32_t strides[], int nox) {
     int indexc = 0;
     for(int ox = 0; ox < nox; ox +=16) {
-//        transform_part_line_vpu(outp2, line, coefficients, strides, ox, indexc);
-        transform_part_line_vpu_asm(outp, line, coefficients, strides, ox, indexc);
+        subsample_x_asm(outp, line, coefficients, strides, ox, indexc);
         indexc += 16 * 3 * 32;
     }
-    asm("gettime %0" : "=r" (t1));
-//    printf("%d\n", t1 - t0);
-#if 0
-    for(int i = 0; i < nox; i++) {
-        for(int rgb = 0; rgb < 3; rgb++) {
-            if (outp[rgb][i] != outp2[rgb][i]) {
-                printf("Bad %d %d  %d %d\n", i, rgb, outp[rgb][i], outp2[rgb][i]);
-            }
-        }
-    }
-#endif   
 }
 
-void transform_line_y(int8_t outp[160][3],
-                      int8_t inp0[3][160],
-                      int8_t inp1[3][160],
-                      int8_t inp2[3][160],
-                      int8_t inp3[3][160],
-                      int8_t inp4[3][160],
+void transform_line_y(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
+                      int8_t inp0[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
+                      int8_t inp1[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
+                      int8_t inp2[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
+                      int8_t inp3[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
+                      int8_t inp4[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
                       int8_t coefficients[], int nox) {
     int t0, t1;
-    asm("gettime %0" : "=r" (t0));
+    asm volatile ("gettime %0" : "=r" (t0));
     for(int ox = 0; ox < nox; ox ++) {
         for(int rgb = 0; rgb < 3; rgb++) {
             int sum = 0;
@@ -115,15 +99,15 @@ void transform_line_y(int8_t outp[160][3],
             }
         }
     }
-    asm("gettime %0" : "=r" (t1));
+    asm volatile("gettime %0" : "=r" (t1));
 }
 
-void transform_line_y_vpu_rgb(int8_t outp[160][3],
-                              int8_t inp0[3][160],
-                              int8_t inp1[3][160],
-                              int8_t inp2[3][160],
-                              int8_t inp3[3][160],
-                              int8_t inp4[3][160],
+void subsample_y_rgb(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
+                              int8_t inp0[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
+                              int8_t inp1[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
+                              int8_t inp2[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
+                              int8_t inp3[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
+                              int8_t inp4[3][SUBSAMPLE_MAX_OUTPUT_WIDTH],
                               int8_t coefficients[], int nox, int rgb) {
     int8_t tmp[32];
     for(int ox = 0; ox < nox; ox +=16) {
@@ -148,33 +132,38 @@ void transform_line_y_vpu_rgb(int8_t outp[160][3],
 }
 
 
-extern transform_yyy(int8_t outp[160][3],
-                          int8_t inp0[160],
-                          int8_t inp1[160],
-                          int8_t inp2[160],
-                          int8_t inp3[160],
-                          int8_t inp4[160],
-                     int8_t coefficients[], int nox, int rgb);
+extern void subsample_y_asm(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
+                            int8_t *inp0,
+                            int8_t *inp1,
+                            int8_t *inp2,
+                            int8_t *inp3,
+                            int8_t *inp4,
+                            int8_t coefficients[], int nox, int rgb);
 
-void transform_line_y_vpu(int8_t outp[160][3],
-                          int8_t inp0[3][160],
-                          int8_t inp1[3][160],
-                          int8_t inp2[3][160],
-                          int8_t inp3[3][160],
-                          int8_t inp4[3][160],
-                          int8_t coefficients[], int nox) {
+void subsample_y(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
+                 int8_t *inp0,
+                 int8_t *inp1,
+                 int8_t *inp2,
+                 int8_t *inp3,
+                 int8_t *inp4,
+                 int8_t coefficients[], int nox) {
     int t0, t1;
-    int8_t outp2[160][3];
+    int8_t outp2[SUBSAMPLE_MAX_OUTPUT_WIDTH][3];
     asm("gettime %0" : "=r" (t0));
     for(int rgb = 0; rgb < 3; rgb++) {
-        //transform_line_y_vpu_rgb(outp2, inp0, inp1, inp2, inp3, inp4, coefficients, nox, rgb);
-        transform_yyy(outp,
-                      inp0[rgb],
-                      inp1[rgb],
-                      inp2[rgb],
-                      inp3[rgb],
-                      inp4[rgb],
+        //subsample_y_rgb(outp2, inp0, inp1, inp2, inp3, inp4, coefficients, nox, rgb);
+        subsample_y_asm(outp,
+                      inp0,
+                      inp1,
+                      inp2,
+                      inp3,
+                      inp4,
                       coefficients, nox/16, rgb);
+        inp0 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
+        inp1 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
+        inp2 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
+        inp3 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
+        inp4 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
     }
     if (0) for(int i = 0; i < nox; i++) {
         for(int r = 0; r < 3; r++) {
@@ -184,12 +173,8 @@ void transform_line_y_vpu(int8_t outp[160][3],
         }
     }
     asm("gettime %0" : "=r" (t1));
-    printf("%d\n", t1 - t0);
+//    printf("%d\n", t1 - t0);
 }
-
-uint8_t inputs[38400] = {
-    #include "yuv.h"
-};
 
 uint8_t gaussian[65] = {
   0,  0,  0,  0,  1,  1,  1,  2,  3,  4,  6,  8, 11, 15, 20, 27,
@@ -199,8 +184,6 @@ uint8_t gaussian[65] = {
   27, 20, 15, 11,  8,  6,  4,  3,  2,  1,  1,  1,  0,  0,  0,  0,
 };
 
-#define MAX_OUTPUT_WIDTH   160
-#define MAX_OUTPUT_HEIGHT   160
 
 int round_down(int multiplier) {
     int v = (multiplier + 256) >> 9;
@@ -215,12 +198,10 @@ static void calculate_ratios(int &ratio, int &ratio_inverse, int in_points, int 
     ratio_inverse = 65536 * (out_points - 1) / (in_points - 1); // in Q.16 format
 }
 
-#define MAX_WINDOW_SIZE  5
-
 static int mkgaussian(int window_val[], int i, int start_x, int &pos_centre, int &int_pos_centre, int ratio, int ratio_inverse) {
     int window_width = (ratio >> 16) + 1;
-    if (window_width > MAX_WINDOW_SIZE / 2) {
-        window_width = MAX_WINDOW_SIZE / 2;
+    if (window_width > SUBSAMPLE_MAX_WINDOW_SIZE / 2) {
+        window_width = SUBSAMPLE_MAX_WINDOW_SIZE / 2;
     }
     int sum = 0;
     pos_centre = i * ratio + (start_x << 16);
@@ -243,13 +224,13 @@ static int mkgaussian(int window_val[], int i, int start_x, int &pos_centre, int
     return window_width;
 }
 
-void build_x_coefficients_strides(int8_t x_coefficients[32*MAX_OUTPUT_WIDTH*3],
-                                  uint32_t strides[MAX_OUTPUT_WIDTH],
+void build_x_coefficients_strides(int8_t x_coefficients[32*SUBSAMPLE_MAX_OUTPUT_WIDTH*3],
+                                  uint32_t strides[SUBSAMPLE_MAX_OUTPUT_WIDTH],
                                   int start_x, int end_x, int points) {
     int ratio, ratio_inverse;
-    int window_val[MAX_WINDOW_SIZE];
+    int window_val[SUBSAMPLE_MAX_WINDOW_SIZE];
 
-    memset(x_coefficients, 0, 32*MAX_OUTPUT_WIDTH*3);
+    memset(x_coefficients, 0, 32*SUBSAMPLE_MAX_OUTPUT_WIDTH*3);
     calculate_ratios(ratio, ratio_inverse, end_x - start_x, points);
 
     int Y[3] = {64,  64,  64};   // Equal contributions of Y to R, G, and B
@@ -317,14 +298,14 @@ void build_x_coefficients_strides(int8_t x_coefficients[32*MAX_OUTPUT_WIDTH*3],
 }
 
 
-#define MAX_WINDOW_SIZE  5
+#define SUBSAMPLE_MAX_WINDOW_SIZE  5
 
-void build_y_coefficients_strides(int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE],
-                                  uint32_t strides[MAX_OUTPUT_HEIGHT],
+void build_y_coefficients_strides(int8_t y_coefficients[16*SUBSAMPLE_MAX_OUTPUT_HEIGHT*SUBSAMPLE_MAX_WINDOW_SIZE],
+                                  uint32_t strides[SUBSAMPLE_MAX_OUTPUT_HEIGHT],
                                   int start_y, int end_y, int points) {
-    int window_val[MAX_WINDOW_SIZE];
+    int window_val[SUBSAMPLE_MAX_WINDOW_SIZE];
     int ratio, ratio_inverse;
-    memset(y_coefficients, 0, 16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE);
+    memset(y_coefficients, 0, 16*SUBSAMPLE_MAX_OUTPUT_HEIGHT*SUBSAMPLE_MAX_WINDOW_SIZE);
     calculate_ratios(ratio, ratio_inverse, end_y - start_y, points);
 //    printf("Ratio %08x\n", ratio);
     for(int index = 0; index < points; index++) {
@@ -344,7 +325,7 @@ void build_y_coefficients_strides(int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX
                 base_location = 0;
             }
             for(int l = 0; l < 16; l++) {
-                int ci = (base_location * MAX_WINDOW_SIZE + window_index + window_width)*16 + l;
+                int ci = (base_location * SUBSAMPLE_MAX_WINDOW_SIZE + window_index + window_width)*16 + l;
                 y_coefficients[ci] += (gauss + 4) >> 3;
                 if (y_coefficients[ci] < 0) {
                     y_coefficients[ci] = 127;
@@ -354,6 +335,11 @@ void build_y_coefficients_strides(int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX
     }
 }
 
+#if MAIN_TEST
+
+uint8_t inputs[38400] = {
+    #include "yuv.h"
+};
 
 uint8_t morph(uint8_t x) {
     int z = x;
@@ -366,19 +352,19 @@ uint8_t morph(uint8_t x) {
 
 int main(void) {
     uint8_t line[320];
-    int8_t outp[160][3];
-    int8_t outp3[160][3];
-    int8_t outp2[48][3][160];
-    int8_t x_coefficients[32*MAX_OUTPUT_WIDTH*3];
-    int8_t y_coefficients[16*MAX_OUTPUT_HEIGHT*MAX_WINDOW_SIZE];
-    uint32_t x_strides[MAX_OUTPUT_WIDTH];
-    uint32_t y_strides[MAX_OUTPUT_HEIGHT];
+    int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3];
+    int8_t outp3[SUBSAMPLE_MAX_OUTPUT_WIDTH][3];
+    int8_t outp2[48][3][SUBSAMPLE_MAX_OUTPUT_WIDTH];
+    int8_t x_coefficients[32*SUBSAMPLE_MAX_OUTPUT_WIDTH*3];
+    int8_t y_coefficients[16*SUBSAMPLE_MAX_OUTPUT_HEIGHT*SUBSAMPLE_MAX_WINDOW_SIZE];
+    uint32_t x_strides[SUBSAMPLE_MAX_OUTPUT_WIDTH];
+    uint32_t y_strides[SUBSAMPLE_MAX_OUTPUT_HEIGHT];
 
             asm volatile("ldc r11, 0x200; vsetc r11");
 
     for(int y = 0; y < 120; y++) {
-        for(int i = 0; i < 160; i+=2) {
-            int index = (y * 160 + i)*2;
+        for(int i = 0; i < SUBSAMPLE_MAX_OUTPUT_WIDTH; i+=2) {
+            int index = (y * SUBSAMPLE_MAX_OUTPUT_WIDTH + i)*2;
             inputs[index] = i == y ? 128 : 127;
             inputs[index+1] = -60+y;
             inputs[index+2] = i+1 == y ? 128 : 127;
@@ -388,7 +374,7 @@ int main(void) {
     if(0)for(int yyy = 38; yyy<44; yyy++) {
         build_y_coefficients_strides(y_coefficients, y_strides, 7, yyy, 32);
         for(int i = 0; i < 32; i++) {
-            for(int window = 0; window < MAX_WINDOW_SIZE; window++) {
+            for(int window = 0; window < SUBSAMPLE_MAX_WINDOW_SIZE; window++) {
                 printf(" %4d", y_coefficients[(i*5 + window)*16 + 0]);
             }
             printf("\n");
@@ -400,7 +386,7 @@ int main(void) {
     build_y_coefficients_strides(y_coefficients, y_strides, 7, YYY, 32);
     if(0)for(int i = 0; i < 16; i++) {
         printf("**%d\n", y_strides[i]);
-        for(int window = 0; window < MAX_WINDOW_SIZE; window++) {
+        for(int window = 0; window < SUBSAMPLE_MAX_WINDOW_SIZE; window++) {
             for(int j = 0; j < 16; j++) {
                 printf(" %4d", y_coefficients[(i*5 + window)*16 + j]);
             }
@@ -433,7 +419,7 @@ int main(void) {
 //            index++;
 //        }
 //        transform_line(outp, line);
-//        transform_line_vpu(outp2[j], line, x_coefficients, x_strides, 32);
+//        subsample_x(outp2[j], line, x_coefficients, x_strides, 32);
     memset(outp, 0, sizeof(outp));
     int ocnt =  0;
     int yindex = 0;
@@ -446,13 +432,13 @@ int main(void) {
                              outp2[j >= 1 ? j-1 : 0],
                              outp2[j-0],
                              &y_coefficients[yindex], 32);
-            transform_line_y_vpu(outp3,
-                                 outp2[j >= 4 ? j-4 : 0],
-                                 outp2[j >= 3 ? j-3 : 0],
-                                 outp2[j >= 2 ? j-2 : 0],
-                                 outp2[j >= 1 ? j-1 : 0],
-                                 outp2[j-0],
-                                 &y_coefficients[yindex], 32);
+            subsample_y(outp3,
+                        outp2[j >= 4 ? j-4 : 0],
+                        outp2[j >= 3 ? j-3 : 0],
+                        outp2[j >= 2 ? j-2 : 0],
+                        outp2[j >= 1 ? j-1 : 0],
+                        outp2[j-0],
+                        &y_coefficients[yindex], 32);
             for(int i = 0; i < 32; i++) {
                 for(int j = 0; j < 3; j++) {
                     if (outp3[i][j] != outp[i][j]) {
@@ -471,3 +457,4 @@ int main(void) {
     }
     return 0;
 }
+#endif
