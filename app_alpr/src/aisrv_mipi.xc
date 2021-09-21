@@ -1,7 +1,5 @@
 #if (MIPI_INTEGRATION == 1)
 
-#define GC2145 1
-
 #include <xs1.h>
 #include <print.h>
 #include <stdio.h>
@@ -11,6 +9,7 @@
 #include <math.h>
 #include "assert.h"
 #include "i2c.h"
+#include "aisrv_mipi.h"
 #ifdef GC2145
 #include "gc2145.h"
 #else
@@ -20,7 +19,6 @@
 #include "debayer.h"
 #include "yuv_to_rgb.h"
 #include "aisrv.h"
-#include "aisrv_mipi.h"
 #include "subsample.h"
 
 typedef enum {
@@ -88,7 +86,7 @@ uint32_t frame_time = 0, line_time = 0;
 
 struct decoupler_buffer 
 {
-    int8_t full_image[SUBSAMPLE_MAX_OUTPUT_HEIGHT][SUBSAMPLE_MAX_OUTPUT_WIDTH][3];
+    uint32_t full_image[SUBSAMPLE_MAX_OUTPUT_HEIGHT*SUBSAMPLE_MAX_OUTPUT_WIDTH*3 / sizeof(uint32_t)];
     int serial;
     int8_t x_coefficients[32*SUBSAMPLE_MAX_OUTPUT_WIDTH*3];
     int8_t y_coefficients[16*SUBSAMPLE_MAX_OUTPUT_HEIGHT*SUBSAMPLE_MAX_WINDOW_SIZE];
@@ -117,7 +115,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
 {
     int line = 0;
     int lineCount = 0;
-    int last_sof = 0, now = 0, last_line = 0;
+    int last_sof = 0, now = 0, start_of_frame = 0;
     int errors = 0;
     int grabbing = 0;
     uint8_t new_grabbing = 0;
@@ -146,6 +144,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     line = (line + 1) & 7;
                     if (header == 0)      // Start of frame
                     {
+                        asm volatile("gettime %0" : "=r" (start_of_frame));
                         lineCount = 0;
                         grabbing = new_grabbing;
                         new_grabbing = 0;
@@ -156,6 +155,8 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                         uint32_t * unsafe ft = &frame_time;
                         *ft = now - last_sof;
                         last_sof = now;
+                        uint32_t * unsafe lt = &line_time;
+                        *lt = (now - start_of_frame) / lineCount;
                         if (lineCount != SENSOR_IMAGE_HEIGHT)
                         {
                             lineCountError++;
@@ -167,9 +168,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                         if (grabbing) {
                             int t0, t1;
                             asm volatile ("gettime %0" : "=r" (t0));
-                            xor_top_bits(pt, 500, start_x);
-                            asm volatile ("gettime %0" : "=r" (t1));
-//                            if (lineCount < 5) printintln(t1 - t0);
+                            xor_top_bits(pt, 400, start_x);
                             subsample_x(subsample_x_output_buffer[cur_x_line], (uint8_t *)pt,
                                         decoupler_r -> x_coefficients, decoupler_r -> x_strides, required_width);
                             line4 = line3;
@@ -183,18 +182,18 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                             }
                             while(lineCount == decoupler_r -> y_strides[output_line_cnt]
                                 && output_line_cnt != required_height) {
-                                subsample_y(decoupler_r->full_image[output_line_cnt],
+                                subsample_y((decoupler_r->full_image, int8_t[])+output_line_cnt*required_width*3,
                                             line4,
                                             line3,
                                             line2,
                                             line1,
                                             line0,
                                             &decoupler_r -> y_coefficients[yindex], required_width);
-//                                for(int i = 0; i < 3; i++) { printint(decoupler_r->full_image[output_line_cnt][0][i]); printchar('+'); } printchar('\n');
                                 output_line_cnt++;
                                 yindex += 16*5;
-//                                printint(output_line_cnt); printchar('-'); printint(lineCount); printchar('='); printintln(decoupler_r -> y_strides[output_line_cnt]);
                             }
+                            asm volatile ("gettime %0" : "=r" (t1));
+//                            if (output_line_cnt < 5) printintln(t1 - t0);
                             if (output_line_cnt == required_height)
                             {
                                 output_line_cnt = 0;
@@ -208,10 +207,6 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                         {
                             statusError++;
                         }
-                        asm volatile("gettime %0" : "=r" (now));
-                        uint32_t * unsafe lt = &line_time;
-                        *lt = now - last_line;
-                        last_line = now;
                     } 
                     else if (header == 0x12)  // Embedded data - ignore
                     {
@@ -266,8 +261,13 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
     c_acquire :> required_height;
     unsafe 
     {
+        int t0, t1, t2;
+        asm volatile ("gettime %0" : "=r" (t0));
         build_y_coefficients_strides(decoupler_r -> y_coefficients, decoupler_r -> y_strides, start_y, end_y, required_height);
+        asm volatile ("gettime %0" : "=r" (t1));
         build_x_coefficients_strides(decoupler_r -> x_coefficients, decoupler_r -> x_strides, start_x, end_x, required_width);
+        asm volatile ("gettime %0" : "=r" (t2));
+        printint(t1 - t0); printchar('='); printintln(t2-t1);
         outuchar(c_debayerer, IMAGER_SAMPLE);        // Tell collector to grab image
         outuint(c_debayerer, start_x);               // Tell collector size
         outuint(c_debayerer, end_x);                 // Tell collector size
@@ -278,7 +278,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
         inuchar(c_debayerer);                        // Wait for image collector ready
         
         fc++;
-        printint(fc); printchar(' '); printintln(frame_time); printchar(' '); printintln(line_time);
+        printint(fc); printchar(' '); printint(frame_time); printchar(' '); printintln(line_time);
 #if defined(POST_PROCESS_SUBSAMPLE)
         // TODO: do this properly, VPU & gaussian
         for(int oy = 0 ; oy < required_height; oy ++) {
@@ -309,7 +309,7 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
             }
         }
 #endif
-        send_array(c_acquire, (uint32_t*) decoupler_r -> full_image, required_width * required_height * 3);
+        send_array(c_acquire, decoupler_r -> full_image, required_width * required_height * 3);
 
     }
 }
