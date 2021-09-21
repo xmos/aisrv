@@ -50,8 +50,8 @@ print("Input shape: " + str(INPUT_SHAPE))
 raw_img = None
 
 # Send image to device
-for arg in sys.argv[2:]:
-        print("SETTING INPUT TENSOR VIA " + sys.argv[1] + "\n")
+for arg in sys.argv[1:]:
+        print("Setting input tensor via " + arg + "\n")
         if not arg.endswith('.raw'):
             import cv2
             img = cv2.imread(arg)

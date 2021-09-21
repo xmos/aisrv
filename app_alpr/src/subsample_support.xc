@@ -132,7 +132,7 @@ void subsample_y_rgb(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
 }
 
 
-extern void subsample_y_asm(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
+extern void subsample_y_asm(int8_t *outp,
                             int8_t *inp0,
                             int8_t *inp1,
                             int8_t *inp2,
@@ -140,40 +140,27 @@ extern void subsample_y_asm(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
                             int8_t *inp4,
                             int8_t coefficients[], int nox, int rgb);
 
-void subsample_y(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
+void subsample_y(int8_t *outp,
                  int8_t *inp0,
                  int8_t *inp1,
                  int8_t *inp2,
                  int8_t *inp3,
                  int8_t *inp4,
                  int8_t coefficients[], int nox) {
-    int t0, t1;
-    int8_t outp2[SUBSAMPLE_MAX_OUTPUT_WIDTH][3];
-    asm("gettime %0" : "=r" (t0));
     for(int rgb = 0; rgb < 3; rgb++) {
-        //subsample_y_rgb(outp2, inp0, inp1, inp2, inp3, inp4, coefficients, nox, rgb);
         subsample_y_asm(outp,
-                      inp0,
-                      inp1,
-                      inp2,
-                      inp3,
-                      inp4,
-                      coefficients, nox/16, rgb);
+                        inp0,
+                        inp1,
+                        inp2,
+                        inp3,
+                        inp4,
+                        coefficients, nox/16, rgb);
         inp0 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
         inp1 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
         inp2 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
         inp3 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
         inp4 += SUBSAMPLE_MAX_OUTPUT_WIDTH;
     }
-    if (0) for(int i = 0; i < nox; i++) {
-        for(int r = 0; r < 3; r++) {
-            if (outp[i][r] != outp2[i][r]) {
-                printf("Err %d %d   %d %d\n", i, r, outp[i][r], outp2[i][r]);
-            }
-        }
-    }
-    asm("gettime %0" : "=r" (t1));
-//    printf("%d\n", t1 - t0);
 }
 
 uint8_t gaussian[65] = {

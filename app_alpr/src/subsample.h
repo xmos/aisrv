@@ -4,7 +4,7 @@
 #define SUBSAMPLE_MAX_OUTPUT_WIDTH   160
 #define SUBSAMPLE_MAX_OUTPUT_HEIGHT   160
 
-void subsample_y(int8_t outp[SUBSAMPLE_MAX_OUTPUT_WIDTH][3],
+void subsample_y(int8_t *outp,
                  int8_t *inp0,
                  int8_t *inp1,
                  int8_t *inp2,

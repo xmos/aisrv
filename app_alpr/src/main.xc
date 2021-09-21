@@ -42,10 +42,8 @@ on tile[0]: port p_scl = XS1_PORT_1N;
 on tile[0]: port p_sda = XS1_PORT_1O;
 #endif
 
-#define WIDTH_ON_SENSOR 320
-#define HEIGHT_ON_SENSOR 320
-#define ORIGIN_X_INSIDE_SENSOR ((640 - WIDTH_ON_SENSOR)/2)
-#define ORIGIN_Y_INSIDE_SENSOR ((480 - HEIGHT_ON_SENSOR)/2)
+#define ORIGIN_X_INSIDE_SENSOR ((SENSOR_IMAGE_WIDTH - WIDTH_ON_SENSOR)/2)
+#define ORIGIN_Y_INSIDE_SENSOR ((SENSOR_IMAGE_HEIGHT - HEIGHT_ON_SENSOR)/2)
 
 void director(chanend to_0, chanend to_1) {
     uint32_t classes[2*MAX_BOXES / sizeof(uint32_t)];
@@ -53,7 +51,7 @@ void director(chanend to_0, chanend to_1) {
     uint32_t ocr_classes[66 * 16 / sizeof(uint32_t)];
     uint32_t bbox[4];
     char ocr_outputs[17];
-    return;
+//    return;
     while(1) {
         int status;
         timer tmr; int t0;
@@ -76,7 +74,8 @@ void director(chanend to_0, chanend to_1) {
         if (aisrv_local_get_output_tensor(to_0, 1, boxes)) {
             continue;
         }
-        int val = box_calculation(bbox, (classes, int8_t[]), (boxes, int8_t[]), 320, 320);
+        int val = box_calculation(bbox, (classes, int8_t[]), (boxes, int8_t[]),
+                                  WIDTH_ON_SENSOR, HEIGHT_ON_SENSOR);
 
         for(int i = 0 ; i < 4; i++) {
             printint(bbox[i]);
@@ -84,6 +83,18 @@ void director(chanend to_0, chanend to_1) {
         }
         printint(val);
         printchar('\n');
+        if (val < 0) {
+            printstr("Value too small");
+            continue;
+        }
+        if (bbox[1] - bbox[0] < 128) {
+            printstr("Width too small");
+            continue;
+        }
+        if (bbox[3] - bbox[2] < 32) {
+            printstr("Height too small");
+            continue;
+        }
         if (aisrv_local_acquire_single(to_1,
                                        ORIGIN_X_INSIDE_SENSOR + bbox[0],
                                        ORIGIN_X_INSIDE_SENSOR + bbox[1],
