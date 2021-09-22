@@ -99,10 +99,6 @@ unsafe
     struct decoupler_buffer * unsafe decoupler_r = decoupler;
 }
 
-#define START_X       ((SENSOR_IMAGE_WIDTH  - RAW_IMAGE_WIDTH)  / 2)
-#define START_Y       ((SENSOR_IMAGE_HEIGHT - RAW_IMAGE_HEIGHT) / 2)
-#define END_Y          (SENSOR_IMAGE_HEIGHT - START_Y)
-
 #define V_OFFSET      (RAW_IMAGE_HEIGHT/2)
 
 #pragma unsafe arrays
@@ -119,9 +115,10 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
     int errors = 0;
     int grabbing = 0;
     uint8_t new_grabbing = 0;
-    int start_x = START_X;
-    int start_y = START_Y;
-    int end_y = END_Y;
+    int start_x = 0;
+    int end_x = 0;
+    int start_y = 0;
+    int end_y = 0;
     int width = RAW_IMAGE_WIDTH;
     int cur_x_line = 0;
     int yindex = 0;
@@ -166,9 +163,11 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     else if (header == 0x1E) // YUV422
                     {
                         if (grabbing) {
-                            int t0, t1;
+                            int t0, t1, t2, t3;
                             asm volatile ("gettime %0" : "=r" (t0));
-                            xor_top_bits(pt, 400, start_x);
+                            xor_top_bits(pt, end_x - start_x + 4, start_x);
+                                                   // overshoot by one double word
+                            asm volatile ("gettime %0" : "=r" (t1));
                             subsample_x(subsample_x_output_buffer[cur_x_line], (uint8_t *)pt,
                                         decoupler_r -> x_coefficients, decoupler_r -> x_strides, required_width);
                             line4 = line3;
@@ -180,6 +179,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                             if (cur_x_line == 5) {
                                 cur_x_line = 0;
                             }
+                            asm volatile ("gettime %0" : "=r" (t2));
                             while(lineCount == decoupler_r -> y_strides[output_line_cnt]
                                 && output_line_cnt != required_height) {
                                 subsample_y((decoupler_r->full_image, int8_t[])+output_line_cnt*required_width*3,
@@ -192,8 +192,12 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                                 output_line_cnt++;
                                 yindex += 16*5;
                             }
-                            asm volatile ("gettime %0" : "=r" (t1));
-//                            if (output_line_cnt < 5) printintln(t1 - t0);
+                            asm volatile ("gettime %0" : "=r" (t3));
+                            if (output_line_cnt > 0 && output_line_cnt < 5) {
+                                printint(t1 - t0); printchar(' ');
+                                printint(t2 - t1); printchar(' ');
+                                printintln(t3 - t2);
+                            }
                             if (output_line_cnt == required_height)
                             {
                                 output_line_cnt = 0;
@@ -231,7 +235,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                     break;
                 case inuchar_byref(c_decoupler, new_grabbing):
                     start_x   = inuint(c_decoupler);
-                    int end_x = inuint(c_decoupler);
+                    end_x = inuint(c_decoupler);
                     start_y   = inuint(c_decoupler);
                     end_y     = inuint(c_decoupler);
                     required_width  = inuint(c_decoupler);
