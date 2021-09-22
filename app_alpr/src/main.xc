@@ -84,15 +84,15 @@ void director(chanend to_0, chanend to_1) {
         printint(val);
         printchar('\n');
         if (val < 0) {
-            printstr("Value too small");
+            printstr("Value too small\n");
             continue;
         }
         if (bbox[1] - bbox[0] < 128) {
-            printstr("Width too small");
+            printstr("Width too small\n");
             continue;
         }
         if (bbox[3] - bbox[2] < 32) {
-            printstr("Height too small");
+            printstr("Height too small\n");
             continue;
         }
         if (aisrv_local_acquire_single(to_1,
