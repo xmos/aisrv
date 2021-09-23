@@ -88,6 +88,7 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
         TF_LITE_REPORT_ERROR(&ie->tflm->error_reporter, "AllocateTensors() failed");
         return 2;
     }
+    printstr("Bytes used for tensor arena "); printintln(ie->tflm->interpreter->arena_used_bytes());
     ie->operators_size = ie->tflm->model->subgraphs()->Get(0)->operators()->size();
 
     // Obtain pointers to the model's input and output tensors.
