@@ -151,7 +151,7 @@ void MipiImager(chanend c_line, chanend c_decoupler, chanend ?c_decoupler2 /*cha
                         *ft = now - last_sof;
                         last_sof = now;
                         uint32_t * unsafe lt = &line_time;
-                        *lt = (now - start_of_frame) / lineCount;
+                        *lt = (now - start_of_frame) / (lineCount+1);
                         if (lineCount != SENSOR_IMAGE_HEIGHT)
                         {
                             lineCountError++;
@@ -281,6 +281,10 @@ void ImagerUser(chanend c_debayerer, client interface i2c_master_if i2c, chanend
         
         fc++;
         printint(fc); printchar(' '); printint(frame_time); printchar(' '); printintln(line_time);
+//        unsigned int shimCfg;
+//        read_node_config_reg(tile[1], XS1_SSWITCH_MIPI_SHIM_CFG0_NUM, shimCfg);
+//        printf("%04x: %08x\n", XS1_SSWITCH_MIPI_SHIM_CFG0_NUM, shimCfg);
+//        write_node_config_reg(tile[1], XS1_SSWITCH_MIPI_SHIM_CFG0_NUM, 0x00800000);
 #if defined(POST_PROCESS_SUBSAMPLE)
         // TODO: do this properly, VPU & gaussian
         for(int oy = 0 ; oy < required_height; oy ++) {
