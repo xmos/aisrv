@@ -18,8 +18,8 @@ for i in range (1):
 
   # Get image from device
   #ie.acquire_set_i2c(0x3C, 0xfe, 0x00)
-  #ie.acquire_set_i2c(0x3C, 0x84, 0x01)
-#  ie.start_acquire_single(i+200, 1400-i, i, 1200-i, 160, 160)
+  #ie.acquire_set_i2c(0x3C, 0x84, 0x03)
+  ie.start_acquire_single(400, 1200, 200, 1000, 160, 160)
   #raw_img = ie.read_input_tensor(engine_num = 1)
   raw_img = ie.read_input_tensor(engine_num = 0)
   print(len(raw_img))
