@@ -29,9 +29,7 @@ typedef enum {
 
 void send_array(chanend c, uint32_t * unsafe array, unsigned size);
 
-#ifndef MIPI_BUFFER_SIZE_BYTES
-#define MIPI_BUFFER_SIZE_BYTES (3300)
-#endif
+#define MIPI_BUFFER_SIZE_BYTES (SENSOR_IMAGE_WIDTH * SENSOR_IMAGE_DEPTH + 40)
 
 #define MIPI_LINES 8
 uint8_t mipiBuffer[MIPI_LINES][MIPI_BUFFER_SIZE_BYTES];
@@ -70,7 +68,7 @@ void MipiDecoupler(chanend c, chanend c_kill, chanend c_line)
             if(mipiHeader & 0x30) {
                 ourWordCount = inuint(c);
                 tailSize = inuint(c);
-                if (ourWordCount != (SENSOR_IMAGE_WIDTH/2) && tailSize != 0)
+                if (ourWordCount != (SENSOR_IMAGE_WIDTH/2) || tailSize != 24)
                 {
                     printintln(ourWordCount);
                     printintln(tailSize);
@@ -390,7 +388,10 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_acquire[], int n_ac
     {
         printstr("Stream start failed\n");
     }
-    
+
+    timer tmr;  // Sensor may have been streaming in some other mode
+    int t;      // Wait for 1 second for old frames to be gone.
+    tmr :> t; tmr when timerafter(t + 100000000) :> void;
     par 
     {
         MipiReceive(tile[MIPI_TILE], 1, c, p_mipi_rxd, p_mipi_rxa, c_kill,
