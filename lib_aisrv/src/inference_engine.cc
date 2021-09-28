@@ -134,21 +134,6 @@ aisrv_status_t interp_invoke(inference_engine *ie)
     return AISRV_STATUS_OKAY;
 }
 
-static const char *index_to_name(inference_engine *ie, int index) {
-    auto* opcodes = ie->tflm->model->operator_codes();
-    if (index >= opcodes->size()) {
-        return "Missing registration";
-    }
-    auto* opcode = (*opcodes)[index];
-    auto builtin_code = std::max(opcode->builtin_code(),
-                                 static_cast<tflite::BuiltinOperator>(opcode->deprecated_builtin_code()));
-    if (builtin_code == tflite::BuiltinOperator_CUSTOM) {
-        return opcode->custom_code()->c_str();
-    } else {
-        return tflite::EnumNameBuiltinOperator(
-            tflite::BuiltinOperator(builtin_code));
-    }
-}
 
 void print_profiler_summary(inference_engine *ie)
 {
@@ -160,36 +145,53 @@ void print_profiler_summary(inference_engine *ie)
     uint32_t const *times = ie->tflm->xcore_profiler.GetEventDurations();
     auto* subgraphs = ie->tflm->model->subgraphs();
 
-    for (size_t i = 0; i < ie->operators_size; ++i)
+    int n_operators = 0;
+    uint64_t operator_times[XCORE_PROFILER_DEFAULT_MAX_LEVELS];
+    const char *operator_names[XCORE_PROFILER_DEFAULT_MAX_LEVELS];
+    for (size_t i = 0; i < ie->operators_size && i < count; ++i)
     {
-        if (i < count) 
-        {
-            const auto* op = (*subgraphs)[0]->operators()->Get(i);
-            const size_t index = op->opcode_index();
-            op_name = index_to_name(ie, index);
+        const auto* op = (*subgraphs)[0]->operators()->Get(i);
+        const size_t index = op->opcode_index();
+        if (index >= opcodes->size()) {
+            op_name = "Missing registration";
+        } else {
+            auto* opcode = (*opcodes)[index];
+            auto builtin_code = std::max(opcode->builtin_code(),
+                                         static_cast<tflite::BuiltinOperator>(opcode->deprecated_builtin_code()));
+            if (builtin_code == tflite::BuiltinOperator_CUSTOM) {
+                const char *name = ie->tflm->interpreter->node_name(0, i);
+                if (name != NULL) {
+                    op_name = name;
+                } else {
+                    op_name = opcode->custom_code()->c_str();
+                }
+            } else {
+                op_name = tflite::EnumNameBuiltinOperator(
+                    tflite::BuiltinOperator(builtin_code));
+            }
+        }
 
-            total += times[i];
-            printf("Operator %3d %-20s took %5lu ms\n", i, op_name, times[i]/100000);
+        total += times[i];
+        printf("Operator %3d %-20s took %5lu ms\n", i, op_name, times[i]/100000);
+        int found = 0;
+        for(int j = 0; j < n_operators; j++) {
+            if (strcmp(operator_names[j], op_name) == 0) {
+                operator_times[j] += times[i];
+                found = 1;
+                break;
+            }
+        }
+        if (!found && n_operators != XCORE_PROFILER_DEFAULT_MAX_LEVELS) {
+            operator_names[n_operators] = op_name;
+            operator_times[n_operators] = times[i];
+            n_operators++;
         }
     }
     printf("TOTAL %llu ticks\n", total);
 
-    for (size_t index = 0; index < opcodes->size(); index++) {
-        uint64_t time = 0;
-        for (size_t i = 0; i < ie->operators_size; ++i)
-        {
-            if (i < count) 
-            {
-                const auto* op = (*subgraphs)[0]->operators()->Get(i);
-                if (index == op->opcode_index()) {
-                    time += times[i];
-                }
-            }
-        }
-        op_name = index_to_name(ie, index);
-
+    for (size_t index = 0; index < n_operators; index++) {
         printf("Operator-class %-20s took %5llu ms %3d%%\n",
-               op_name, time/100000, (int)(100*time/total));
+               operator_names[index], operator_times[index]/100000, (int)(100*operator_times[index]/total));
     }
 }
 
