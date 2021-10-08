@@ -14,7 +14,8 @@ tflite::MicroMutableOpResolver<TFLM_OPERATORS> *
      inference_engine_initialize(inference_engine *ie,
                                  uint32_t data_tensor_arena[], uint32_t n_tensor_arena,
                                  uint32_t data_ext[], uint32_t n_ext,
-                                 struct tflite_micro_objects *tflmo)
+                                 struct tflite_micro_objects *tflmo,
+                                 unsigned c_flash)
 {
     // First initialise the structure with the three memory objects
     // internal memory, external memory, and TFLM objects.
@@ -24,6 +25,7 @@ tflite::MicroMutableOpResolver<TFLM_OPERATORS> *
     ie->model_data_ext          = data_ext;
     ie->model_data_tensor_arena_bytes = n_tensor_arena;
     ie->model_data_ext_bytes          = n_ext;
+    ie->c_flash = c_flash;
     ie->tflm->error_reporter.Init((char *)ie->debug_log_buffer, MAX_DEBUG_LOG_LENGTH);
     // Now add all the operators that we need
     auto *resolver = &ie->tflm->resolver;
@@ -79,7 +81,8 @@ int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint
                                                kTensorArena, kTensorArenaSize,
                                                &ie->tflm->error_reporter,
                                                true,
-                                               &ie->tflm->xcore_profiler);
+                                               &ie->tflm->xcore_profiler,
+                                               ie->c_flash);
 
     // Allocate memory from the kTensorArena for the model's tensors.
     TfLiteStatus allocate_tensors_status = ie->tflm->interpreter->AllocateTensors();
