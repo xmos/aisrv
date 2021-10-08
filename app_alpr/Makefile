@@ -26,8 +26,8 @@ APP_SHARED_FLAGS  = -report \
 -DTF_LITE_STATIC_MEMORY \
 -DXCORE \
 -DPRINT_PROFILER_SUMMARY \
+-lquadflash \
 -DENABLE_USB -DXUD_CORE_CLOCK=700 -DTF_LITE_STRIP_ERROR_STRINGS -DGC2145 #-DTFLM_DISABLED
-
 SOURCE_DIRS = src
 
 # The USED_MODULES variable lists other module used by the application. 

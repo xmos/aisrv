@@ -89,6 +89,7 @@ typedef struct inference_engine {
     uint8_t outputGpioMode;
     uint32_t debug_log_buffer[MAX_DEBUG_LOG_LENGTH / sizeof(uint32_t)]; // aligned
     uint32_t modelSize;
+    unsigned c_flash;
 } inference_engine_t;
 
 
@@ -98,7 +99,8 @@ tflite::MicroMutableOpResolver<TFLM_OPERATORS> *
      inference_engine_initialize(inference_engine_t * UNSAFE ie,
                                  uint32_t data_tensor_arena[], uint32_t n_int,
                                  uint32_t data_ext[], uint32_t n_ext,
-                                 struct tflite_micro_objects * UNSAFE tflmo);
+                                 struct tflite_micro_objects * UNSAFE tflmo,
+                                 unsigned c_flash);
 #endif
 extern "C" {
 #endif
