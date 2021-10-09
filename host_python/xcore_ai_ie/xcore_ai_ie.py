@@ -83,14 +83,45 @@ class xcore_ai_ie(ABC):
         print("output_size: " + str(self._output_length))
         self._model_length = len(model_bytes)
 
-    def upload_model(self):
+    # TODO: combine this with download above
+    def load_model_from_flash(self, address, nbytes, ext_mem = False, engine_num = 0):
 
-        read_data = self._upload_data(aisrv_cmd.CMD_GET_MODEL)
+        if ext_mem: 
+            print("Loading model to external memory")
+            cmd = aisrv_cmd.CMD_SET_MODEL_EXT_FLASH
+        else:
+            print("Loading model to first part of tensor memory")
+            cmd = aisrv_cmd.CMD_SET_MODEL_ARENA_FLASH
 
-        assert len(read_data) == self._model_length
+        def tobytes(l):
+            o = []
+            for i in l:
+                o.append( i & 0xff )
+                o.append( (i>>8) & 0xff )
+                o.append( (i>>16) & 0xff )
+                o.append( (i>>24) & 0xff )
+            return bytes(o)
+            
+        try:
+            # Download model to device
+            self._download_data(cmd, tobytes([address,nbytes]), engine_num = engine_num)
+        except IOError:
+            #print("Error from device during model download (likely issue with model)")
+            self._clear_error()
+            raise IOError
 
-        return read_data
-
+        try:
+            # Update lengths
+            self._input_length, self._output_length, self._timings_length = self._read_spec(engine_num = engine_num)
+        
+        except IOError:
+            #print("Error from device during spec upload (likely issue with model)")
+            self._clear_error()
+            raise IOError
+       
+        print("input_size: " + str(self._input_length))
+        print("output_size: " + str(self._output_length))
+        
     @property
     def input_length(self):
 

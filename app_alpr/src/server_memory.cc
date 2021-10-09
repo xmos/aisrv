@@ -21,14 +21,13 @@ uint32_t data_ext[16 + 0 * TENSOR_ARENA_BYTES_0/sizeof(int)];  // engine 0, tile
 uint32_t data_int[         TENSOR_ARENA_BYTES_1/sizeof(int)];  // engine 1, tile 0
 #endif
 
-void inference_engine_initialize_with_memory_0(inference_engine_t *ie, unsigned c_flash) {
+void inference_engine_initialize_with_memory_0(inference_engine_t *ie) {
 #if !defined(TFLM_DISABLED)
     static struct tflite_micro_objects s0;
     auto *resolver = inference_engine_initialize(ie,
                                                  data_ext, TENSOR_ARENA_BYTES_0,
                                                  nullptr,  0,
-                                                 &s0,
-                                                 c_flash);
+                                                 &s0);
     resolver->AddPad();
     resolver->AddReshape();
     resolver->AddConcatenation();
@@ -52,8 +51,7 @@ void inference_engine_initialize_with_memory_1(inference_engine_t *ie) {
     auto *resolver = inference_engine_initialize(ie,
                                                  data_int, TENSOR_ARENA_BYTES_1,
                                                  nullptr,  0,
-                                                 &s1,
-                                                 0);
+                                                 &s1);
     resolver->AddPad();
     resolver->AddAdd();
     resolver->AddMaxPool2D();
