@@ -185,7 +185,7 @@ void flash_access(chanend c_flash[], int n_flash) {
                         }
                         fl_readData(address+k, buf_bytes, buf); // TODO, check?
                         for(int j = 0; j < buf_bytes; j++) {
-                            c_flash[i] <: buf[i];
+                            c_flash[i] <: buf[j];
                         }
                     }
                 }
@@ -204,7 +204,7 @@ int main(void)
     chan c_usb_to_engine[2], c_director_to_engine_0, c_director_to_engine_1;
     chan c_usb_ep0_dat;
     chan c_acquire[2];
-    chan c_flash[1];
+    chan c_flash[2];
 
 #if defined(I2C_INTEGRATION)
     i2c_master_if i2c[1];
@@ -221,7 +221,7 @@ int main(void)
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory_1(&ie); }
             aiengine(ie, c_usb_to_engine[1], c_director_to_engine_1, null,
-                     c_acquire[1], null
+                     c_acquire[1], null, c_flash[1]
 #if defined(TFLM_DISABLED)
                      , tflite_disabled_image_1, sizeof(tflite_disabled_image_1)
 #endif
@@ -230,9 +230,9 @@ int main(void)
 
         on tile[1]: {
             inference_engine_t ie;
-            unsafe { inference_engine_initialize_with_memory_0(&ie, c_flash[0]); }
+            unsafe { inference_engine_initialize_with_memory_0(&ie); }
             aiengine(ie, c_usb_to_engine[0], c_director_to_engine_0, null,
-                     c_acquire[0], null
+                     c_acquire[0], null, c_flash[0]
 #if defined(TFLM_DISABLED)
                      , tflite_disabled_image, sizeof(tflite_disabled_image)
 #endif
@@ -248,7 +248,7 @@ int main(void)
 #if defined(MIPI_INTEGRATION)
         on tile[1]: mipi_main(i2c[0], c_acquire, 2);
 #endif
-        on tile[0]: flash_access(c_flash, 1);
+        on tile[0]: flash_access(c_flash, 2);
 
 #if defined(PSOC_INTEGRATION)
         on tile[1]: {

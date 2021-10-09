@@ -55,16 +55,33 @@ size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned ignore)
     return i;
 }
 
-static size_t SetModel(inference_engine_t &ie, chanend c, uint32_t * unsafe model_data)
+static size_t SetModel(inference_engine_t &ie, chanend c,
+                       uint32_t * unsafe model_data,
+                       chanend ?c_flash,
+                       int read_from_flash)
 {
     size_t modelSize;
 
     inference_engine_unload_model(&ie);
 
-    modelSize = receive_array_(c, model_data, 0);
+    if (read_from_flash) {
+        uint32_t address_bytes[2];
+        receive_array_(c, address_bytes, 0);
+        int address = address_bytes[0];
+        modelSize = address_bytes[1];
+        c_flash <: address;
+        c_flash <: modelSize;
+        slave {
+            for(int i = 0; i < modelSize; i++) {
+                c_flash :> ((uint8_t *)model_data)[i];
+            }
+        }
+    } else {
+        modelSize = receive_array_(c, model_data, 0);
+    }
 
     printstr("Model received: "); printintln(modelSize);
-    int error = inference_engine_load_model(&ie, modelSize, model_data);
+    int error = inference_engine_load_model(&ie, modelSize, model_data, c_flash);
     ie.haveModel = !error;
 
     if(ie.haveModel)
@@ -136,7 +153,8 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
                           chanend ?c_chain,
                           aisrv_cmd_t cmd,
                           uint32_t tensor_num,
-                          chanend ?c_acquire, chanend (&?c_leds)[AISRV_GPIO_LENGTH])
+                          chanend ?c_acquire, chanend (&?c_leds)[AISRV_GPIO_LENGTH],
+                          chanend ?c_flash)
 {
     uint32_t data[MAX_PACKET_SIZE_WORDS];
     switch(cmd)
@@ -155,27 +173,19 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
             break;
 
         case CMD_SET_MODEL_ARENA:
-            ie.modelSize = SetModel(ie, c, ie.model_data_tensor_arena);
+            ie.modelSize = SetModel(ie, c, ie.model_data_tensor_arena, c_flash, 0);
             break;
 
         case CMD_SET_MODEL_EXT:
-            ie.modelSize = SetModel(ie, c, ie.model_data_ext);
+            ie.modelSize = SetModel(ie, c, ie.model_data_ext, c_flash, 0);
             break;
 
-        /* TODO debug only = remove for production */
-        case CMD_GET_MODEL_ARENA:
-           
-            /* TODO bad status if no model */
-            c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, ie.model_data_tensor_arena, ie.modelSize);
+        case CMD_SET_MODEL_ARENA_FLASH:
+            ie.modelSize = SetModel(ie, c, ie.model_data_tensor_arena, c_flash, 1);
             break;
 
-        /* TODO debug only = remove for production */
-        case CMD_GET_MODEL_EXT:
-           
-            /* TODO bad status if no model */
-            c <: (unsigned) AISRV_STATUS_OKAY;
-            send_array(c, ie.model_data_ext, ie.modelSize);
+        case CMD_SET_MODEL_EXT_FLASH:
+            ie.modelSize = SetModel(ie, c, ie.model_data_ext, c_flash, 1);
             break;
 
         case CMD_SET_INPUT_TENSOR:
@@ -432,7 +442,8 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
 }
 
 void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
-              chanend ?c_push, chanend ?c_acquire, chanend (&?c_leds)[4]
+              chanend ?c_push, chanend ?c_acquire, chanend (&?c_leds)[4],
+              chanend ?c_flash
 #if defined(TFLM_DISABLED)
               , uint32_t tflite_disabled_image[], uint32_t sizeof_tflite_disabled_image
 #endif
@@ -471,12 +482,12 @@ void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
         {
             case (!isnull(c_usb)) => c_usb :> cmd:
                 c_usb :> tensor_num;
-                HandleCommand(ie, c_usb, c_push, cmd, tensor_num, c_acquire, c_leds);
+                HandleCommand(ie, c_usb, c_push, cmd, tensor_num, c_acquire, c_leds, c_flash);
                 break;
             
             case (!isnull(c_spi)) => c_spi :> cmd:
                 c_spi :> tensor_num;
-                HandleCommand(ie, c_spi, c_push, cmd, tensor_num, c_acquire, c_leds);
+                HandleCommand(ie, c_spi, c_push, cmd, tensor_num, c_acquire, c_leds, c_flash);
                 break;
 
             (ie.acquireMode == AISRV_ACQUIRE_MODE_STREAM) => default:
