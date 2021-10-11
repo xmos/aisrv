@@ -4,9 +4,7 @@
 #include <platform.h>
 #include "leds.h"
 
-on tile[0]: out port p_leds = XS1_PORT_4C;
-
-void led_driver(chanend c[4]) 
+void led_driver(chanend c[4], out port p_leds) 
 {
     int all = 0;
     while(1) 
