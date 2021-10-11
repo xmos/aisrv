@@ -65,13 +65,10 @@ static size_t SetModel(inference_engine_t &ie, chanend c,
     inference_engine_unload_model(&ie);
 
     if (read_from_flash) {
-        uint32_t address_bytes[2];
-        receive_array_(c, address_bytes, 0);
-        int address = address_bytes[0];
-        modelSize = address_bytes[1];
-        c_flash <: address;
-        c_flash <: modelSize;
+        receive_array_(c, model_data, 1);                // receive empty array
+        c_flash <: READ_FLASH_MODEL;
         slave {
+            c_flash :> modelSize;
             for(int i = 0; i < modelSize; i++) {
                 c_flash :> ((uint8_t *)model_data)[i];
             }

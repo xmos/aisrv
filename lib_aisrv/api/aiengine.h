@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "inference_engine.h"
+#include "flash.h"
 
 void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
               chanend ?c_push, chanend ?c_acquire, chanend (&?c_leds)[4],
