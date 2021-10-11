@@ -15,6 +15,8 @@
 #include "server_memory.h"
 #include "leds.h"
 #include "box_calculation.h"
+#include "uart.h"
+#include "gpio.h"
 
 #include "aisrv_mipi.h"
 
@@ -42,10 +44,12 @@ on tile[0]: port p_scl = XS1_PORT_1N;
 on tile[0]: port p_sda = XS1_PORT_1O;
 #endif
 
+on tile[0]: port p_uart = PORT_LEDS;
+
 #define ORIGIN_X_INSIDE_SENSOR ((SENSOR_IMAGE_WIDTH - WIDTH_ON_SENSOR)/2)
 #define ORIGIN_Y_INSIDE_SENSOR ((SENSOR_IMAGE_HEIGHT - HEIGHT_ON_SENSOR)/2)
 
-void director(chanend to_0, chanend to_1) {
+void director(chanend to_0, chanend to_1, client interface uart_tx_if uart_tx) {
     uint32_t classes[2*MAX_BOXES / sizeof(uint32_t)];
     uint32_t boxes[4*MAX_BOXES / sizeof(uint32_t)];
     uint32_t ocr_classes[66 * 16 / sizeof(uint32_t)];
@@ -112,6 +116,7 @@ void director(chanend to_0, chanend to_1) {
         int len = ocr_calculation(ocr_outputs, (ocr_classes, int8_t [16][66]));
         printstr(">>>");
         for(int i = 0; i < len; i++) {
+            uart_tx.write(ocr_outputs[i]);
             printchar(ocr_outputs[i]);
         }
         printstr("<<<\n");
@@ -133,6 +138,8 @@ int main(void)
     chan c_usb_ep0_dat;
     chan c_acquire[2];
     chan c_flash[2];
+    interface uart_tx_if i_tx;
+    output_gpio_if i_gpio_tx[1];
 
 #if defined(I2C_INTEGRATION)
     i2c_master_if i2c[1];
@@ -168,8 +175,16 @@ int main(void)
         }
 
         on tile[1]: {
-            director(c_director_to_engine_0, c_director_to_engine_1);
+            director(c_director_to_engine_0, c_director_to_engine_1, i_tx);
         }
+
+        on tile[0]: {
+            char pin_map[1] = {2};
+            output_gpio(i_gpio_tx, 1, p_uart, pin_map);
+        }
+        on tile[0]: uart_tx(i_tx, null,
+                            1, UART_PARITY_NONE, 8, 1,
+                            i_gpio_tx[0]);
 #if defined(I2C_INTEGRATION)
         on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
 #endif
