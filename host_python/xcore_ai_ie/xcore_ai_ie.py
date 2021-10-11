@@ -84,7 +84,7 @@ class xcore_ai_ie(ABC):
         self._model_length = len(model_bytes)
 
     # TODO: combine this with download above
-    def load_model_from_flash(self, address, nbytes, ext_mem = False, engine_num = 0):
+    def load_model_from_flash(self, ext_mem = False, engine_num = 0):
 
         if ext_mem: 
             print("Loading model to external memory")
@@ -93,18 +93,9 @@ class xcore_ai_ie(ABC):
             print("Loading model to first part of tensor memory")
             cmd = aisrv_cmd.CMD_SET_MODEL_ARENA_FLASH
 
-        def tobytes(l):
-            o = []
-            for i in l:
-                o.append( i & 0xff )
-                o.append( (i>>8) & 0xff )
-                o.append( (i>>16) & 0xff )
-                o.append( (i>>24) & 0xff )
-            return bytes(o)
-            
         try:
             # Download model to device
-            self._download_data(cmd, tobytes([address,nbytes]), engine_num = engine_num)
+            self._download_data(cmd, bytes([]), engine_num = engine_num)
         except IOError:
             #print("Error from device during model download (likely issue with model)")
             self._clear_error()

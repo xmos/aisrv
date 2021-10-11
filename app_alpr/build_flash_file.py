@@ -4,19 +4,58 @@
 import sys
 from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi, AISRVError
 
-if len(sys.argv) != 4:
-    print("Usage: python3 " + sys.argv[0] + " model0.tflite model1.tflite flashfile")
-
-with open(sys.argv[1], "rb") as input_fd:
-    model_0_data = input_fd.read()
+engines = (len(sys.argv)-2) // 2
     
-with open(sys.argv[2], "rb") as input_fd:
-    model_1_data = input_fd.read()
+if len(sys.argv) - 2 * engines != 2 or len(sys.argv) < 4:
+    print("Usage: python3 " + sys.argv[0] + " flash.bin [modelX.tflite modelX.parameter] (X times)")
+    sys.exit(1)
     
-print("Models are of length ", len(model_0_data), " and ", len(model_1_data))
-model_out_data = model_0_data + model_1_data
-print("Combined models are ", len(model_out_data))
+class header:
+    def __init__(self, model, parameters, operators, start):
+        self.model_length = len(model)
+        self.model_start = start
+        self.parameters_start = start + len(model)
+        self.operators_start = start + len(model) + len(parameters)
+        self.length = len(model) + len(parameters) + len(operators)
+        self.model = model
+        self.parameters = parameters
+        self.operators = operators
 
-with open(sys.argv[3], "wb") as output_fd:
-    model_1_data = output_fd.write(model_out_data)
+def read_whole_file(filename):
+    if filename == '-':
+        return bytes([])
+    with open(filename, "rb") as input_fd:
+        contents = input_fd.read()
+    return contents
+
+def tobytes(integr):
+    data = []
+    for i in range(4):
+        data.append((integr >> (8*i)) & 0xff)
+    return bytes(data)
+
+headers = [None] * engines
+start = 16 * engines
+for i in range(engines):
+    model_data = read_whole_file(sys.argv[2*i+2])
+    parameter_data = read_whole_file(sys.argv[2*i+3])
+    headers[i] = header(model_data, parameter_data, bytes([]), start)
+    start += headers[i].length
+
+output = bytes([])
+for i in range(engines):
+    output += tobytes(headers[i].model_length)
+    output += tobytes(headers[i].model_start)
+    output += tobytes(headers[i].parameters_start)
+    output += tobytes(headers[i].operators_start)
+
+for i in range(engines):
+    output += headers[i].model
+    output += headers[i].parameters
+    output += headers[i].operators
+
+print("Flash image size ", len(output))
+
+with open(sys.argv[1], "wb") as output_fd:
+    output_fd.write(output)
 
