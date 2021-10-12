@@ -126,6 +126,43 @@ void director(chanend to_0, chanend to_1, client interface uart_tx_if uart_tx) {
     }
 }
 
+#define FL_QUADDEVICE_MACRONIX_MX25R6435FM2IH0 \
+{ \
+    16,                     /* MX25R6435FM2IH0 */ \
+    256,                    /* page size */ \
+    32768,                  /* num pages */ \
+    3,                      /* address size */ \
+    3,                      /* log2 clock divider */ \
+    0x9F,                   /* QSPI_RDID */ \
+    0,                      /* id dummy bytes */ \
+    3,                      /* id size in bytes */ \
+    0xC22817,               /* device id */ \
+    0x20,                   /* QSPI_SE */ \
+    4096,                   /* Sector erase is always 4KB */ \
+    0x06,                   /* QSPI_WREN */ \
+    0x04,                   /* QSPI_WRDI */ \
+    PROT_TYPE_NONE,         /* no protection */ \
+    {{0,0},{0x00,0x00}},    /* QSPI_SP, QSPI_SU */ \
+    0x02,                   /* QSPI_PP */ \
+    0xEB,                   /* QSPI_READ_FAST */ \
+    1,                      /* 1 read dummy byte */ \
+    SECTOR_LAYOUT_REGULAR,  /* mad sectors */ \
+    {4096,{0,{0}}},         /* regular sector sizes */ \
+    0x05,                   /* QSPI_RDSR */ \
+    0x01,                   /* QSPI_WRSR */ \
+    0x01,                   /* QSPI_WIP_BIT_MASK */ \
+}
+
+fl_QuadDeviceSpec flash_spec[] = {
+    FL_QUADDEVICE_MACRONIX_MX25R6435FM2IH0
+};
+
+on tile[0]: fl_QSPIPorts qspi = {
+    PORT_SQI_CS,
+    PORT_SQI_SCLK,
+    PORT_SQI_SIO,
+    XS1_CLKBLK_2
+};
 
 #if defined(TFLM_DISABLED)
 extern uint32_t tflite_disabled_image[320*320*3/4];
@@ -183,7 +220,7 @@ int main(void)
             output_gpio(i_gpio_tx, 1, p_uart, pin_map);
         }
         on tile[0]: uart_tx(i_tx, null,
-                            1, UART_PARITY_NONE, 8, 1,
+                            10, UART_PARITY_NONE, 8, 1,
                             i_gpio_tx[0]);
 #if defined(I2C_INTEGRATION)
         on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 400);
@@ -193,7 +230,7 @@ int main(void)
 #endif
         on tile[0]: {
             flash_t headers[2];
-            flash_access(c_flash, headers, 2);
+            flash_server(c_flash, headers, 2, qspi, flash_spec, 1);
         }
 
 #if defined(PSOC_INTEGRATION)
