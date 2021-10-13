@@ -21,6 +21,8 @@
 #include "aisrv.h"
 #include "subsample.h"
 
+#define MIPI_TILE (1)
+
 typedef enum {
     IMAGER_SAMPLE = 1,
     IMAGER_DONTSAMPLE = 0,
