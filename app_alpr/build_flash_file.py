@@ -3,6 +3,15 @@
 
 import sys
 from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi, AISRVError
+import flexbuffers
+
+
+with open('test.flash', 'rb') as fd:
+    buf = fd.read()
+print(buf)
+r = flexbuffers.Loads(buf)
+print(r)
+sys.exit(0)
 
 engines = (len(sys.argv)-2) // 2
     
