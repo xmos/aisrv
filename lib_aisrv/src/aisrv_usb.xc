@@ -227,7 +227,7 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c_engine[], chane
             }
 
             aisrv_status_t status;
-            status = inuint(c_engine[engine_num]);
+            status = inuint(c_engine[engine_num]);        // TODO: use <:
             chkct(c_engine[engine_num], XS1_CT_END);
 
             if(status != AISRV_STATUS_OKAY)

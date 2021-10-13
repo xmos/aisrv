@@ -3,12 +3,11 @@
 
 #include <stdint.h>
 
+// This configuration file defines the maximum number of input and output tensors
+// on each model
+
 #if defined(__aisrv_conf_h_exists__)
 #include "aisrv_conf.h"
-#endif
-
-#ifndef MIPI_TILE
-#define MIPI_TILE (1)
 #endif
 
 #define AISRV_CMD_WRITE_BIT_MASK    (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
@@ -20,6 +19,7 @@
 #define MAX_DEBUG_LOG_LENGTH        (400)
 
 
+// Including all commands that are being used, shared with... Python!
 typedef enum aisrv_cmd
 {
     #define int(x) x,
