@@ -27,10 +27,10 @@ typedef struct flash {
 
 /** Type representing the commands that the flash server accepts */
 typedef enum flash_command {
-    READ_FLASH_PARAMETERS = 0, ///< Read a set of parameters.   // TODO: share with lib_tflite_micro
-    READ_FLASH_MODEL = 1,      ///< Read a whole model.
-    READ_FLASH_OPERATORS = 2,  ///< Read the binary for an operator - future extension
-    READ_FLASH_XIP = 3,        ///< Read code to execute-in-place throught L2 cache - future extension
+    FLASH_READ_PARAMETERS = 0, ///< Read a set of parameters.   // TODO: share with lib_tflite_micro
+    FLASH_READ_MODEL = 1,      ///< Read a whole model.
+    FLASH_READ_OPERATORS = 2,  ///< Read the binary for an operator - future extension
+    FLASH_READ_XIP = 3,        ///< Read code to execute-in-place throught L2 cache - future extension
 } flash_command_t;
 
 /**
