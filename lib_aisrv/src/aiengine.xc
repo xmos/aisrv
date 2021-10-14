@@ -66,7 +66,7 @@ static size_t SetModel(inference_engine_t &ie, chanend c,
 
     if (read_from_flash) {
         receive_array_(c, model_data, 1);                // receive empty array
-        c_flash <: READ_FLASH_MODEL;
+        c_flash <: FLASH_READ_MODEL;
         slave {
             c_flash :> modelSize;
             for(int i = 0; i < modelSize; i++) {

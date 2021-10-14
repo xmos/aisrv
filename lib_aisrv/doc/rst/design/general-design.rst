@@ -256,9 +256,6 @@ Protocol
 The protocol to obtain data from flash is to send a command, and then in
 one transaction obtain the data as follows:
 
-// TODO: replace READ_FLASH in include file with FLASH_READ
-
-
  * FLASH_READ_MODEL:
 
      #. Output the integer FLASH_READ_MODEL

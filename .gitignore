@@ -5,6 +5,7 @@
 *~
 
 */build/*
+_build
 */.build*/*
 */bin/*
 venv/*
