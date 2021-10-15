@@ -209,7 +209,7 @@ extern "C" void DebugLog(const char* s) {}
 
 void inference_engine_initialize(inference_engine *ie, uint8_t data_tensor_arena[], uint32_t n_int, uint8_t data_ext[], uint32_t n_ext, struct tflite_micro_object *tflmo) {}
 
-int inference_engine_load_model(inference_engine *ie, uint32_t modelSize, uint32_t *model_data) {
+int inference_engine_load_model(inference_engine *ie, uint32_t model_bytes, uint32_t *model_data) {
     printf("Inference engine disabled, model not loaded\n");
     return AISRV_STATUS_OKAY;
 }
