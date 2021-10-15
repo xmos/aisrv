@@ -13,15 +13,17 @@ class header:
     The header comprises the addresses of the model, parameters, and operators
     relative to the start address
     """
-    def __init__(self, model, parameters, operators, start):
-        self.model_length = len(model)
-        self.model_start = start
-        self.parameters_start = start + len(model)
-        self.operators_start = start + len(model) + len(parameters)
-        self.length = len(model) + len(parameters) + len(operators)
+    def __init__(self, model, parameters, operators, xip, start):
+        self.model_start      = start
+        self.parameters_start = self.model_start      + len(model) + 4
+        self.operators_start  = self.parameters_start + len(parameters)
+        self.xip_start        = self.operators_start  + len(operators)
+        new_start             = self.xip_start        + len(xip)
+        self.length = new_start - start
         self.model = model
         self.parameters = parameters
         self.operators = operators
+        self.xip = xip
 
 def read_whole_binary_file(filename):
     """
@@ -71,20 +73,22 @@ def build_flash_image(files):
     for i in range(engines):
         model_data = read_whole_binary_file(files[2*i])
         parameter_data = read_whole_parameter_file(files[2*i+1])
-        headers[i] = header(model_data, parameter_data, bytes([]), start)
+        headers[i] = header(model_data, parameter_data, bytes([]), bytes([]), start)
         start += headers[i].length
     
     output = bytes([])
     for i in range(engines):
-        output += tobytes(headers[i].model_length)
         output += tobytes(headers[i].model_start)
         output += tobytes(headers[i].parameters_start)
         output += tobytes(headers[i].operators_start)
+        output += tobytes(headers[i].xip_start)
     
     for i in range(engines):
+        output += tobytes(len(headers[i].model))
         output += headers[i].model
         output += headers[i].parameters
         output += headers[i].operators
+        output += headers[i].xip
     return output
 
 

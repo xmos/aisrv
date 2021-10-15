@@ -16,13 +16,10 @@
  * multiple flash servers.
  */
 typedef struct flash {
-    int model_length;         ///< Length of model for this client.
-                              // TODO: model length should probably not be stored
-                              // in the header, but just
-                              // be read from the first four bytes of the model when required.
-    int model_start;          ///< Start address for model.
-    int parameters_start;     ///< Start address of parameters.
-    int operators_start;      ///< Start address for operator-binaries.
+    int model_start;            ///< Start address for model.
+    int parameters_start;       ///< Start address of parameters.
+    int operators_start;        ///< Start address for operator-binaries.
+    int execute_in_place_start; ///< Start address for operator-binaries.
 } flash_t;
 
 /** Type representing the commands that the flash server accepts */
