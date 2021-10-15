@@ -55,7 +55,7 @@ size_t receive_array_(chanend c, uint32_t * unsafe array, unsigned ignore)
     return i;
 }
 
-static size_t SetModel(inference_engine_t &ie, chanend c,
+static void SetModel(inference_engine_t &ie, chanend c,
                        uint32_t * unsafe model_data,
                        chanend ?c_flash,
                        int read_from_flash)
@@ -94,8 +94,6 @@ static size_t SetModel(inference_engine_t &ie, chanend c,
     }
 
     outct(c, XS1_CT_END);
-
-    return modelSize;
 }
 
 static void HandleGpio(inference_engine_t &ie, chanend (&?c_led)[AISRV_GPIO_LENGTH])
@@ -170,19 +168,19 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
             break;
 
         case CMD_SET_MODEL_ARENA:
-            ie.modelSize = SetModel(ie, c, ie.model_data_tensor_arena, c_flash, 0);
+            SetModel(ie, c, ie.model_data_tensor_arena, c_flash, 0);
             break;
 
         case CMD_SET_MODEL_EXT:
-            ie.modelSize = SetModel(ie, c, ie.model_data_ext, c_flash, 0);
+            SetModel(ie, c, ie.model_data_ext, c_flash, 0);
             break;
 
         case CMD_SET_MODEL_ARENA_FLASH:
-            ie.modelSize = SetModel(ie, c, ie.model_data_tensor_arena, c_flash, 1);
+            SetModel(ie, c, ie.model_data_tensor_arena, c_flash, 1);
             break;
 
         case CMD_SET_MODEL_EXT_FLASH:
-            ie.modelSize = SetModel(ie, c, ie.model_data_ext, c_flash, 1);
+            SetModel(ie, c, ie.model_data_ext, c_flash, 1);
             break;
 
         case CMD_SET_INPUT_TENSOR:

@@ -80,7 +80,6 @@ typedef struct inference_engine {
     int8_t outputGpioThresh[AISRV_GPIO_LENGTH]; 
     uint8_t outputGpioMode;
     uint32_t debug_log_buffer[MAX_DEBUG_LOG_LENGTH / sizeof(uint32_t)]; ///< buffer for error messages
-    uint32_t modelSize;                         ///< number of bytes in model - TODO: obsolete?
 } inference_engine_t;
 
 
@@ -155,16 +154,16 @@ extern "C" {
  * the model is in place already and will simply parse it, not copy it.
  * 
  * \param ie           pointer to inference engine.
- * \param modelSize    Number of bytes in the model
+ * \param model_bytes  Number of bytes in the model
  * \param model_data   Pointer to the model (one of data_model or data_tensor_arena passed above)
  * \param c_flash      Optional channel to flash server, to be used for fetching parameter blocks
  *
  * \returns            non zero indicates an error
  */
 #ifdef __XC__
-    int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t modelSize, uint32_t * UNSAFE model_data, chanend ?c_flash);
+    int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t model_bytes, uint32_t * UNSAFE model_data, chanend ?c_flash);
 #else
-    int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t modelSize, uint32_t * UNSAFE model_data, unsigned c_flash);
+    int inference_engine_load_model(inference_engine_t * UNSAFE ie, uint32_t model_bytes, uint32_t * UNSAFE model_data, unsigned c_flash);
 #endif
 
 /** Function that invokes the inference engine.
