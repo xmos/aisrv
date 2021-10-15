@@ -28,8 +28,11 @@ void flash_server(chanend c_flash[], flash_t headers[], int n_flash,
                         c_flash[i] :> bytes;
                         address += headers[i].parameters_start;
                     } else if (cmd == FLASH_READ_MODEL) {
+                        unsigned char bytes_length[sizeof(uint32_t)];
                         address = headers[i].model_start;
-                        bytes   = headers[i].model_length;
+                        fl_readData(address, sizeof(uint32_t), bytes_length);  // read length
+                        address += sizeof(uint32_t);
+                        bytes   = (bytes_length, unsigned[])[0];
                         c_flash[i] <: bytes;
                     } else if (cmd == FLASH_READ_OPERATORS) {
                         ; // TODO

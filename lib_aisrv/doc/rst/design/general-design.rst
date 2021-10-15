@@ -223,8 +223,6 @@ partition of the flash contains the following:
 
   * For each client the following are stored in integers (LSB first):
 
-      - The length of the model if any (TODO: move this to the start of the model)
-
       - The offset in the data partition where the model starts, 0 otherwise
 
       - The offset in the data partition where the parameters start, if
@@ -233,13 +231,14 @@ partition of the flash contains the following:
       - The offset in the data partition where the binaries of the
         operators start, if any. Zero otherwise
 
-      - TODO: the offset in the data partition where the execute in place
+      - The offset in the data partition where the execute in place
         segment starts, if any. Zero otherwise.
 
-    So for two clients, there is a 32 byte header [length, model-start,
-    par-start, op-start, length, model-start, par-start, op-start] (TODO:
+    The model start with four bytes length, then the actual model data. No
+    length information is stored with parameters. Operators and XIP are TBD.
+    So for two clients, there is a 32 byte header
     [model-start, par-start, op-start, xip-start, model-start, par-start,
-    op-start, xip-start]).
+    op-start, xip-start].
 
   * In any order, models, parameters, operators, and execute-in-place
     segments.
