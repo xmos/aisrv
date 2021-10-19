@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 
 #include "inference_engine.h"
 #include "server_memory.h"
@@ -16,14 +17,15 @@
 // Because of bug in xgdb we make this array tiny, knowing we own external memory
 // otherwise xgdb spends hours loading this array
 // TODO - fix when bug is fixed.
-__attribute__((section(".ExtMem_data")))
-uint32_t data_ext[16 + 0 * TENSOR_ARENA_BYTES_0/sizeof(int)];  // engine 0, tile 1
+//__attribute__((section(".ExtMem_data")))
+uint32_t *data_ext = (uint32_t *)0x10000000;//[TENSOR_ARENA_BYTES_0/sizeof(int)];  // engine 0, tile 1
 uint32_t data_int[         TENSOR_ARENA_BYTES_1/sizeof(int)];  // engine 1, tile 0
 #endif
 
 void inference_engine_initialize_with_memory_0(inference_engine_t *ie) {
 #if !defined(TFLM_DISABLED)
     static struct tflite_micro_objects s0;
+    memset(data_ext, 0, TENSOR_ARENA_BYTES_0);
     auto *resolver = inference_engine_initialize(ie,
                                                  data_ext, TENSOR_ARENA_BYTES_0,
                                                  nullptr,  0,
