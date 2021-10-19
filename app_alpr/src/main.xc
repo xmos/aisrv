@@ -169,6 +169,8 @@ extern uint32_t tflite_disabled_image[320*320*3/4];
 uint32_t tflite_disabled_image_1[1];
 #endif
 
+extern void setup_ddr();
+
 int main(void) 
 {
     chan c_usb_to_engine[2], c_director_to_engine_0, c_director_to_engine_1;
@@ -202,6 +204,7 @@ int main(void)
 
         on tile[1]: {
             inference_engine_t ie;
+            setup_ddr();
             unsafe { inference_engine_initialize_with_memory_0(&ie); }
             aiengine(ie, c_usb_to_engine[0], c_director_to_engine_0, null,
                      c_acquire[0], null, c_flash[0]
