@@ -19,6 +19,7 @@ APP_NAME = app_alpr
 # xcc for the final link (mapping) stage.
 
 APP_SHARED_FLAGS  = -report \
+-fcmdline-buffer-bytes=32 \
 -O3 -fcomment-asm -fxscope -mcmodel=large  -Wno-xcore-fptrgroup -save-temps \
 -Wno-unknown-pragmas \
 -Wno-bidirectional-buffered-port \
