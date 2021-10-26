@@ -75,14 +75,7 @@ int main(void)
     chan c_usb_to_engine[2];
     chan c_usb_ep0_dat;
     chan c_flash[2];
-
-#if defined(I2C_INTEGRATION)
-    i2c_master_if i2c[1];
-#endif
-
-#ifdef ENABLE_USB
     chan c_ep_out[EP_COUNT_OUT], c_ep_in[EP_COUNT_IN];
-#endif
 
     par 
     {
