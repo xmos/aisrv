@@ -3,20 +3,12 @@
 
 #include <stdint.h>
 
-// This configuration file defines the maximum number of input and output tensors
-// on each model
-
-#if defined(__aisrv_conf_h_exists__)
-#include "aisrv_conf.h"
-#endif
-
 #define AISRV_CMD_WRITE_BIT_MASK    (0x80) // Note, usage of this is not automatic - manually change commands if this is modified
 #define CMD_LENGTH_BYTES            (3)    // CMD, Tile, Tensor
 #define MAX_PACKET_SIZE             (512)
 #define MAX_PACKET_SIZE_WORDS       (MAX_PACKET_SIZE / 4)
 #define INFERENCE_ENGINE_ID         (0x12345678)//0x633
 #define DUMMY_CLOCKS                (16)
-#define MAX_DEBUG_LOG_LENGTH        (400)
 
 
 // Including all commands that are being used, shared with... Python!
