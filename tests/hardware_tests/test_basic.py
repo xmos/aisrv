@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import struct
 
-APP_NAME = "app_alpr"
+APP_NAME = "app_testing"
 XMOS_ROOT = Path('/Users/henk/gitAISERV_default')
 sw_xvf3610 = XMOS_ROOT / "aisrv"
 APP_PATH = sw_xvf3610 / APP_NAME
@@ -22,15 +22,15 @@ def initialise(host):
 
 @pytest.fixture(scope='session')
 def session_utils():
-        adapter_id = ''
-        host = prepare_host()
-        firmware = prepare_firmware(host, adapter_id=adapter_id)
-        ie = initialise(host)
-        ie.connect()
+    adapter_id = ''
+    host = prepare_host()
+    firmware = prepare_firmware(host, adapter_id=adapter_id)
+    ie = initialise(host)
+    ie.connect()
 
-        yield ie, firmware, host, adapter_id
-        
-        xn_file = XN_PATH / "XVF3610_AI_EXPLORER.xn"
+    yield ie, firmware, host, adapter_id
+    
+    xn_file = XN_PATH / "XVF3610_AI_EXPLORER.xn"
 
 def load_model(ie, model):
     try:
