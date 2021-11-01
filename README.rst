@@ -10,11 +10,13 @@ Note, this project is currently pre-release quality, the following is required t
 
 - ``lib_xud`` on branch master
 - ``lib_nn`` on branch develop
-- ``lib_tflite_micro`` on branch master (to be changed)
+- ``lib_tflite_micro`` on branch main (to be changed)
 - ``lib_mipi`` on branch master
 - ``lib_i2c`` on branch develop
 - ``lib_xassert`` on branch develop
 - ``lib_xlogging`` on branch develop
+- ``lib_uart`` on branch master (to be changed). Only needed to compile app_alpr.
+- ``lib_gpio`` on branch master (to be changed). Only needed to compile app_alpr.
 
 Note, dependencies should be cloned to the same level as the aisrv repo.
 ``lib_tflite_micro`` shold be cloned with ``--recursive``
