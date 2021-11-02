@@ -26,7 +26,7 @@ void flash_server(chanend c_flash[], flash_t headers[], int n_flash,
                     if (cmd == FLASH_READ_PARAMETERS) {
                         c_flash[i] :> address;
                         c_flash[i] :> bytes;
-                        address += headers[i].parameters_start;
+                        address = headers[i].parameters_start + address;
                     } else if (cmd == FLASH_READ_MODEL) {
                         unsigned char bytes_length[sizeof(uint32_t)];
                         address = headers[i].model_start;
@@ -37,7 +37,6 @@ void flash_server(chanend c_flash[], flash_t headers[], int n_flash,
                     } else if (cmd == FLASH_READ_OPERATORS) {
                         ; // TODO
                     }
-                    printf("reading %d from %d\n", bytes, address);
                     unsigned char buf[TMP_BUF_SIZE];
                     for(int k = 0; k < bytes; k += TMP_BUF_SIZE) {
                         int buf_bytes = TMP_BUF_SIZE;
@@ -54,3 +53,4 @@ void flash_server(chanend c_flash[], flash_t headers[], int n_flash,
         }
     }
 }
+

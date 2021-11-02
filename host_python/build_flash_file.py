@@ -49,7 +49,7 @@ def read_whole_parameter_file(filename):
         with open(filename, 'rb') as fd:
             buf = fd.read()
         r = flexbuffers.Loads(buf)
-        return r['params'][0]                   # Glue them all together?
+        return b"".join(r['params'])
     except:
         print('File "%s" is not a flexbuffer with a "params" field' % (filename))
         sys.exit(1)
