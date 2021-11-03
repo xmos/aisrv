@@ -51,7 +51,6 @@ void inference_engine_initialize_with_memory_1(inference_engine_t *ie) {
                                                  nullptr,  0,
                                                  &s1);
     resolver->AddDequantize();
-    resolver->AddAveragePool2D();
     resolver->AddSoftmax();
     resolver->AddMean();
     resolver->AddPad();
