@@ -98,7 +98,7 @@ int main(void)
 
         on tile[0]: {
             flash_t headers[2];
-            flash_server(c_flash, headers, 2, qspi, flash_spec, 1);
+            //flash_server(c_flash, headers, 2, qspi, flash_spec, 1);
         }
 
 #if defined(PSOC_INTEGRATION)
