@@ -55,7 +55,7 @@ void director(chanend to_0, chanend to_1, client interface uart_tx_if uart_tx) {
     uint32_t ocr_classes[66 * 16 / sizeof(uint32_t)];
     uint32_t bbox[4];
     char ocr_outputs[17];
-//    return;
+    return;
     while(1) {
         int status;
         timer tmr; int t0;

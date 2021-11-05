@@ -167,20 +167,20 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
             send_array(c, spec, SPEC_MODEL_TOTAL*sizeof(uint32_t));
             break;
 
-        case CMD_SET_MODEL_ARENA:
-            SetModel(ie, c, ie.model_data_tensor_arena, c_flash, 0);
+        case CMD_SET_MODEL_PRIMARY:
+            SetModel(ie, c, ie.memory_primary, c_flash, 0);
             break;
 
-        case CMD_SET_MODEL_EXT:
-            SetModel(ie, c, ie.model_data_ext, c_flash, 0);
+        case CMD_SET_MODEL_SECONDARY:
+            SetModel(ie, c, ie.memory_secondary, c_flash, 0);
             break;
 
-        case CMD_SET_MODEL_ARENA_FLASH:
-            SetModel(ie, c, ie.model_data_tensor_arena, c_flash, 1);
+        case CMD_SET_MODEL_PRIMARY_FLASH:
+            SetModel(ie, c, ie.memory_primary, c_flash, 1);
             break;
 
-        case CMD_SET_MODEL_EXT_FLASH:
-            SetModel(ie, c, ie.model_data_ext, c_flash, 1);
+        case CMD_SET_MODEL_SECONDARY_FLASH:
+            SetModel(ie, c, ie.memory_secondary, c_flash, 1);
             break;
 
         case CMD_SET_INPUT_TENSOR:
