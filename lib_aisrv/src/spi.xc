@@ -125,7 +125,7 @@ void spi_xcore_ai_slave(in port p_cs, in port p_clk,
                                mem->sensor_tensor_length :
                                mem->output_tensor_length);
             break;
-        case CMD_SET_MODEL_ARENA:
+        case CMD_SET_MODEL_PRIMARY:
             bytes = 4*data_word_in(p_data, p_cs, mem->memory, mem->model_index);
             c_to_buffer <: cmd;
             c_to_buffer <: bytes;

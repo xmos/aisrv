@@ -48,19 +48,21 @@ class xcore_ai_ie(ABC):
     def connect(self):
         pass
 
-    def download_model(self, model_bytes, ext_mem = False, engine_num = 0):
+    def download_model(self, model_bytes, secondary_memory = False, ext_mem = False, engine_num = 0):
         
         assert type(model_bytes) == bytearray
         
         print("Model length (bytes): " + str(len(model_bytes)))
        
 
-        if ext_mem: 
-            print("Downloading model to external memory")
-            cmd = aisrv_cmd.CMD_SET_MODEL_EXT
+        if ext_mem or secondary_memory:
+            if ext_mem:
+                print("@@@ Warning: use of ext_mem is deprecated")
+            print("Downloading model to secondary memory")
+            cmd = aisrv_cmd.CMD_SET_MODEL_SECONDARY
         else:
-            print("Downloading model to first part of tensor memory")
-            cmd = aisrv_cmd.CMD_SET_MODEL_ARENA
+            print("Downloading model to primary memory")
+            cmd = aisrv_cmd.CMD_SET_MODEL_PRIMARY
 
         try:
             # Download model to device
@@ -84,14 +86,16 @@ class xcore_ai_ie(ABC):
         self._model_length = len(model_bytes)
 
     # TODO: combine this with download above
-    def load_model_from_flash(self, ext_mem = False, engine_num = 0):
+    def load_model_from_flash(self, secondary_memory = False, ext_mem = False, engine_num = 0):
 
-        if ext_mem: 
-            print("Loading model to external memory")
-            cmd = aisrv_cmd.CMD_SET_MODEL_EXT_FLASH
+        if ext_mem or secondary_memory:
+            if ext_mem:
+                print("@@@ Warning: use of ext_mem is deprecated")
+            print("Loading model to secondary memory")
+            cmd = aisrv_cmd.CMD_SET_MODEL_SECONDARY_FLASH
         else:
-            print("Loading model to first part of tensor memory")
-            cmd = aisrv_cmd.CMD_SET_MODEL_ARENA_FLASH
+            print("Loading model to primary memory")
+            cmd = aisrv_cmd.CMD_SET_MODEL_PRIMARY_FLASH
 
         try:
             # Download model to device
@@ -161,11 +165,11 @@ class xcore_ai_ie(ABC):
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
 
-    def download_model_file(self, model_file, ext_mem = False, engine_num = 0):
+    def download_model_file(self, model_file, secondary_memory = False, ext_mem = False, engine_num = 0):
     
         with open(model_file, "rb") as input_fd:
             model_data = input_fd.read()
-            self.download_model(bytearray(model_data), ext_mem = ext_mem, engine_num = engine_num)
+            self.download_model(bytearray(model_data), secondary_memory = secondary_memory, ext_mem = ext_mem, engine_num = engine_num)
 
     def bytes_to_ints(self, data_bytes, bpi=1):
 
