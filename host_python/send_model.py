@@ -15,9 +15,9 @@ else:
     print("Only usb or spi supported")
     exit(1)
 
-if sys.argv[2] == 'single':
+if sys.argv[2] == 'split':
     ext_mem = True
-elif sys.argv[2] == 'split':
+elif sys.argv[2] == 'single':
     ext_mem = False
 else:
     print("Only single or split (single or split memory space for arena and model) supported")
