@@ -8,8 +8,8 @@ ie = xcore_ai_ie_usb()
 ie.connect()
 
 try:
-    ie.load_model_from_flash(ext_mem = False, engine_num = 0)
-    ie.load_model_from_flash(ext_mem = False, engine_num = 1)
+    ie.load_model_from_flash(secondary_memory = False, engine_num = 0)
+    ie.load_model_from_flash(secondary_memory = False, engine_num = 1)
 except AISRVError:
     print("Device reported an error : ")
     debug_string = ie.read_debug_log()

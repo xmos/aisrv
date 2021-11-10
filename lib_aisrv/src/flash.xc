@@ -4,19 +4,41 @@
 #include <platform.h>
 #include "flash.h"
 
+// TODO: move this to lib_tflite_micro
+// It is linked with the flash generation library
+
 #define TMP_BUF_SIZE  1024
+
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 2
+#define VERSION_LITTLE_ENDING (VERSION_MAJOR |\
+                               (VERSION_MINOR << 8) |\
+                               ((VERSION_MAJOR^0xff) << 16) |\
+                               ((VERSION_MINOR^0xff) << 24))
+
+static int flash_version_check() {
+    uint32_t tmp[1];
+    fl_readData(0, 4, (tmp, unsigned char[]));
+    return tmp[0] ^ VERSION_LITTLE_ENDING;
+}
 
 void flash_server(chanend c_flash[], flash_t headers[], int n_flash,
                   fl_QSPIPorts &qspi, fl_QuadDeviceSpec flash_spec[],
                   int n_flash_spec) {
     int res;
     if ((res = fl_connectToDevice(qspi, flash_spec, n_flash_spec)) != 0) {
-        printf("ERROR %d\n", res);
+        printstr("fl_connect err");printintln(res);    // TODO; these errors needs to be reported through AI server
+        asm("waiteu");
     }
-    if ((res = fl_dividerOverride(2)) != 0) {   // 25 MHz - sort of safe.
-        printf("ERROR %d\n", res);
+    if ((res = fl_dividerOverride(2)) != 0) {          // 25 MHz - sort of safe.
+        printstr("fl_divider err");printintln(res);
+        asm("waiteu");
     }
-    fl_readData(0, n_flash * sizeof(flash_t), (headers, unsigned char[]) ); // TODO, check?
+    if ((res = flash_version_check()) != 0) {
+        printstr("Flash version diff ");printhexln(res);
+        asm("waiteu");
+    }
+    fl_readData(4, n_flash * sizeof(flash_t), (headers, unsigned char[]) ); // TODO, check?
     while(1) {
         int address, bytes;
         flash_command_t cmd;
