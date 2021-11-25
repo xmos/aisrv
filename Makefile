@@ -9,7 +9,7 @@ init:
 build:
 	( \
 	  cd app_alpr && \
-	  source ${TOOLS_PATH}/SetEnv && \
+	  . ${TOOLS_PATH}/SetEnv && \
 	  xmake \
 	)
 	rm -rf ../Installs/Target/aisrv
