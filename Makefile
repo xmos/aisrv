@@ -8,10 +8,13 @@ init:
 .PHONY: build
 build:
 	( \
-	  cd aisrv/app_alpr && \
+	  cd app_alpr && \
 	  source ${TOOLS_PATH}/SetEnv && \
 	  xmake \
 	)
+	rm -rf ../Installs/Target/aisrv
+	mkdir -p ../Installs/Target/aisrv
+	cp app_alpr/bin/app_alpr.xe ../Installs/Target/aisrv
 
 .PHONY: test
 test:
