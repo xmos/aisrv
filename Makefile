@@ -20,3 +20,8 @@ build:
 .PHONY: test
 test:
 	echo 'Hello'
+
+.PHONY: artifacts
+artifacts:
+	mkdir -p $(OUTPUT)
+	cp  ../Installs/Target/aisrv/* $(OUTPUT)
