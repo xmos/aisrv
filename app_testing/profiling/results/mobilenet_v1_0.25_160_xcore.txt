@@ -1,0 +1,147 @@
+
+filename: 
+'mobilenet_v1_0.25_160_xcore.tflite'
+
+flash: 
+False
+
+loadToExt: 
+False
+
+memoryPrimary: 
+'Int'
+
+memorySecondary: 
+'Ext'
+
+loadType: 
+'split'
+
+alpha: 
+0.25
+
+inputRes: 
+160
+
+multiplications: 
+20805760
+
+time: 
+'25/11/2021 14:03:21'
+
+file size (bytes): 
+453456
+
+execution time (ms): 
+727.30668
+
+layer timings (ms): 
+[[22.45429,
+  111.26903,
+  56.24089,
+  18.33964,
+  21.01398,
+  12.49427,
+  25.23135,
+  38.90499,
+  38.58237,
+  10.36975,
+  4.92487,
+  19.12937,
+  19.30909,
+  33.47313,
+  5.30544,
+  2.34794,
+  16.62533,
+  9.87109,
+  30.60367,
+  9.67637,
+  30.60599,
+  9.93505,
+  30.60587,
+  9.77843,
+  30.60359,
+  9.94069,
+  30.67197,
+  2.84447,
+  1.2035,
+  15.30525,
+  5.03773,
+  29.38337,
+  11.11305,
+  0.00242,
+  0.02003,
+  0.00781,
+  0.03235,
+  3.86787,
+  0.00385,
+  0.0203,
+  0.00561,
+  0.0058,
+  0.14482],
+ ['PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'MEAN',
+  'SHAPE',
+  'STRIDED_SLICE',
+  'PACK',
+  'RESHAPE',
+  'CONV_2D',
+  'SHAPE',
+  'STRIDED_SLICE',
+  'PACK',
+  'RESHAPE',
+  'SOFTMAX']]
+
+operator timings (ms): 
+[['CONV_2D',
+  'MEAN',
+  'PACK',
+  'PAD',
+  'RESHAPE',
+  'SHAPE',
+  'SOFTMAX',
+  'STRIDED_SLICE',
+  "b'XC_conv2d_v2'"],
+ [3.86787,
+  11.11305,
+  0.013420000000000001,
+  61.98793,
+  0.038149999999999996,
+  0.0062699999999999995,
+  0.14482,
+  0.04033,
+  650.0948400000001]]
+
+_id: 
+ObjectId('619f97a91bd1ccfd6f262d30')
