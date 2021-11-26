@@ -1,0 +1,147 @@
+
+filename: 
+'mobilenet_v1_0.25_192_xcore.tflite'
+
+flash: 
+False
+
+loadToExt: 
+False
+
+memoryPrimary: 
+'Ext'
+
+memorySecondary: 
+'None'
+
+loadType: 
+'single'
+
+alpha: 
+0.25
+
+inputRes: 
+192
+
+multiplications: 
+29959168
+
+time: 
+'25/11/2021 14:06:32'
+
+file size (bytes): 
+453456
+
+execution time (ms): 
+1987.07759
+
+layer timings (ms): 
+[[33.10378,
+  302.84117,
+  283.48349,
+  138.52775,
+  31.83282,
+  43.54671,
+  68.20463,
+  144.37717,
+  84.76153,
+  15.98592,
+  22.95685,
+  39.47287,
+  75.49081,
+  63.94453,
+  7.9904,
+  12.29325,
+  31.88515,
+  35.58311,
+  54.61521,
+  37.22139,
+  55.09823,
+  35.23883,
+  55.36981,
+  38.67243,
+  55.09049,
+  35.48221,
+  55.49863,
+  4.18424,
+  5.89583,
+  27.61835,
+  18.25857,
+  50.80537,
+  17.46528,
+  0.007,
+  0.0265,
+  0.01644,
+  0.0436,
+  3.98096,
+  0.00716,
+  0.02726,
+  0.01268,
+  0.01112,
+  0.14806],
+ ['PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'PAD',
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  "b'XC_conv2d_v2'",
+  'MEAN',
+  'SHAPE',
+  'STRIDED_SLICE',
+  'PACK',
+  'RESHAPE',
+  'CONV_2D',
+  'SHAPE',
+  'STRIDED_SLICE',
+  'PACK',
+  'RESHAPE',
+  'SOFTMAX']]
+
+operator timings (ms): 
+[['CONV_2D',
+  'MEAN',
+  'PACK',
+  'PAD',
+  'RESHAPE',
+  'SHAPE',
+  'SOFTMAX',
+  'STRIDED_SLICE',
+  "b'XC_conv2d_v2'"],
+ [3.98096,
+  17.46528,
+  0.02912,
+  93.09715999999999,
+  0.05472,
+  0.014159999999999999,
+  0.14806,
+  0.05376,
+  1872.2343699999997]]
+
+_id: 
+ObjectId('619f98681bd1ccfd6f262d32')

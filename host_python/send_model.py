@@ -16,9 +16,9 @@ else:
     exit(1)
 
 if sys.argv[2] == 'split':
-    ext_mem = True
+    secondary = True
 elif sys.argv[2] == 'single':
-    ext_mem = False
+    secondary = False
 else:
     print("Only single or split (single or split memory space for arena and model) supported")
     exit(1)
@@ -28,7 +28,7 @@ ie.connect()
 engine_num = 0
 for model in sys.argv[3:]:
     try:
-        ie.download_model_file(model, ext_mem = ext_mem, engine_num = engine_num)
+        ie.download_model_file(model, secondary_memory = secondary, engine_num = engine_num)
     except AISRVError:
         print("Device reported an error : ")
         debug_string = ie.read_debug_log()

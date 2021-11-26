@@ -35,6 +35,8 @@ class CommandError(AISRVError):
 
 class xcore_ai_ie(ABC):
     
+    currentModel = None
+
     def __init__(self):
         self._output_length = None
         self._input_length = None
@@ -48,27 +50,34 @@ class xcore_ai_ie(ABC):
     def connect(self):
         pass
 
-    def download_model(self, model_bytes, secondary_memory = False, ext_mem = False, engine_num = 0):
+    def download_model(self, model_bytes, secondary_memory = False, flash = False, engine_num = 0):
         
-        assert type(model_bytes) == bytearray
-        
-        print("Model length (bytes): " + str(len(model_bytes)))
-       
+        if not flash:
+            assert type(model_bytes) == bytearray
+            
+            print("Model length (bytes): " + str(len(model_bytes)))
+           
 
-        if ext_mem or secondary_memory:
-            if ext_mem:
-                print("@@@ Warning: use of ext_mem is deprecated")
-            print("Downloading model to secondary memory")
-            cmd = aisrv_cmd.CMD_SET_MODEL_SECONDARY
-        else:
-            print("Downloading model to primary memory")
-            cmd = aisrv_cmd.CMD_SET_MODEL_PRIMARY
+            if secondary_memory:
+                print("Downloading model to secondary memory")
+                cmd = aisrv_cmd.CMD_SET_MODEL_SECONDARY
+            else:
+                print("Downloading model to primary memory")
+                cmd = aisrv_cmd.CMD_SET_MODEL_PRIMARY
+
+        elif flash:
+            if secondary_memory:
+                print("Loading model to secondary memory")
+                cmd = aisrv_cmd.CMD_SET_MODEL_SECONDARY_FLASH
+            else:
+                print("Loading model to primary memory")
+                cmd = aisrv_cmd.CMD_SET_MODEL_PRIMARY_FLASH
+
 
         try:
             # Download model to device
             self._download_data(cmd, model_bytes, engine_num = engine_num)
         except IOError:
-            #print("Error from device during model download (likely issue with model)")
             self._clear_error()
             raise IOError
 
@@ -77,46 +86,20 @@ class xcore_ai_ie(ABC):
             self._input_length, self._output_length, self._timings_length = self._read_spec(engine_num = engine_num)
         
         except IOError:
-            #print("Error from device during spec upload (likely issue with model)")
             self._clear_error()
             raise IOError
        
         print("input_size: " + str(self._input_length))
         print("output_size: " + str(self._output_length))
-        self._model_length = len(model_bytes)
+        if not flash:
+            self._model_length = len(model_bytes)
 
-    # TODO: combine this with download above
-    def load_model_from_flash(self, secondary_memory = False, ext_mem = False, engine_num = 0):
+    def download_model_file(self, model_file, secondary_memory = False, engine_num = 0):
+        currentModel = model_file
+        with open(model_file, "rb") as input_fd:
+            model_data = input_fd.read()
+            self.download_model(bytearray(model_data), secondary_memory = secondary_memory, engine_num = engine_num)
 
-        if ext_mem or secondary_memory:
-            if ext_mem:
-                print("@@@ Warning: use of ext_mem is deprecated")
-            print("Loading model to secondary memory")
-            cmd = aisrv_cmd.CMD_SET_MODEL_SECONDARY_FLASH
-        else:
-            print("Loading model to primary memory")
-            cmd = aisrv_cmd.CMD_SET_MODEL_PRIMARY_FLASH
-
-        try:
-            # Download model to device
-            self._download_data(cmd, bytes([]), engine_num = engine_num)
-        except IOError:
-            #print("Error from device during model download (likely issue with model)")
-            self._clear_error()
-            raise IOError
-
-        try:
-            # Update lengths
-            self._input_length, self._output_length, self._timings_length = self._read_spec(engine_num = engine_num)
-        
-        except IOError:
-            #print("Error from device during spec upload (likely issue with model)")
-            self._clear_error()
-            raise IOError
-       
-        print("input_size: " + str(self._input_length))
-        print("output_size: " + str(self._output_length))
-        
     @property
     def input_length(self):
 
@@ -164,12 +147,6 @@ class xcore_ai_ie(ABC):
         times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length*4, engine_num = engine_num)
         times_ints = self.bytes_to_ints(times_bytes, bpi=4)
         return times_ints
-
-    def download_model_file(self, model_file, secondary_memory = False, ext_mem = False, engine_num = 0):
-    
-        with open(model_file, "rb") as input_fd:
-            model_data = input_fd.read()
-            self.download_model(bytearray(model_data), secondary_memory = secondary_memory, ext_mem = ext_mem, engine_num = engine_num)
 
     def bytes_to_ints(self, data_bytes, bpi=1):
 

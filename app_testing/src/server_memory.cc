@@ -23,12 +23,17 @@ void inference_engine_initialize_with_memory_0(inference_engine_t *ie) {
     memset(data_ext, 0, TENSOR_ARENA_BYTES_0);
     auto *resolver = inference_engine_initialize(ie,
                                                  data_ext, TENSOR_ARENA_BYTES_0,
-                                                 nullptr,  0,
+                                                 nullptr, 0,
                                                  &s0);
     resolver->AddDequantize();
     resolver->AddSoftmax();
     resolver->AddMean();
     resolver->AddPad();
+    resolver->AddPack();
+    resolver->AddMul();
+    resolver->AddSub();
+    resolver->AddShape();
+    resolver->AddStridedSlice();
     resolver->AddReshape();
     resolver->AddConcatenation();
     resolver->AddAdd();
