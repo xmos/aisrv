@@ -10,12 +10,12 @@ init:
 build:
 	( \
 	  cd app_regression_si && \
-	  . ${TOOLS_PATH}/SetEnv.sh && \
+	  . ${TOOLS_PATH}/SetEnv && \
 	  xmake \
 	)
 	( \
 	  cd app_regression_pi && \
-	  . ${TOOLS_PATH}/SetEnv.sh && \
+	  . ${TOOLS_PATH}/SetEnv && \
 	  xmake \
 	)
 	rm -rf ../Installs/Target/aisrv
