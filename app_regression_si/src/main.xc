@@ -59,10 +59,6 @@ on tile[1]: clock clkblk_s = XS1_CLKBLK_4;
     0x01,                   /* QSPI_WIP_BIT_MASK */ \
 }
 
-<<<<<<< HEAD
-fl_QuadDeviceSpec flash_spec[] = {
-    FL_QUADDEVICE_MACRONIX_MX25R6435FM2IH0
-=======
 #define FL_QUADDEVICE_MACRONIX_MX25R3235FM1IH0 \
 { \
     15,                     /* MX25R3235FM1IH0 */ \
@@ -93,7 +89,6 @@ fl_QuadDeviceSpec flash_spec[] = {
 fl_QuadDeviceSpec flash_spec[] = {
     FL_QUADDEVICE_MACRONIX_MX25R6435FM2IH0,
     FL_QUADDEVICE_MACRONIX_MX25R3235FM1IH0
->>>>>>> afc5772e6802e18094824bd98e208b04c294fffa
 };
 
 on tile[0]: fl_QSPIPorts qspi = {
@@ -131,11 +126,7 @@ int main(void)
 
         on tile[0]: {
             flash_t headers[2];
-<<<<<<< HEAD
-            //flash_server(c_flash, headers, 2, qspi, flash_spec, 1);
-=======
             flash_server(c_flash, headers, 2, qspi, flash_spec, sizeof(flash_spec) / sizeof(flash_spec[0]));
->>>>>>> afc5772e6802e18094824bd98e208b04c294fffa
         }
 
 #if defined(PSOC_INTEGRATION)
