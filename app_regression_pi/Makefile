@@ -1,10 +1,6 @@
 TARGET = XCORE-AI-EXPLORER-700.xn
 
-<<<<<<< HEAD
 APP_NAME = app_regression_pi
-=======
-APP_NAME = app_regression_si
->>>>>>> afc5772e6802e18094824bd98e208b04c294fffa
 
 APP_SHARED_FLAGS  = -report \
 			-fcmdline-buffer-bytes=32 \

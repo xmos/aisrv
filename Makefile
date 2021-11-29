@@ -8,15 +8,15 @@ init:
 
 .PHONY: build
 build:
-	( \
-	  cd app_regression_si && \
-	  . ${TOOLS_PATH}/SetEnv && \
-	  xmake \
+	(\
+	cd app_regression_si && \
+	. ${TOOLS_PATH}/SetEnv && \
+	xmake \
 	)
-	( \
-	  cd app_regression_pi && \
-	  . ${TOOLS_PATH}/SetEnv && \
-	  xmake \
+	(\
+	cd app_regression_pi && \
+	. ${TOOLS_PATH}/SetEnv && \
+	xmake \
 	)
 	rm -rf ../Installs/Target/aisrv
 	mkdir -p ../Installs/Target/aisrv
