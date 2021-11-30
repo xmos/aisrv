@@ -127,6 +127,8 @@ for arg in sys.argv[2:]:
             pyplot.show()
 
 
-        times = ie.read_times()
+        times = np.asarray(ie.read_times())
+        times_sum = sum(times)/100000
+        times = times / 100000
         
-        print("Time per layer: "+ str(times))
+        print("milliseconds taken "  + str(times_sum) + " per layer timings:\n"+ str(times))
