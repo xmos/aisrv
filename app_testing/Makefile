@@ -19,7 +19,7 @@ USED_MODULES = lib_aisrv lib_xud lib_tflite_micro
 
 XCC_FLAGS = $(APP_SHARED_FLAGS) -DI2C_INTEGRATION=1 -DUSB_TILE=tile[0]
 XCC_CPP_FLAGS = $(APP_SHARED_FLAGS) -std=c++11 -DI2C_INTEGRATION=1 
-XCC_ASM_FLAGS = $(APP_SHARED_FLAGS) -DUSE_DDR_FIX=1
+XCC_ASM_FLAGS = $(APP_SHARED_FLAGS)
 
 #=============================================================================
 # The following part of the Makefile includes the common build infrastructure
