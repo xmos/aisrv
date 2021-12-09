@@ -44,7 +44,8 @@ Then::
 And in another window::
 
   cd host_python
-  python3 send_model.py usb ext ../model/model_quant.tflite
+  ./flatc --python schema.fbs
+  python3 send_model.py usb single ../model/model_quant.tflite
   python3 send_picture_float.py usb ostrich.png 
   python3 send_picture_float.py usb goldfish.png 
 

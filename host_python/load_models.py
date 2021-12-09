@@ -10,6 +10,8 @@ ie.connect()
 try:
     ie.download_model(bytes([]), secondary_memory = False, flash = True, engine_num = 0)
     #ie.load_model_from_flash(ext_mem = False, engine_num = 1)
+    if os.path.exists("current_model.txt"):
+        os.remove("current_model.txt")
 except AISRVError:
     print("Device reported an error : ")
     debug_string = ie.read_debug_log()
