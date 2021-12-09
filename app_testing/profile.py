@@ -1,10 +1,20 @@
 #TODO:
 #Cant set tools env
 
-import yaml, time, os, signal, runpy, pymongo
+import time, yaml, os, signal, runpy, pymongo, sys
 import numpy as np
 from pprint import pprint
 from datetime import datetime
+
+if (sys.argv[1] == 'true') or (sys.argv[1] == 'false'):
+    pass 
+else:
+    print('Option 1 (Use Database) must be true or false')
+    quit()
+
+use_db = sys.argv[1]
+
+from tflite.Model import Model
 
 def configToDict():
     with open(r'./profiling/config.yaml') as file:
@@ -52,6 +62,7 @@ def build():
 
 def flashModel(flashPath):
     import os
+    print('Writing Model to Flash')
     os.system("xflash --boot-partition-size 524288 --target-file src/XCORE-AI-EXPLORER-700.xn --data ./profiling/models/{}out ./bin/app_testing.xe".format(flashPath[:-6]))
 
 def run():
@@ -180,8 +191,6 @@ def sendGoldfish():
     return(times)
 
 def modelToOpList(model_path):
-  import flatc.flatbuffers
-  from flatc.tflite.Model import Model
 
   # Update the path to your model
   model_path = model_path
@@ -199,7 +208,7 @@ def modelToOpList(model_path):
     else:
       opsList.append(opcode.BuiltinCode())
 
-  f = open('./flatc/schema.fbs', "r")
+  f = open('./profiling/schema.fbs', "r")
   lines = f.readlines()[108:238]
   for line in lines:
       if '/' in line:
@@ -237,7 +246,6 @@ def writeResults(results, modelDict, collection):
 
     operatorTimings = [list(opsUnique), list(uniqueTimes)]
 
-
     # Write to database
     time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     modelDict['time'] = time
@@ -246,17 +254,18 @@ def writeResults(results, modelDict, collection):
     modelDict['layer timings (ms)'] = layerTimings
     modelDict['operator timings (ms)'] = operatorTimings
     
-    try:
-        collection.insert_one(modelDict)
-    except Exception as e: 
-        print(e)
+    if use_db == 'true':
+        try:
+            collection.insert_one(modelDict)
+        except Exception as e: 
+            print(e)
 
     with open("./profiling/results/"+modelDict['filename'][:-7]+'.txt',"w") as out:
         for attr in modelDict:
             print('\n'+attr +': ', file=out)
             pprint(modelDict[attr], stream=out)
 
-def profileModels(dict, db):
+def profileModels(dict):
     for model in dict:
         print("\n#################")
         print("Profiling model: {}".format(config[model]['filename']))
@@ -278,16 +287,20 @@ def profileModels(dict, db):
         elif config[model]['flash']:
             loadModel(config[model]['loadToExt'])
 
-        writeResults(sendGoldfish(), config[model], db[model])
+        if use_db =='true':
+            writeResults(sendGoldfish(), config[model], db[model])
+        else:
+            writeResults(sendGoldfish(), config[model], None)
 
 # Read Config File
 config = configToDict()
 
 # Connect to database
-db = setupDB()
+if use_db == 'true':
+    db = setupDB()
 
 # Profile models in config, and write results to database
-profileModels(config, db)
+profileModels(config)
 
 
 
