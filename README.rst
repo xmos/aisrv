@@ -64,7 +64,7 @@ Install required packages from aisrv::
   
 Adjust ``profiling/config.yaml`` to add the model configuration you want to test.
 For each model added you must add the .tflite file to the models directory.
-If you want to flash a model, a .out file of the same name must be added to the models directory.
+If you want to flash a model, a .out file of the same name must be added to the models directory, along with a .tflite model of the same name produced when making the .out file. (This model then includes flash load operations)
 
 Run the profiling.py script (option 1 specifies whether results will be saved to a mongodb database)::
   
