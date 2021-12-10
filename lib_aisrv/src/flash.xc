@@ -19,7 +19,6 @@
 static int flash_version_check() {
     uint32_t tmp[1];
     fl_readData(0, 4, (tmp, unsigned char[]));
-    printf("%x\n", tmp[0]);
     return tmp[0] ^ VERSION_LITTLE_ENDING;
 }
 
