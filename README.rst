@@ -44,7 +44,7 @@ Then::
 And in another window::
 
   cd host_python
-  ./flatc --python schema.fbs
+  pip install -e xcore_ai_ie
   python3 send_model.py usb single ../model/model_quant.tflite
   python3 send_picture_float.py usb ostrich.png 
   python3 send_picture_float.py usb goldfish.png 
@@ -55,22 +55,13 @@ The profiling app will allow you to automate testing a list of models in a speci
 
 First setting up a virtual environment is reccomended
 
-You must compile ``schema.fbs`` with flatc::
-  
-  ./flatc --python ./profiling/schema.fbs
-  
-Install required packages from aisrv::
-
-  pip install -r requirements.txt
   
 Adjust ``profiling/config.yaml`` to add the model configuration you want to test.
 For each model added you must add the .tflite file to the models directory.
 If you want to flash a model, a .out file of the same name must be added to the models directory, along with a .tflite model of the same name produced when making the .out file. (This model then includes flash load operations)
 
-Run the profiling.py script (option 1 specifies whether results will be saved to a mongodb database)::
-  
-  python3 profile.py <true/false>
-
+Run the profiling script and setup environment::
+  xmake profile
 
 Development
 -----------
