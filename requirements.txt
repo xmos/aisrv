@@ -8,3 +8,6 @@ pyparsing==2.4.7
 python-dateutil==2.8.1
 pyusb==1.1.0
 six==1.15.0
+pyyaml
+pymongo[srv]
+flatbuffers

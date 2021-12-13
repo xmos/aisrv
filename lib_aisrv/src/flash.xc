@@ -30,7 +30,7 @@ void flash_server(chanend c_flash[], flash_t headers[], int n_flash,
         printstr("fl_connect err");printintln(res);    // TODO; these errors needs to be reported through AI server
         asm("waiteu");
     }
-    if ((res = fl_dividerOverride(2)) != 0) {          // 25 MHz - sort of safe.
+    if ((res = fl_dividerOverride(3)) != 0) {          // 25 MHz - sort of safe.
         printstr("fl_divider err");printintln(res);
         asm("waiteu");
     }

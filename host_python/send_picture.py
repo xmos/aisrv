@@ -7,15 +7,57 @@ import time
 import struct
 import ctypes
 from math import sqrt
+from pprint import pprint
 
 import numpy as np
 from matplotlib import pyplot
 
 import usb.core
 import usb.util
+import numpy as np
 
 from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi
 
+def modelToOpList(model_path):
+
+  from tflite.Model import Model
+  # Update the path to your model
+  model_path = model_path
+  with open(model_path, "rb") as model_file:
+    buffer = model_file.read()
+
+  # Get Model
+  model = Model.GetRootAs(buffer)
+
+  opsList = []
+  for y in range(0, model.Subgraphs(0).OperatorsLength()):
+    opcode = model.OperatorCodes(model.Subgraphs(0).Operators(y).OpcodeIndex())
+    if opcode.BuiltinCode() == 32:
+      opsList.append(str(opcode.CustomCode()).strip("b'"))
+    else:
+      opsList.append(opcode.BuiltinCode())
+
+  f = open('./schema.fbs', "r")
+  lines = f.readlines()[108:238]
+  for line in lines:
+      if '/' in line:
+        lines.remove(line)
+  for line in lines:
+      if '/' in line:
+        lines.remove(line)
+  for j in range(len(opsList)):
+    for line in lines:
+        split = line.split(' = ')
+        if str(opsList[j]) == split[1].strip(',').strip('\n').strip(','):
+            opsList[j] = split[0].strip()
+            break
+
+  return opsList
+
+if os.path.exists("current_model.txt"):
+    with open('current_model.txt') as f:
+        modelP = f.read()
+    opList = np.array(modelToOpList(modelP))
 
 DRAW = False
 
@@ -127,6 +169,15 @@ for arg in sys.argv[2:]:
             pyplot.show()
 
 
-        times = ie.read_times()
+        times = np.asarray(ie.read_times())
+        times_sum = sum(times)/100000
+        times = times / 100000
+
         
-        print("Time per layer: "+ str(times))
+        print("milliseconds taken "  + str(times_sum) + "\n\nper layer timings:\n")
+
+        if os.path.exists("current_model.txt"):
+            for op, time in zip(opList, times):
+                print(op+': '+ str(time))
+        else:
+            print(str(times))
