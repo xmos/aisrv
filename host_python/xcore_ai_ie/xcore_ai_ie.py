@@ -5,7 +5,7 @@ import sys
 import struct
 import array
 
-from xcore_ai_ie import aisrv_cmd
+import aisrv_cmd
 
 XCORE_IE_MAX_BLOCK_SIZE = 512 
 

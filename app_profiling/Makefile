@@ -28,3 +28,12 @@ XCC_ASM_FLAGS = $(APP_SHARED_FLAGS)
 XMOS_MAKE_PATH ?= ../..
 include $(XMOS_MAKE_PATH)/xcommon/module_xcommon/build/Makefile.common
 
+.PHONY: profile
+profile:
+	python3 -m pip install --upgrade pip
+	pip3 install -r ../requirements.txt
+	pip3 install -e ../host_python/xcore_ai_ie
+	python3 profile.py false
+
+
+

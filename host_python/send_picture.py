@@ -33,7 +33,7 @@ def modelToOpList(model_path):
   for y in range(0, model.Subgraphs(0).OperatorsLength()):
     opcode = model.OperatorCodes(model.Subgraphs(0).Operators(y).OpcodeIndex())
     if opcode.BuiltinCode() == 32:
-      opsList.append(str(opcode.CustomCode()))
+      opsList.append(str(opcode.CustomCode()).strip("b'"))
     else:
       opsList.append(opcode.BuiltinCode())
 
