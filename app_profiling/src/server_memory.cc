@@ -22,8 +22,8 @@ void inference_engine_initialize_with_memory_0(inference_engine_t *ie) {
     static struct tflite_micro_objects s0;
     memset(data_ext, 0, TENSOR_ARENA_BYTES_0);
     auto *resolver = inference_engine_initialize(ie,
+                                                 data_int, TENSOR_ARENA_BYTES_1,
                                                  data_ext, TENSOR_ARENA_BYTES_0,
-                                                 nullptr, 0,
                                                  &s0);
     resolver->AddDequantize();
     resolver->AddSoftmax();

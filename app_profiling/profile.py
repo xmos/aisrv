@@ -5,6 +5,9 @@ import time, yaml, os, signal, runpy, pymongo, sys
 import numpy as np
 from pprint import pprint
 from datetime import datetime
+from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi
+from tflite.Model import Model
+
 
 if (sys.argv[1] == 'true') or (sys.argv[1] == 'false'):
     pass 
@@ -13,8 +16,6 @@ else:
     quit()
 
 use_db = sys.argv[1]
-
-from tflite.Model import Model
 
 def configToDict():
     with open(r'./profiling/config.yaml') as file:
@@ -91,8 +92,6 @@ def sendGoldfish():
 
     import usb.core
     import usb.util
-
-    from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi
 
 
     DRAW = False
@@ -204,11 +203,11 @@ def modelToOpList(model_path):
   for y in range(0, model.Subgraphs(0).OperatorsLength()):
     opcode = model.OperatorCodes(model.Subgraphs(0).Operators(y).OpcodeIndex())
     if opcode.BuiltinCode() == 32:
-      opsList.append(str(opcode.CustomCode()))
+      opsList.append(str(opcode.CustomCode()).strip("b'"))
     else:
       opsList.append(opcode.BuiltinCode())
 
-  f = open('./profiling/schema.fbs', "r")
+  f = open('../host_python/schema.fbs', "r")
   lines = f.readlines()[108:238]
   for line in lines:
       if '/' in line:
@@ -291,6 +290,9 @@ def profileModels(dict):
             writeResults(sendGoldfish(), config[model], db[model])
         else:
             writeResults(sendGoldfish(), config[model], None)
+
+    if os.path.exists("current_model.txt"):
+        os.remove("current_model.txt")
 
 # Read Config File
 config = configToDict()
