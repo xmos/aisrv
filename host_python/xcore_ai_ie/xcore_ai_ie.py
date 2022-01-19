@@ -5,7 +5,8 @@ import sys
 import struct
 import array
 
-from xcore_ai_ie import aisrv_cmd
+import aisrv_cmd
+from tflite.Model import Model
 
 XCORE_IE_MAX_BLOCK_SIZE = 512 
 
@@ -44,6 +45,9 @@ class xcore_ai_ie(ABC):
         self._timings_length = None
         self._max_block_size = XCORE_IE_MAX_BLOCK_SIZE # TODO read from (usb) device?
         self._spec_length = 20 # TODO fix magic number
+
+        self.model_path = None
+        self.opList = []
         super().__init__()
    
     @abstractmethod
@@ -258,8 +262,36 @@ class xcore_ai_ie(ABC):
         r = bytearray(debug_string).decode('utf8', errors='replace')
         return r
 
+    def modelToOpList(self):
 
+        # Update the path to your model
+        with open(self.model_path, "rb") as model_file:
+            buffer = model_file.read()
 
+        # Get Model
+        model = Model.GetRootAs(buffer)
+        self.opList = []
+        for y in range(0, model.Subgraphs(0).OperatorsLength()):
+            opcode = model.OperatorCodes(model.Subgraphs(0).Operators(y).OpcodeIndex())
+            if opcode.BuiltinCode() == 32:
+                self.opList.append(str(opcode.CustomCode()).strip("b'"))
+            else:
+                self.opList.append(opcode.BuiltinCode())
+
+        f = open('../host_python/schema.fbs', "r")
+        lines = f.readlines()[108:238]
+        for line in lines:
+          if '/' in line:
+            lines.remove(line)
+        for line in lines:
+          if '/' in line:
+            lines.remove(line)
+        for j in range(len(self.opList)):
+            for line in lines:
+                split = line.split(' = ')
+                if str(self.opList[j]) == split[1].strip(',').strip('\n').strip(','):
+                    self.opList[j] = split[0].strip()
+                    break
 
 
 class xcore_ai_ie_spi(xcore_ai_ie):

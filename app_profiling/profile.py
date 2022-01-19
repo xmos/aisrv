@@ -32,57 +32,32 @@ def setupDB():
         print(e)
     return db
 
-def setupMemoryConfig(primary="Int", secondary="Ext"):
-    with open('./src/server_memory.cc', 'r') as file:
-        data = file.readlines()
-
-    # now change the 2nd line, note that you have to add a newline
-    if(primary == "Int"):
-        data[24] = '                                                 data_int, TENSOR_ARENA_BYTES_1,\n'
-    elif(primary == "Ext"):
-        data[24] = '                                                 data_ext, TENSOR_ARENA_BYTES_0,\n'
-    elif(primary == "None"):
-        data[24] = '                                                 nullptr, 0,\n'
-
-    if(secondary == "Int"):
-        data[25] = '                                                 data_int, TENSOR_ARENA_BYTES_1,\n'
-    elif(secondary == "Ext"):
-        data[25] = '                                                 data_ext, TENSOR_ARENA_BYTES_0,\n'
-    elif(secondary == "None"):
-        data[25] = '                                                 nullptr, 0,\n'
-
-    # and write everything back
-    with open('./src/server_memory.cc', 'w') as file:
-        file.writelines( data )
-
-    file.close()
-
 def build():
-    import os
-    os.system("xmake")
+    os.system("xmake si")
+    os.system("xmake pi")
 
-def flashModel(flashPath):
-    import os
+def flashModel(flashPath, primary="Int"):
     print('Writing Model to Flash')
-    os.system("xflash --boot-partition-size 524288 --target-file src/XCORE-AI-EXPLORER-700.xn --data ./profiling/models/{}out ./bin/app_testing.xe".format(flashPath[:-6]))
+    if primary == "Int":
+        os.system("xflash --boot-partition-size 524288 --target-file src/XCORE-AI-EXPLORER-700.xn --data ./profiling/models/{}out ./bin/app_pi.xe".format(flashPath[:-6]))
+    elif primary == "Ext":
+        os.system("xflash --boot-partition-size 524288 --target-file src/XCORE-AI-EXPLORER-700.xn --data ./profiling/models/{}out ./bin/app_si.xe".format(flashPath[:-6]))
 
-def run():
+def run(primary="Int"):
     import subprocess
-    process = subprocess.Popen(["xrun", "./bin/app_testing.xe"])
+    if primary == "Int":
+        process = subprocess.Popen(["xrun", "./bin/app_pi.xe"])
+    elif primary == "Ext":
+        process = subprocess.Popen(["xrun", "./bin/app_si.xe"])
     return process
 
 def loadModel(extMem):
-    import os 
     os.system("python3 ../host_python/load_models.py")
 
 def sendModel(model, mem_space):
-    import os 
     os.system("python3 ../host_python/send_model.py usb {} ./profiling/models/{}".format(mem_space, model))
 
 def sendGoldfish():
-    import sys
-    import os
-    import time
     import struct
     import ctypes
     from math import sqrt
@@ -196,8 +171,10 @@ def writeResults(results, modelDict, collection):
     times = results / 100000
     old_times_sum = 1000000000
 
-    # Link Operator List to Times List and add up for each operator
-    opList = np.array(modelToOpList('./profiling/models/'+modelDict['filename']))
+    ie = xcore_ai_ie_usb()
+    ie.model_path = './profiling/models/'+modelDict['filename']
+    ie.modelToOpList()
+    opList = np.array(ie.opList)
     layerTimings = [list(times), list(opList)]
     
     opsUnique = np.unique(opList)
@@ -229,35 +206,29 @@ def writeResults(results, modelDict, collection):
             print('\n'+attr +': ', file=out)
             pprint(modelDict[attr], stream=out)
 
-def profileModels(dict):
-    for model in dict:
+def profileModels(configDict):
+    build()
+    for model in configDict:
         print("\n#################")
-        print("Profiling model: {}".format(config[model]['filename']))
+        print("Profiling model: {}".format(configDict[model]['filename']))
         print("#################\n")
 
-
-        setupMemoryConfig(config[model]['memoryPrimary'], config[model]['memorySecondary'])
-        build()
-
-        if config[model]['flash']:
-            flashModel(config[model]['filename'])
+        if configDict[model]['flash']:
+            flashModel(configDict[model]['filename'], configDict[model]['memoryPrimary'])
 
         process = run()
         time.sleep(10) #Wait for device to initialise
 
         #Either send model over usb, or load from flash
-        if not config[model]['flash']:
-            sendModel(config[model]['filename'], config[model]['loadType'])
-        elif config[model]['flash']:
-            loadModel(config[model]['loadToExt'])
+        if not configDict[model]['flash']:
+            sendModel(configDict[model]['filename'], config[model]['loadType'])
+        elif configDict[model]['flash']:
+            loadModel(configDict[model]['loadToExt'])
 
         if use_db =='true':
-            writeResults(sendGoldfish(), config[model], db[model])
+            writeResults(sendGoldfish(), configDict[model], db[model])
         else:
-            writeResults(sendGoldfish(), config[model], None)
-
-    if os.path.exists("current_model.txt"):
-        os.remove("current_model.txt")
+            writeResults(sendGoldfish(), configDict[model], None)
 
 # Read Config File
 config = configToDict()
