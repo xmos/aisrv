@@ -35,7 +35,6 @@ void flash_server(chanend c_flash[], flash_t headers[], int n_flash,
         asm("waiteu");
     }
     if ((res = flash_version_check()) != 0) {
-        printstr("Flash version diff ");printhexln(res);
         asm("waiteu");
     }
     fl_readData(4, n_flash * sizeof(flash_t), (headers, unsigned char[]) ); // TODO, check?

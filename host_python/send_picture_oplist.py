@@ -6,6 +6,7 @@ import os
 import time
 import struct
 import ctypes
+import pprint
 from math import sqrt
 
 import numpy as np
@@ -64,6 +65,9 @@ else:
 
 ie.connect()
 
+ie.model_path = sys.argv[2]
+ie.modelToOpList()
+
 input_length = ie.input_length
 print("READING INPUT TENSOR LENGTH FROM DEVICE: " + str(input_length))
 
@@ -79,7 +83,7 @@ print("Inferred input shape: " + str(INPUT_SHAPE))
 raw_img = None
 
 # Send image to device
-for arg in sys.argv[2:]:
+for arg in sys.argv[3:]:
         print("SETTING INPUT TENSOR VIA " + sys.argv[1] + "\n")
         try:
             if not arg.endswith('.raw'):
@@ -132,4 +136,7 @@ for arg in sys.argv[2:]:
         times_sum = sum(times)/100000
         times = times / 100000
 
-        print("milliseconds taken "  + str(times_sum) + " per layer timings:\n"+ str(times))
+        layerTimings = [list(times), list(np.array(ie.opList))]
+        print("milliseconds taken "  + str(times_sum) + " per layer timings:\n")
+        for i in range(0,len(layerTimings[0])):
+            print(layerTimings[1][i]+':',layerTimings[0][i], 'ms')

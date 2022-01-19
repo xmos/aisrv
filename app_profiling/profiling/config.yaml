@@ -4,9 +4,9 @@ model1:
   filename: "mobilenet_v1_0.25_160_xcore.tflite"
   flash: False #Will put model+paramters in flash, expects filename.out in same dir as model
   loadToExt: False #If Flash, Whether to load Model to secondary memory
-  memoryPrimary: "Int" #[Int, Ext, None]
-  memorySecondary: "Ext" #[Int, Ext, None]
-  loadType: "split" #[single, split]
+  memoryPrimary: "Ext" #[Int, Ext, None]
+  memorySecondary: "Int" #[Int, Ext, None]
+  loadType: "single" #[single, split]
   alpha: 0.25
   inputRes: 160
   multiplications: 20805760  
