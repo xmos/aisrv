@@ -1,0 +1,47 @@
+#List models to be run and their parameters
+
+model1:
+  filename: "mobilenet_v1_0.25_160_xcore.tflite"
+  flash: False #Will put model+paramters in flash, expects filename.out in same dir as model
+  loadToExt: False #If Flash, Whether to load Model to secondary memory
+  memoryPrimary: "Int" #[Int, Ext, None]
+  memorySecondary: "Ext" #[Int, Ext, None]
+  loadType: "split" #[single, split]
+  alpha: 0.25
+  inputRes: 160
+  multiplications: 20805760  
+model2:
+  filename: "mobilenet_v1_0.25_128_xcore.tflite"
+  flash: True #Will put model+paramters in flash, expects filename.out in same dir as model
+  loadToExt: False #If Flash, Whether to load Model to secondary memory
+  memoryPrimary: "Int" #[Int, Ext, None]
+  memorySecondary: "Ext" #[Int, Ext, None]
+  loadType: "split" #[single, split]
+  alpha: 0.25
+  inputRes: 128
+  multiplications: 13316608
+model3:
+  filename: "mobilenet_v1_0.25_192_xcore.tflite"
+  flash: False #Will put model+paramters in flash, expects filename.out in same dir as model
+  loadToExt: False #If Flash, Whether to load Model to secondary memory
+  memoryPrimary: "Ext" #[Int, Ext, None]
+  memorySecondary: "None" #[Int, Ext, None]
+  loadType: "single" #[single, split]
+  alpha: 0.25
+  inputRes: 192
+  multiplications: 29959168
+model4:
+  filename: "efficientnet_b0_xcore.tflite"
+  flash: False #Will put model+paramters in flash, expects filename.out in same dir as model
+  loadToExt: False #If Flash, Whether to load Model to secondary memory
+  memoryPrimary: "Ext" #[Int, Ext, None]
+  memorySecondary: "None" #[Int, Ext, None]
+  loadType: "single" #[single, split]
+model5:
+  filename: "mobilenet_v2_0.35_xcore.tflite"
+  flash: False #Will put model+paramters in flash, expects filename.out in same dir as model
+  loadToExt: False #If Flash, Whether to load Model to secondary memory
+  memoryPrimary: "Ext" #[Int, Ext, None]
+  memorySecondary: "None" #[Int, Ext, None]
+  loadType: "single" #[single, split]
+  alpha: 0.35
