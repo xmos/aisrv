@@ -1,0 +1,144 @@
+
+filename: 
+'mobilenet_v1_0.25_160_xcore.tflite'
+
+flash: 
+False
+
+loadToExt: 
+False
+
+memoryPrimary: 
+'Int'
+
+memorySecondary: 
+'Ext'
+
+loadType: 
+'split'
+
+alpha: 
+0.25
+
+inputRes: 
+160
+
+multiplications: 
+20805760
+
+time: 
+'13/01/2022 15:32:32'
+
+file size (bytes): 
+453456
+
+execution time (ms): 
+727.30711
+
+layer timings (ms): 
+[[22.4543,
+  111.26952,
+  56.24089,
+  18.33965,
+  21.01398,
+  12.49426,
+  25.23135,
+  38.90498,
+  38.58237,
+  10.36975,
+  4.92486,
+  19.12937,
+  19.30908,
+  33.47313,
+  5.30544,
+  2.34793,
+  16.62533,
+  9.87108,
+  30.60367,
+  9.67636,
+  30.60599,
+  9.93504,
+  30.60587,
+  9.77842,
+  30.60359,
+  9.94068,
+  30.67197,
+  2.84448,
+  1.2035,
+  15.30525,
+  5.03772,
+  29.38337,
+  11.11306,
+  0.00243,
+  0.02004,
+  0.00781,
+  0.03234,
+  3.86787,
+  0.00385,
+  0.0203,
+  0.00561,
+  0.0058,
+  0.14482],
+ ['PAD',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'PAD',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'PAD',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'PAD',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'PAD',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'XC_conv2d_v2',
+  'MEAN',
+  'SHAPE',
+  'STRIDED_SLICE',
+  'PACK',
+  'RESHAPE',
+  'CONV_2D',
+  'SHAPE',
+  'STRIDED_SLICE',
+  'PACK',
+  'RESHAPE',
+  'SOFTMAX']]
+
+operator timings (ms): 
+[['CONV_2D',
+  'MEAN',
+  'PACK',
+  'PAD',
+  'RESHAPE',
+  'SHAPE',
+  'SOFTMAX',
+  'STRIDED_SLICE',
+  'XC_conv2d_v2'],
+ [3.86787,
+  11.11306,
+  0.013420000000000001,
+  61.98795,
+  0.03814,
+  0.00628,
+  0.14482,
+  0.04034,
+  650.0952300000002]]
