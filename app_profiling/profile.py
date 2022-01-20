@@ -1,6 +1,3 @@
-#TODO:
-#Cant set tools env
-
 import time, yaml, os, signal, runpy, pymongo, sys
 import numpy as np
 from pprint import pprint
@@ -16,6 +13,8 @@ else:
     quit()
 
 use_db = sys.argv[1]
+
+VERBOSE = True
 
 def configToDict():
     with open(r'./profiling/config.yaml') as file:
@@ -33,8 +32,7 @@ def setupDB():
     return db
 
 def build():
-    os.system("xmake si")
-    os.system("xmake pi")
+    os.system("xmake build")
 
 def flashModel(flashPath, primary="Int"):
     print('Writing Model to Flash')
@@ -46,8 +44,12 @@ def flashModel(flashPath, primary="Int"):
 def run(primary="Int"):
     import subprocess
     if primary == "Int":
+        if VERBOSE:
+            print('Running pi.xe')
         process = subprocess.Popen(["xrun", "./bin/app_pi.xe"])
     elif primary == "Ext":
+        if VERBOSE:
+            print('Running si.xe')
         process = subprocess.Popen(["xrun", "./bin/app_si.xe"])
     return process
 
@@ -68,6 +70,8 @@ def sendGoldfish():
     import usb.core
     import usb.util
 
+    if VERBOSE:
+        print('Starting to send image')
 
     DRAW = False
 
@@ -214,20 +218,30 @@ def profileModels(configDict):
         print("#################\n")
 
         if configDict[model]['flash']:
+            if VERBOSE:
+                print('Flashing model')
             flashModel(configDict[model]['filename'], configDict[model]['memoryPrimary'])
 
-        process = run()
+        process = run(configDict[model]['memoryPrimary'])
         time.sleep(10) #Wait for device to initialise
 
         #Either send model over usb, or load from flash
         if not configDict[model]['flash']:
+            if VERBOSE:
+                print('Sending model')
             sendModel(configDict[model]['filename'], config[model]['loadType'])
         elif configDict[model]['flash']:
+            if VERBOSE:
+                print('Loading model from flash')
             loadModel(configDict[model]['loadToExt'])
 
         if use_db =='true':
+            if VERBOSE:
+                print('Writing to DB')
             writeResults(sendGoldfish(), configDict[model], db[model])
         else:
+            if VERBOSE:
+                print('Writing to txt file')
             writeResults(sendGoldfish(), configDict[model], None)
 
 # Read Config File

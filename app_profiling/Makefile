@@ -25,14 +25,22 @@ XCC_ASM_FLAGS = $(APP_SHARED_FLAGS)
 XMOS_MAKE_PATH ?= ../..
 include $(XMOS_MAKE_PATH)/xcommon/module_xcommon/build/Makefile.common
 
+.PHONY: build
+build:
+	xmake pi
+	xmake si
+
 .PHONY: pi
 pi:
+	cp ./makefiles/pi_files/server_memory.cc ./src/server_memory.cc
 	xmake --makefile='./makefiles/Makefile_pi'
+	rm ./src/server_memory.cc
 
 .PHONY: si
-
 si:
+	cp ./makefiles/si_files/server_memory.cc ./src/server_memory.cc
 	xmake --makefile='./makefiles/Makefile_si'
+	rm ./src/server_memory.cc
 
 .PHONY: profile
 profile:
