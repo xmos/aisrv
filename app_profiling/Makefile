@@ -42,11 +42,14 @@ si:
 	xmake --makefile='./makefiles/Makefile_si'
 	rm ./src/server_memory.cc
 
-.PHONY: profile
-profile:
+.PHONY: init
+init:
 	python3 -m pip install --upgrade pip
 	pip3 install -r ../requirements.txt
 	pip3 install -e ../host_python/xcore_ai_ie
+
+.PHONY: profile
+profile:
 	python3 profile.py false
 
 
