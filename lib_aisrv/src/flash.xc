@@ -18,7 +18,6 @@
 
 static int flash_version_check() {
     uint32_t tmp[1];
-    printf("%d", tmp[0]);
     fl_readData(0, 4, (tmp, unsigned char[]));
     return tmp[0] ^ VERSION_LITTLE_ENDING;
 }
@@ -29,16 +28,14 @@ void flash_server(chanend c_flash[], flash_t headers[], int n_flash,
     int res;
     if ((res = fl_connectToDevice(qspi, flash_spec, n_flash_spec)) != 0) {
         printstr("fl_connect err");printintln(res);    // TODO; these errors needs to be reported through AI server
-        printf("1");
         asm("waiteu");
     }
-    if ((res = fl_dividerOverride(2)) != 0) {          // 25 MHz - sort of safe.
+    if ((res = fl_dividerOverride(3)) != 0) {          // 25 MHz - sort of safe.
         printstr("fl_divider err");printintln(res);
-        printf("2");
         asm("waiteu");
     }
     if ((res = flash_version_check()) != 0) {
-        printf("3");
+        printstr("version check error");printintln(res);
         asm("waiteu");
     }
     fl_readData(4, n_flash * sizeof(flash_t), (headers, unsigned char[]) ); // TODO, check?
