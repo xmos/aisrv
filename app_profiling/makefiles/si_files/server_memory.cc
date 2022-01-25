@@ -33,6 +33,9 @@ void inference_engine_initialize_with_memory_0(inference_engine_t *ie) {
     resolver->AddMul();
     resolver->AddSub();
     resolver->AddShape();
+    resolver->AddMaxPool2D();
+    resolver->AddResizeNearestNeighbor();
+    resolver->AddTranspose();
     resolver->AddStridedSlice();
     resolver->AddReshape();
     resolver->AddConcatenation();

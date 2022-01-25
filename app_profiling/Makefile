@@ -45,7 +45,7 @@ si:
 .PHONY: init
 init:
 	python3 -m pip install --upgrade pip
-	pip3 install -r ../requirements.txt
+	pip3 install -r ./requirements.txt
 	pip3 install -e ../host_python/xcore_ai_ie
 
 .PHONY: profile
