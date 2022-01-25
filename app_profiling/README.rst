@@ -8,6 +8,7 @@ XMOS Tools must be installed to a recent version, and the SetEnv.sh command
 run in the terminal.
 
 Then use::
+  
   xmake init
 
 This will upgrade pip, and install the required modules.
