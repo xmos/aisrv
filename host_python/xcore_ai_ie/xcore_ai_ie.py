@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import sys
 import struct
 import array
+import numpy as np
 
 import aisrv_cmd
 from tflite.Model import Model
@@ -35,8 +36,6 @@ class CommandError(AISRVError):
     pass
 
 class xcore_ai_ie(ABC):
-    
-    currentModel = None
 
     def __init__(self):
         self._output_length = None
@@ -99,7 +98,6 @@ class xcore_ai_ie(ABC):
             self._model_length = len(model_bytes)
 
     def download_model_file(self, model_file, secondary_memory = False, engine_num = 0):
-        currentModel = model_file
         with open(model_file, "rb") as input_fd:
             model_data = input_fd.read()
             self.download_model(bytearray(model_data), secondary_memory = secondary_memory, engine_num = engine_num)
@@ -262,6 +260,11 @@ class xcore_ai_ie(ABC):
         r = bytearray(debug_string).decode('utf8', errors='replace')
         return r
 
+    def set_model_path(self, path):
+
+        if type(path) == str:
+            self.model_path = path
+
     def modelToOpList(self):
 
         # Update the path to your model
@@ -293,6 +296,18 @@ class xcore_ai_ie(ABC):
                     self.opList[j] = split[0].strip()
                     break
 
+    def read_opTimes(self):
+        times = np.asarray(self.read_times())
+        times = times/100000
+        layerTimings = [list(times), list(np.array(self.opList))]
+
+        return layerTimings
+
+    def read_timesSum(self):
+        times = np.asarray(self.read_times())
+        times_sum = sum(times)/100000
+
+        return times_sum
 
 class xcore_ai_ie_spi(xcore_ai_ie):
 
