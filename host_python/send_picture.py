@@ -103,6 +103,7 @@ elif sys.argv[1] == 'spi':
 else:
     print("Only spi or usb supported")
 
+
 ie.connect()
 
 input_length = ie.input_length
@@ -173,11 +174,4 @@ for arg in sys.argv[2:]:
         times_sum = sum(times)/100000
         times = times / 100000
 
-        
-        print("milliseconds taken "  + str(times_sum) + "\n\nper layer timings:\n")
-
-        if os.path.exists("current_model.txt"):
-            for op, time in zip(opList, times):
-                print(op+': '+ str(time))
-        else:
-            print(str(times))
+        print("milliseconds taken "  + str(times_sum) + " per layer timings:\n"+ str(times))
