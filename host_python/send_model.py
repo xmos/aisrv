@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import sys
+import sys, os
 from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi, AISRVError
 
 if len(sys.argv) < 3:
-    print("Usage: python3 " + sys.argv[0] + " (usb|spi) (single|split) model.tflit")
+    print("Usage: python3 " + sys.argv[0] + " (usb|spi) (single|split) model.tflite")
     exit(1)
 if sys.argv[1] == 'usb':
     ie = xcore_ai_ie_usb()
@@ -33,5 +33,8 @@ for model in sys.argv[3:]:
         print("Device reported an error : ")
         debug_string = ie.read_debug_log()
         print(str(debug_string))
+        if os.path.exists("current_model.txt"):
+            os.remove("current_model.txt")
+
     engine_num += 1
 

@@ -50,10 +50,24 @@ Then::
 And in another window::
 
   cd host_python
-  python3 send_model.py usb ext ../model/model_quant.tflite
+  pip install -e xcore_ai_ie
+  python3 send_model.py usb single ../model/model_quant.tflite
   python3 send_picture_float.py usb ostrich.png 
   python3 send_picture_float.py usb goldfish.png 
 
+Profiling
+---------
+The profiling app will allow you to automate testing a list of models in a specified configuration on an xcore.ai explorer board, and to collect the associated timings. This can be used to compare timings when parts of the codebase are updated.
+
+First setting up a virtual environment is reccomended
+
+  
+Adjust ``profiling/config.yaml`` to add the model configuration you want to test.
+For each model added you must add the .tflite file to the models directory.
+If you want to flash a model, a .out file of the same name must be added to the models directory, along with a .tflite model of the same name produced when making the .out file. (This model then includes flash load operations)
+
+Run the profiling script and setup environment::
+  xmake profile
 
 Development
 -----------
