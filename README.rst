@@ -21,6 +21,12 @@ Note, this project is currently pre-release quality, the following is required t
 Note, dependencies should be cloned to the same level as the aisrv repo.
 ``lib_tflite_micro`` shold be cloned with ``--recursive``
 
+When running some models, a small modification need to be made to the gemmlowp submodule
+in lib_tflite_micro. In lib_tflite_micro/lib_tflite_micro/submodules/gemmlowp/fixedpoint/fixedpoint.h
+Line 370 should be changed to::
+  
+  if(exponent > 31) return 0;
+
 Adding operators
 ----------------
 
