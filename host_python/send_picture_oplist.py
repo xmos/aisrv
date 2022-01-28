@@ -65,8 +65,8 @@ else:
 
 ie.connect()
 
-ie.model_path = sys.argv[2]
-ie.modelToOpList()
+engine_num = 0
+ie.set_model_path(sys.argv[2], engine_num)
 
 input_length = ie.input_length
 print("READING INPUT TENSOR LENGTH FROM DEVICE: " + str(input_length))
@@ -132,11 +132,8 @@ for arg in sys.argv[3:]:
             pyplot.show()
 
 
-        times = np.asarray(ie.read_times())
-        times_sum = sum(times)/100000
-        times = times / 100000
-
-        layerTimings = [list(times), list(np.array(ie.opList))]
+        layerTimings = ie.read_opTimes(engine_num)
+        times_sum = ie.read_timesSum()
         print("milliseconds taken "  + str(times_sum) + " per layer timings:\n")
         for i in range(0,len(layerTimings[0])):
             print(layerTimings[1][i]+':',layerTimings[0][i], 'ms')

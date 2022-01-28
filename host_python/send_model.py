@@ -29,6 +29,7 @@ engine_num = 0
 for model in sys.argv[3:]:
     try:
         ie.download_model_file(model, secondary_memory = secondary, engine_num = engine_num)
+        ie.set_model_path(model, engine_num)
     except AISRVError:
         print("Device reported an error : ")
         debug_string = ie.read_debug_log()
