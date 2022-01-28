@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import sys
 import struct
 import array
+import numpy as np
 
 import aisrv_cmd
 from tflite.Model import Model
@@ -34,9 +35,47 @@ class CommandError(AISRVError):
     """Command Error from device"""
     pass
 
+class modelData():
+
+    def __init__(self, path, engine_num):
+        self.path = path 
+        self.tile = engine_num
+        self.opList = []
+        self.modelToOpList()
+
+    def modelToOpList(self):
+
+        # Update the path to your model
+        with open(self.path, "rb") as model_file:
+            buffer = model_file.read()
+
+        # Get Model
+        model = Model.GetRootAs(buffer)
+        self.opList = []
+        for y in range(0, model.Subgraphs(0).OperatorsLength()):
+            opcode = model.OperatorCodes(model.Subgraphs(0).Operators(y).OpcodeIndex())
+            if opcode.BuiltinCode() == 32:
+                self.opList.append(str(opcode.CustomCode()).strip("b'"))
+            else:
+                self.opList.append(opcode.BuiltinCode())
+
+        f = open('../host_python/schema.fbs', "r")
+        lines = f.readlines()[108:238]
+        for line in lines:
+          if '/' in line:
+            lines.remove(line)
+        for line in lines:
+          if '/' in line:
+            lines.remove(line)
+        for j in range(len(self.opList)):
+            for line in lines:
+                split = line.split(' = ')
+                if str(self.opList[j]) == split[1].strip(',').strip('\n').strip(','):
+                    self.opList[j] = split[0].strip()
+                    break
+
+
 class xcore_ai_ie(ABC):
-    
-    currentModel = None
 
     def __init__(self):
         self._output_length = None
@@ -46,8 +85,8 @@ class xcore_ai_ie(ABC):
         self._max_block_size = XCORE_IE_MAX_BLOCK_SIZE # TODO read from (usb) device?
         self._spec_length = 20 # TODO fix magic number
 
-        self.model_path = None
-        self.opList = []
+        self.models = []
+
         super().__init__()
    
     @abstractmethod
@@ -99,7 +138,6 @@ class xcore_ai_ie(ABC):
             self._model_length = len(model_bytes)
 
     def download_model_file(self, model_file, secondary_memory = False, engine_num = 0):
-        currentModel = model_file
         with open(model_file, "rb") as input_fd:
             model_data = input_fd.read()
             self.download_model(bytearray(model_data), secondary_memory = secondary_memory, engine_num = engine_num)
@@ -262,37 +300,35 @@ class xcore_ai_ie(ABC):
         r = bytearray(debug_string).decode('utf8', errors='replace')
         return r
 
-    def modelToOpList(self):
+    def set_model_path(self, path, engine_num):
 
-        # Update the path to your model
-        with open(self.model_path, "rb") as model_file:
-            buffer = model_file.read()
-
-        # Get Model
-        model = Model.GetRootAs(buffer)
-        self.opList = []
-        for y in range(0, model.Subgraphs(0).OperatorsLength()):
-            opcode = model.OperatorCodes(model.Subgraphs(0).Operators(y).OpcodeIndex())
-            if opcode.BuiltinCode() == 32:
-                self.opList.append(str(opcode.CustomCode()).strip("b'"))
-            else:
-                self.opList.append(opcode.BuiltinCode())
-
-        f = open('../host_python/schema.fbs', "r")
-        lines = f.readlines()[108:238]
-        for line in lines:
-          if '/' in line:
-            lines.remove(line)
-        for line in lines:
-          if '/' in line:
-            lines.remove(line)
-        for j in range(len(self.opList)):
-            for line in lines:
-                split = line.split(' = ')
-                if str(self.opList[j]) == split[1].strip(',').strip('\n').strip(','):
-                    self.opList[j] = split[0].strip()
+        if type(path) == str:
+            tile_found = False
+            for model in self.models:
+                if model.tile == engine_num:
+                    model.path = path
+                    tile_found = True
                     break
+            if not tile_found:
+                self.models.append(modelData(path, engine_num))
 
+    def read_opTimes(self, engine_num):
+        for model in self.models:
+            if model.tile == engine_num:
+                currentModel = model
+                break
+                
+        times = np.asarray(self.read_times())
+        times = times/100000
+        layerTimings = [list(times), list(np.array(currentModel.opList))]
+
+        return layerTimings
+
+    def read_timesSum(self):
+        times = np.asarray(self.read_times())
+        times_sum = sum(times)/100000
+
+        return times_sum
 
 class xcore_ai_ie_spi(xcore_ai_ie):
 
