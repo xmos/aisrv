@@ -11,8 +11,8 @@ ie = xcore_ai_ie_usb()
 ie.connect()
 
 try:
-    ie.download_model_file(sys.argv[1], ext_mem = True, engine_num = 0)
-    ie.download_model_file(sys.argv[2], ext_mem = False, engine_num = 1)
+    ie.download_model_file(sys.argv[1], secondary_memory = True, engine_num = 0)
+    ie.download_model_file(sys.argv[2], secondary_memory = False, engine_num = 1)
 except AISRVError:
     print("Device reported an error : ")
     debug_string = ie.read_debug_log()

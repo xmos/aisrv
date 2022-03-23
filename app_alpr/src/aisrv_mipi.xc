@@ -356,7 +356,7 @@ void mipi_main(client interface i2c_master_if i2c, chanend c_acquire[], int n_ac
 {
     chan c;
     chan c_kill, c_img, c_ctrl;
-
+    return;
 #define MIPI_CLK_DIV 1
 #define MIPI_CFG_CLK_DIV 3
 
