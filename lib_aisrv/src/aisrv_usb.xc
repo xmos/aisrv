@@ -176,18 +176,15 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c_engine[], chane
             /* Wait for clear on both Endpoints */
             c_ep0 :> x;
             
-            if(x == 0x01){
+            if(x == 0x01)
                 stalled_out = 0;
-                XUD_ClearStall(ep_out);
-                }
-            else if(x == 0x81){
-                printf("Clearing stall.\n");
+            else if(x == 0x81)
                 stalled_in = 0;
-                XUD_ClearStall(ep_in);}
         }
 
         /* Get command */
         XUD_GetBuffer(ep_out, (data, uint8_t[]), length);
+
         if(length != CMD_LENGTH_BYTES)
         {
             printstr("Bad cmd length: "); printintln(length);
@@ -289,7 +286,3 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c_engine[], chane
 } // unsafe
 
 #endif
-
-
-
-
