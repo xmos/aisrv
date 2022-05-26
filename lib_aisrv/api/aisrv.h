@@ -15,7 +15,7 @@
 typedef enum aisrv_cmd
 {
     #define int(x) x,
-    #include "../../host_python/xcore_ai_ie/aisrv_cmd.py"
+    #include "./aisrv_cmd.py"
     #undef int
 } aisrv_cmd_t;
    
