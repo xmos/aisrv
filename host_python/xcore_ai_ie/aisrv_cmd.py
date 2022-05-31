@@ -9,10 +9,17 @@ CMD_START_INFER                 = int(0x84)
 
 CMD_GET_OUTPUT_TENSOR           = int(0x05)
 
+<<<<<<< HEAD
 CMD_SET_MODEL_PRIMARY           = int(0x86)
 CMD_SET_MODEL_SECONDARY         = int(0x87)
 CMD_SET_MODEL_PRIMARY_FLASH     = int(0x96)
 CMD_SET_MODEL_SECONDARY_FLASH   = int(0x97)
+=======
+CMD_GET_MODEL_INT               = int(0x06)    
+CMD_SET_MODEL_INT               = int(0x86)
+CMD_GET_MODEL_EXT               = int(0x07)    
+CMD_SET_MODEL_EXT               = int(0x87)
+>>>>>>> develop
 
 CMD_GET_SPEC                    = int(0x08)
 
@@ -24,7 +31,10 @@ CMD_GET_OUTPUT_TENSOR_LENGTH    = int(0x0B)
 
 CMD_START_ACQUIRE_SINGLE        = int(0x8C)
 CMD_START_ACQUIRE_STREAM        = int(0x8E)
+<<<<<<< HEAD
 CMD_START_ACQUIRE_SET_I2C       = int(0x8F)
+=======
+>>>>>>> develop
 
 CMD_GET_ACQUIRE_MODE            = int(0x0E)
 

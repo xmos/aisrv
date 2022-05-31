@@ -8,5 +8,9 @@ from .xcore_ai_ie import NoModelError
 from .xcore_ai_ie import ModelError
 from .xcore_ai_ie import InferenceError
 from .xcore_ai_ie import CommandError
+<<<<<<< HEAD
 from .tflite.Model import Model
 import aisrv_cmd 
+=======
+from . import aisrv_cmd 
+>>>>>>> develop
