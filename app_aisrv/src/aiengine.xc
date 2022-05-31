@@ -1,6 +1,7 @@
 #include <xs1.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <print.h>
 #include "aiengine.h"
 #include "aisrv.h"
 #include "inference_engine.h"
@@ -79,7 +80,7 @@ size_t SetModel(chanend c, uint8_t * unsafe model_data)
     modelSize = receive_array_(c, model_data, 0);
 
     printf("Model received: %d bytes\n", modelSize); 
-    status.haveModel = !interp_initialize(&ie, modelSize, model_data);
+    status.haveModel = !inference_engine_load_model(&ie, modelSize, model_data);
 
     if(status.haveModel)
     {
@@ -217,9 +218,9 @@ void HandleCommand(chanend c, aisrv_cmd_t cmd, chanend c_acquire, chanend c_leds
                 
             if(status.haveModel)
             {
-                trans_status = interp_invoke();
+                trans_status = interp_invoke(&ie);
                 //print_output();
-                print_profiler_summary();
+                print_profiler_summary(&ie);
 
                 if(status.outputGpioEn)
                 {
@@ -396,6 +397,7 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4]
     status.haveModel = 0;
     status.acquireMode = AISRV_ACQUIRE_MODE_SINGLE;
 
+    printstr("Ready\n");
     for(size_t i = 0; i< AISRV_GPIO_LENGTH; i++)
     {
         status.outputGpioThresh[i] = -128;
@@ -426,7 +428,7 @@ void aiengine(chanend c_usb, chanend c_spi, chanend c_acquire, chanend c_leds[4]
                 size = receive_array_(c_acquire, (uint32_t * unsafe)ie.input_buffer, 0);
 
                 // TODO check model status and interp status
-                interp_invoke();
+                interp_invoke(&ie);
 
                 if(status.outputGpioEn)
                 {

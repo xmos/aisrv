@@ -74,12 +74,13 @@ void exit(int);
 
 #ifdef MIPI_INTEGRATION
 /* When MIPI enabled USB moves to Tile[0] - need some mem for this */
-#define INT_MEM_SIZE_BYTES          (330000)
+#define INT_MEM_SIZE_BYTES          (2300000)
 #else
-#define INT_MEM_SIZE_BYTES          (350000)
+#define INT_MEM_SIZE_BYTES          (2320000)
 #endif
-#define MAX_MODEL_SIZE_EXT_BYTES    (1024000)
+#define MAX_MODEL_SIZE_EXT_BYTES    (10224000)
 #define NETWORK_NUM_THREADS         (1)
+#define MAX_OPERATORS               (24)
 
 #define AISRV_GPIO_LENGTH           (4)
 

@@ -95,7 +95,6 @@ void aisrv_usb_ep0(chanend c_ep0_out, chanend c_ep0_in, chanend c_data)
 
     USB_SetupPacket_t sp;
 
-    unsigned bmRequestType;
     XUD_BusSpeed_t usbBusSpeed;
 
     XUD_ep ep0_out = XUD_InitEp(c_ep0_out);
@@ -161,10 +160,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
 
     aisrv_cmd_t cmd = CMD_NONE;
 
-    int result_requested = 0;
-
-    int output_size = 0;
-    int input_size = 0;
     int stalled_in = 0;
     int stalled_out = 0;
 
@@ -229,8 +224,6 @@ void aisrv_usb_data(chanend c_ep_out, chanend c_ep_in, chanend c, chanend c_ep0)
                 unsigned pktLength;
                 XUD_GetBuffer(ep_out, (data, uint8_t[]), pktLength);
        
-                printf("Received: %d bytes\n", pktLength);
-                
                 size_t i = 0;
                 for(i = 0; i < (pktLength/4); i++)
                 {

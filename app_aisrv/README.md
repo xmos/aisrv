@@ -25,10 +25,7 @@ other deps: USB
 
 (slightly messy) build instructions
 -----------------------------------
-
-- Checked against XMOS tools 15.0.5
-
-- ensure XMOS tools are setup 
+- ensure XMOS tools are setup
    - This should also clone ai_tools
 - cd aisrv/app_aissrv_spi
 - source Setenv.sh

@@ -25,13 +25,13 @@ SHARED_FLAGS  = -report \
 -g \
 -DTF_LITE_STATIC_MEMORY \
 -DXCORE \
--DENABLE_USB 
+-DENABLE_USB -DXUD_CORE_CLOCK=700
 
 
 SOURCE_DIRS = src
 
 # The USED_MODULES variable lists other module used by the application. 
-USED_MODULES = lib_i2c lib_xud lib_tensorflow lib_mipi
+USED_MODULES = lib_i2c lib_xud lib_tflite_micro lib_mipi
 
 XCC_FLAGS_usb = $(SHARED_FLAGS) -DUSB_TILE=tile[1] 
 XCC_CPP_FLAGS_usb = $(SHARED_FLAGS) -std=c++11 

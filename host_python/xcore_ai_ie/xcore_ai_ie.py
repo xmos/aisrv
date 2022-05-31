@@ -4,8 +4,15 @@ from abc import ABC, abstractmethod
 import sys
 import struct
 import array
+<<<<<<< HEAD
+import numpy as np
+
+import aisrv_cmd
+from tflite.Model import Model
+=======
 
 from xcore_ai_ie import aisrv_cmd
+>>>>>>> develop
 
 XCORE_IE_MAX_BLOCK_SIZE = 512 
 
@@ -33,8 +40,53 @@ class CommandError(AISRVError):
     """Command Error from device"""
     pass
 
+<<<<<<< HEAD
+class modelData():
+
+    def __init__(self, path, engine_num):
+        self.path = path 
+        self.tile = engine_num
+        self.opList = []
+        self.modelToOpList()
+
+    def modelToOpList(self):
+
+        # Update the path to your model
+        with open(self.path, "rb") as model_file:
+            buffer = model_file.read()
+
+        # Get Model
+        model = Model.GetRootAs(buffer)
+        self.opList = []
+        for y in range(0, model.Subgraphs(0).OperatorsLength()):
+            opcode = model.OperatorCodes(model.Subgraphs(0).Operators(y).OpcodeIndex())
+            if opcode.BuiltinCode() == 32:
+                self.opList.append(str(opcode.CustomCode()).strip("b'"))
+            else:
+                self.opList.append(opcode.BuiltinCode())
+
+        f = open('../host_python/schema.fbs', "r")
+        lines = f.readlines()[108:238]
+        for line in lines:
+          if '/' in line:
+            lines.remove(line)
+        for line in lines:
+          if '/' in line:
+            lines.remove(line)
+        for j in range(len(self.opList)):
+            for line in lines:
+                split = line.split(' = ')
+                if str(self.opList[j]) == split[1].strip(',').strip('\n').strip(','):
+                    self.opList[j] = split[0].strip()
+                    break
+
+
+class xcore_ai_ie(ABC):
+
+=======
 class xcore_ai_ie(ABC):
     
+>>>>>>> develop
     def __init__(self):
         self._output_length = None
         self._input_length = None
@@ -42,12 +94,48 @@ class xcore_ai_ie(ABC):
         self._timings_length = None
         self._max_block_size = XCORE_IE_MAX_BLOCK_SIZE # TODO read from (usb) device?
         self._spec_length = 20 # TODO fix magic number
+<<<<<<< HEAD
+
+        self.models = []
+
+=======
+>>>>>>> develop
         super().__init__()
    
     @abstractmethod
     def connect(self):
         pass
 
+<<<<<<< HEAD
+    def download_model(self, model_bytes, secondary_memory = False, flash = False, engine_num = 0):
+        
+        if not flash:
+            assert type(model_bytes) == bytearray
+            
+            print("Model length (bytes): " + str(len(model_bytes)))
+           
+
+            if secondary_memory:
+                print("Downloading model to secondary memory")
+                cmd = aisrv_cmd.CMD_SET_MODEL_SECONDARY
+            else:
+                print("Downloading model to primary memory")
+                cmd = aisrv_cmd.CMD_SET_MODEL_PRIMARY
+
+        elif flash:
+            if secondary_memory:
+                print("Loading model to secondary memory")
+                cmd = aisrv_cmd.CMD_SET_MODEL_SECONDARY_FLASH
+            else:
+                print("Loading model to primary memory")
+                cmd = aisrv_cmd.CMD_SET_MODEL_PRIMARY_FLASH
+
+
+        try:
+            # Download model to device
+            self._download_data(cmd, model_bytes, engine_num = engine_num)
+        except IOError:
+=======
     def download_model(self, model_bytes, ext_mem = False):
         
         assert type(model_bytes) == bytearray
@@ -67,20 +155,36 @@ class xcore_ai_ie(ABC):
             self._download_data(cmd, model_bytes)
         except IOError:
             #print("Error from device during model download (likely issue with model)")
+>>>>>>> develop
             self._clear_error()
             raise IOError
 
         try:
             # Update lengths
+<<<<<<< HEAD
+            self._input_length, self._output_length, self._timings_length = self._read_spec(engine_num = engine_num)
+        
+        except IOError:
+=======
             self._input_length, self._output_length, self._timings_length = self._read_spec()
         
         except IOError:
             #print("Error from device during spec upload (likely issue with model)")
+>>>>>>> develop
             self._clear_error()
             raise IOError
        
         print("input_size: " + str(self._input_length))
         print("output_size: " + str(self._output_length))
+<<<<<<< HEAD
+        if not flash:
+            self._model_length = len(model_bytes)
+
+    def download_model_file(self, model_file, secondary_memory = False, engine_num = 0):
+        with open(model_file, "rb") as input_fd:
+            model_data = input_fd.read()
+            self.download_model(bytearray(model_data), secondary_memory = secondary_memory, engine_num = engine_num)
+=======
         self._model_length = len(model_bytes)
 
     def upload_model(self):
@@ -90,6 +194,7 @@ class xcore_ai_ie(ABC):
         assert len(read_data) == self._model_length
 
         return read_data
+>>>>>>> develop
 
     @property
     def input_length(self):
@@ -133,6 +238,14 @@ class xcore_ai_ie(ABC):
     def _clear_error(self):
         pass
 
+<<<<<<< HEAD
+    def read_times(self, engine_num = 0):
+      
+        times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length*4, engine_num = engine_num)
+        times_ints = self.bytes_to_ints(times_bytes, bpi=4)
+        return times_ints
+
+=======
     def read_times(self):
       
         times_bytes = self._upload_data(aisrv_cmd.CMD_GET_TIMINGS, self.timings_length*4)
@@ -145,6 +258,7 @@ class xcore_ai_ie(ABC):
             model_data = input_fd.read()
             self.download_model(bytearray(model_data), ext_mem = ext_mem)
 
+>>>>>>> develop
     def bytes_to_ints(self, data_bytes, bpi=1):
 
         output_data_int = []
@@ -185,6 +299,16 @@ class xcore_ai_ie(ABC):
        input_length, output_length, timings_length  = self._read_spec()
        return timings_length
 
+<<<<<<< HEAD
+    def write_input_tensor(self, raw_img, tensor_num = 0, engine_num = 0):
+        
+        self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img, tensor_num = tensor_num, engine_num = engine_num)
+
+    # TODO decide if want to keep read spec or not
+    def _read_spec(self, engine_num = 0):
+        
+        spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length, engine_num = engine_num)
+=======
     def write_input_tensor(self, raw_img):
         
         self._download_data(aisrv_cmd.CMD_SET_INPUT_TENSOR, raw_img)
@@ -193,6 +317,7 @@ class xcore_ai_ie(ABC):
     def _read_spec(self):
         
         spec = self._upload_data(aisrv_cmd.CMD_GET_SPEC, self._spec_length)
+>>>>>>> develop
 
         assert len(spec) == self._spec_length
 
@@ -218,20 +343,34 @@ class xcore_ai_ie(ABC):
         
         return int.from_bytes(read_data, byteorder = "little", signed=True)
    
+<<<<<<< HEAD
+    def read_output_tensor(self, tensor_num = 0, engine_num = 0):
+
+        # Retrieve result from device
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length, tensor_num = tensor_num, engine_num = engine_num)
+=======
     def read_output_tensor(self):
 
         # Retrieve result from device
         data_read = self._upload_data(aisrv_cmd.CMD_GET_OUTPUT_TENSOR, self.output_length)
+>>>>>>> develop
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
 
         return self.bytes_to_ints(data_read)
 
+<<<<<<< HEAD
+    def read_input_tensor(self, tensor_num = 0, engine_num = 0):
+
+        # Retrieve result from device
+        data_read = self._upload_data(aisrv_cmd.CMD_GET_INPUT_TENSOR, self.input_length, tensor_num = tensor_num, engine_num = engine_num)
+=======
     def read_input_tensor(self):
 
         # Retrieve result from device
         data_read = self._upload_data(aisrv_cmd.CMD_GET_INPUT_TENSOR, self.input_length)
+>>>>>>> develop
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
@@ -252,12 +391,47 @@ class xcore_ai_ie(ABC):
 
         debug_string = self._upload_data(aisrv_cmd.CMD_GET_DEBUG_LOG, 300) #TODO rm magic number
 
+<<<<<<< HEAD
+        r = bytearray(debug_string).decode('utf8', errors='replace')
+        return r
+
+    def set_model_path(self, path, engine_num):
+
+        if type(path) == str:
+            tile_found = False
+            for model in self.models:
+                if model.tile == engine_num:
+                    model.path = path
+                    tile_found = True
+                    break
+            if not tile_found:
+                self.models.append(modelData(path, engine_num))
+
+    def read_opTimes(self, engine_num):
+        for model in self.models:
+            if model.tile == engine_num:
+                currentModel = model
+                break
+                
+        times = np.asarray(self.read_times())
+        times = times/100000
+        layerTimings = [list(times), list(np.array(currentModel.opList))]
+
+        return layerTimings
+
+    def read_timesSum(self):
+        times = np.asarray(self.read_times())
+        times_sum = sum(times)/100000
+
+        return times_sum
+=======
         r = bytearray(debug_string).decode("ascii")
         return r
 
 
 
 
+>>>>>>> develop
 
 class xcore_ai_ie_spi(xcore_ai_ie):
 
@@ -363,20 +537,32 @@ class xcore_ai_ie_spi(xcore_ai_ie):
 
 class xcore_ai_ie_usb(xcore_ai_ie):
 
+<<<<<<< HEAD
+    def __init__(self, timeout = 500000):
+=======
     def __init__(self, timeout = 5000):
+>>>>>>> develop
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None
         self._timeout = timeout
         super().__init__()
 
+<<<<<<< HEAD
+    def _download_data(self, cmd, data_bytes, tensor_num = 0, engine_num = 0):
+=======
     def _download_data(self, cmd, data_bytes):
+>>>>>>> develop
     
         import usb
         
         try:
             # TODO rm this extra CMD packet
+<<<<<<< HEAD
+            self._out_ep.write(bytes([cmd, engine_num, tensor_num]))
+=======
             self._out_ep.write(bytes([cmd]))
+>>>>>>> develop
        
             #data_bytes = bytes([cmd]) + data_bytes
 
@@ -390,13 +576,21 @@ class xcore_ai_ie_usb(xcore_ai_ie):
                 #print("USB error, IN/OUT pipe halted")
                 raise IOError()
    
+<<<<<<< HEAD
+    def _upload_data(self, cmd, length, sign = False, tensor_num = 0, engine_num = 0):
+=======
     def _upload_data(self, cmd, length, sign = False):
+>>>>>>> develop
         
         import usb
         read_data = []
 
         try:  
+<<<<<<< HEAD
+            self._out_ep.write(bytes([cmd, engine_num, tensor_num]), self._timeout)
+=======
             self._out_ep.write(bytes([cmd]), self._timeout)
+>>>>>>> develop
             buff = usb.util.create_buffer(self._max_block_size)
         
             while True:
@@ -426,7 +620,11 @@ class xcore_ai_ie_usb(xcore_ai_ie):
         while self._dev is None:
 
             # TODO - more checks that we have the right device..
+<<<<<<< HEAD
+            self._dev = usb.core.find(idVendor=0x20b1, idProduct=0xa15e)
+=======
             self._dev = usb.core.find(idVendor=0x20b1) #, idProduct=0xa15e)
+>>>>>>> develop
 
             # set the active configuration. With no arguments, the first
             # configuration will be the active one
@@ -460,15 +658,54 @@ class xcore_ai_ie_usb(xcore_ai_ie):
             print("Connected to AISRV via USB")
 
     # TODO move to super()
+<<<<<<< HEAD
+    def start_inference(self, engine_num = 0):
+
+        # Send cmd
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_INFER, engine_num, 0]), 1000)
+=======
     def start_inference(self):
 
         # Send cmd
         self._out_ep.write(bytes([aisrv_cmd.CMD_START_INFER]), 1000)
+>>>>>>> develop
 
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
 
     # TODO move to super()
+<<<<<<< HEAD
+    def start_acquire_single(self, sx, ex, sy, ey, rw, rh, engine_num = 0):
+
+        # Send cmd
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_SINGLE, engine_num, 0]), 1000)
+        def tobytes(l):
+            o = []
+            for i in l:
+                o.append( i & 0xff )
+                o.append( (i>>8) & 0xff )
+            return bytes(o)
+        # Send out packet with coordinates 
+        self._out_ep.write(tobytes([sx, ex, sy, ey, rw, rh]), 1000)
+
+    def acquire_set_i2c(self, i2c_address, reg_address, reg_value, engine_num = 0):
+
+        # Send cmd
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_SET_I2C, engine_num, 0]), 1000)
+        def tobytes(l):
+            o = []
+            for i in l:
+                o.append( i & 0xff )
+            return bytes(o)
+        # Send out packet with coordinates 
+        self._out_ep.write(tobytes([i2c_address, reg_address, reg_value]), 1000)
+
+    # TODO move to super()
+    def start_acquire_stream(self, engine_num = 0):
+
+        # Send cmd
+        self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_STREAM, engine_num, 0]), 1000)
+=======
     def start_acquire_single(self):
 
         # Send cmd
@@ -482,11 +719,23 @@ class xcore_ai_ie_usb(xcore_ai_ie):
 
         # Send cmd
         self._out_ep.write(bytes([aisrv_cmd.CMD_START_ACQUIRE_STREAM]), 1000)
+>>>>>>> develop
 
         # Send out a 0 length packet 
         self._out_ep.write(bytes([]), 1000)
 
     #TODO move to super()
+<<<<<<< HEAD
+    def enable_output_gpio(self, engine_num = 0):
+
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN, engine_num, 0]), 1000)
+        self._out_ep.write(bytes([1]), 1000)
+    
+    #TODO move to super()
+    def disable_output_gpio(self, engine_num = 0):
+
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN, engine_num, 0]), 1000)
+=======
     def enable_output_gpio(self):
 
         self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN]), 1000)
@@ -496,10 +745,24 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def disable_output_gpio(self):
 
         self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_EN]), 1000)
+>>>>>>> develop
         self._out_ep.write(bytes([0]), 1000)
 
     def set_output_gpio_threshold(self, index, threshold):
         
+<<<<<<< HEAD
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_THRESH, engine_num, 0]), 1000)
+        self._out_ep.write(bytes([index, threshold]), 1000)
+
+    def set_output_gpio_mode_max(self, engine_num = 0):
+        
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE, engine_num, 0]), 1000)
+        self._out_ep.write(bytes([1]), 1000)
+
+    def set_output_gpio_mode_none(self, engine_num = 0):
+        
+        self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE, engine_num, 0]), 1000)
+=======
         self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_THRESH]), 1000)
         self._out_ep.write(bytes([index, threshold]), 1000)
 
@@ -511,6 +774,7 @@ class xcore_ai_ie_usb(xcore_ai_ie):
     def set_output_gpio_mode_none(self):
         
         self._out_ep.write(bytes([aisrv_cmd.CMD_SET_OUTPUT_GPIO_MODE]), 1000)
+>>>>>>> develop
         self._out_ep.write(bytes([0]), 1000)
 
 
