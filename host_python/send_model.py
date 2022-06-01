@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+<<<<<<< HEAD
 import sys, os
+=======
+import sys
+>>>>>>> develop
 from xcore_ai_ie import xcore_ai_ie_usb, xcore_ai_ie_spi, AISRVError
 
 if len(sys.argv) < 3:
@@ -15,6 +19,7 @@ else:
     print("Only usb or spi supported")
     exit(1)
 
+<<<<<<< HEAD
 if sys.argv[2] == 'split':
     secondary = True
 elif sys.argv[2] == 'single':
@@ -22,6 +27,24 @@ elif sys.argv[2] == 'single':
 else:
     print("Only single or split (single or split memory space for arena and model) supported")
     exit(1)
+=======
+if sys.argv[2] == 'ext':
+    ext_mem = True
+elif sys.argv[2] == 'int':
+    ext_mem = False
+else:
+    print("only ext or int (external or internal memory) supported")
+    exit(1)
+
+ie.connect()
+
+try:
+    ie.download_model_file(sys.argv[3], ext_mem = ext_mem)
+except AISRVError:
+    print("Device reported an error")
+    debug_string = ie.read_debug_log()
+    print("Debug log from device: " +  str(debug_string))
+>>>>>>> develop
 
 ie.connect()
 
