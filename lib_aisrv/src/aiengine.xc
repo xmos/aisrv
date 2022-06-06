@@ -149,7 +149,8 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
                           aisrv_cmd_t cmd,
                           uint32_t tensor_num,
                           chanend ?c_acquire, chanend (&?c_leds)[AISRV_GPIO_LENGTH],
-                          chanend ?c_flash)
+                          chanend ?c_flash, uint8_t num_threads
+                          )
 {
     uint32_t data[MAX_PACKET_SIZE_WORDS];
     switch(cmd)
@@ -211,7 +212,23 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
             if(ie.haveModel)
             {
                 printstr("Inferencing...\n");
-                trans_status = interp_invoke(&ie);
+
+                switch(num_threads)
+                {
+                    case 1:
+                        trans_status = interp_invoke(&ie);
+                        break;
+                    case 2:
+                        trans_status = interp_invoke_par_2(&ie);
+                        break;
+                    case 3:
+                        trans_status = interp_invoke_par_3(&ie);
+                        break;
+                    case 4:
+                        trans_status = interp_invoke_par_4(&ie);
+                        break;
+                }
+                
                 printstr("Done...\n");
                 if (trans_status == AISRV_STATUS_OKAY && ie.chainToNext)
                 {
@@ -438,7 +455,7 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
 
 void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
               chanend ?c_push, chanend ?c_acquire, chanend (&?c_leds)[4],
-              chanend ?c_flash
+              chanend ?c_flash, uint8_t num_threads
 #if defined(TFLM_DISABLED)
               , uint32_t tflite_disabled_image[], uint32_t sizeof_tflite_disabled_image
 #endif
@@ -477,12 +494,12 @@ void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
         {
             case (!isnull(c_usb)) => c_usb :> cmd:
                 c_usb :> tensor_num;
-                HandleCommand(ie, c_usb, c_push, cmd, tensor_num, c_acquire, c_leds, c_flash);
+                HandleCommand(ie, c_usb, c_push, cmd, tensor_num, c_acquire, c_leds, c_flash, num_threads);
                 break;
             
             case (!isnull(c_spi)) => c_spi :> cmd:
                 c_spi :> tensor_num;
-                HandleCommand(ie, c_spi, c_push, cmd, tensor_num, c_acquire, c_leds, c_flash);
+                HandleCommand(ie, c_spi, c_push, cmd, tensor_num, c_acquire, c_leds, c_flash, num_threads);
                 break;
 
             (ie.acquireMode == AISRV_ACQUIRE_MODE_STREAM) => default:
@@ -496,7 +513,23 @@ void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
                 size = receive_array_(c_acquire, ie.input_buffers[0], 0);
 
                 // TODO check model status and interp status
-                interp_invoke(&ie);
+
+                switch(num_threads)
+                {
+                    case 1:
+                        interp_invoke(&ie);
+                        break;
+                    case 2:
+                        interp_invoke_par_2(&ie);
+                        break;
+                    case 3:
+                        interp_invoke_par_3(&ie);
+                        break;
+                    case 4:
+                        interp_invoke_par_4(&ie);
+                        break;
+                }
+                
 
                 if(ie.outputGpioEn)
                 {
