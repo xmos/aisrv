@@ -18,7 +18,6 @@
 
 #define EP_COUNT_OUT 2
 #define EP_COUNT_IN 2
-#define NUM_THREADS 1
 
 XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
 XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL | XUD_STATUS_ENABLE, XUD_EPTYPE_BUL};
@@ -113,7 +112,7 @@ int main(void)
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory_1(&ie); }
             aiengine(ie, c_usb_to_engine[1], null, null,
-                     null, null, c_flash[1], NUM_THREADS
+                     null, null, c_flash[1]
                 );
         } 
 
@@ -121,7 +120,7 @@ int main(void)
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory_0(&ie); }
             aiengine(ie, c_usb_to_engine[0], null, null,
-                     null, null, c_flash[0], NUM_THREADS
+                     null, null, c_flash[0]
                 );
         }
 
