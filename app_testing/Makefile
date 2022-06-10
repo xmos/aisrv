@@ -24,7 +24,7 @@ APP_SHARED_FLAGS  = -report \
 -Wno-unknown-pragmas \
 -Wno-bidirectional-buffered-port \
 -g \
--D NUM_THREADS=4 \
+-DNUM_THREADS=4 \
 -DTF_LITE_STATIC_MEMORY \
 -DXCORE \
 -DPRINT_PROFILER_SUMMARY \
