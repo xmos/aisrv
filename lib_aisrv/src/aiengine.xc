@@ -149,7 +149,8 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
                           aisrv_cmd_t cmd,
                           uint32_t tensor_num,
                           chanend ?c_acquire, chanend (&?c_leds)[AISRV_GPIO_LENGTH],
-                          chanend ?c_flash)
+                          chanend ?c_flash
+                          )
 {
     uint32_t data[MAX_PACKET_SIZE_WORDS];
     switch(cmd)
@@ -211,7 +212,21 @@ static void HandleCommand(inference_engine_t &ie, chanend c,
             if(ie.haveModel)
             {
                 printstr("Inferencing...\n");
-                trans_status = interp_invoke(&ie);
+
+                #if NUM_THREADS == 1
+                    trans_status = interp_invoke(&ie);
+                #elif NUM_THREADS == 2
+                    trans_status = interp_invoke_par_2(&ie);
+                #elif NUM_THREADS == 3
+                    trans_status = interp_invoke_par_3(&ie);
+                #elif NUM_THREADS == 4
+                    trans_status = interp_invoke_par_4(&ie);
+                #elif NUM_THREADS == 5
+                    trans_status = interp_invoke_par_5(&ie);
+                #else
+                    trans_status = interp_invoke(&ie);
+                #endif 
+                
                 printstr("Done...\n");
                 if (trans_status == AISRV_STATUS_OKAY && ie.chainToNext)
                 {
@@ -496,7 +511,21 @@ void aiengine(inference_engine_t &ie, chanend ?c_usb, chanend ?c_spi,
                 size = receive_array_(c_acquire, ie.input_buffers[0], 0);
 
                 // TODO check model status and interp status
-                interp_invoke(&ie);
+
+                
+                #if NUM_THREADS == 1
+                    interp_invoke(&ie);
+                #elif NUM_THREADS == 2
+                    interp_invoke_par_2(&ie);
+                #elif NUM_THREADS == 3
+                    interp_invoke_par_3(&ie);
+                #elif NUM_THREADS == 4
+                    interp_invoke_par_4(&ie);
+                #elif NUM_THREADS == 5
+                    interp_invoke_par_5(&ie);
+                #else
+                    interp_invoke(&ie);
+                #endif            
 
                 if(ie.outputGpioEn)
                 {
