@@ -27,6 +27,7 @@ void inference_engine_initialize_with_memory_0(inference_engine_t *ie) {
                                                  &s0);
     //resolver->AddDequantize();
     resolver->AddSoftmax();
+    resolver->AddMinimum();
     resolver->AddMean();
     resolver->AddPad();
     resolver->AddPack();
@@ -34,7 +35,7 @@ void inference_engine_initialize_with_memory_0(inference_engine_t *ie) {
     resolver->AddSub();
     resolver->AddShape();
     resolver->AddMaxPool2D();
-    resolver->AddResizeNearestNeighbor();
+    //resolver->AddResizeNearestNeighbor();
     resolver->AddStridedSlice();
     resolver->AddReshape();
     resolver->AddConcatenation();
