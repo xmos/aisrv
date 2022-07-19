@@ -47,14 +47,7 @@ void inference_engine_initialize_with_memory_0(inference_engine_t *ie) {
     resolver->AddConv2D();
     //resolver->AddQuantize();
     resolver->AddDepthwiseConv2D();
-    resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
-               tflite::ops::micro::xcore::Register_BSign_8());
-    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_V2_OpCode,
-               tflite::ops::micro::xcore::Register_Conv2D_V2());
-    resolver->AddCustom(tflite::ops::micro::xcore::Load_Flash_OpCode,
-               tflite::ops::micro::xcore::Register_LoadFromFlash());
-    resolver->AddCustom(tflite::ops::micro::xcore::Strided_Slice_OpCode,
-               tflite::ops::micro::xcore::Register_Strided_Slice());
+    tflite::ops::micro::xcore::RegisterXCOps(resolver);
 
 }
 
@@ -76,9 +69,6 @@ void inference_engine_initialize_with_memory_1(inference_engine_t *ie) {
     resolver->AddConv2D();
     resolver->AddQuantize();
     resolver->AddDepthwiseConv2D();
-    resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_V2_OpCode,
-               tflite::ops::micro::xcore::Register_Conv2D_V2());
-    resolver->AddCustom(tflite::ops::micro::xcore::Load_Flash_OpCode,
-               tflite::ops::micro::xcore::Register_LoadFromFlash());
+
 
 }
