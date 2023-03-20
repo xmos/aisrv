@@ -25,18 +25,16 @@ APP_SHARED_FLAGS  = -report \
 -Wno-bidirectional-buffered-port \
 -g \
 -D NUM_THREADS=5 \
--D USE_DDR_FIX \
 -DTF_LITE_STATIC_MEMORY \
 -DXCORE \
--DPRINT_PROFILER_SUMMARY \
 -lquadflash \
--DENABLE_USB -DXUD_CORE_CLOCK=700 -DTF_LITE_STRIP_ERROR_STRINGS -DGC2145 #-DTFLM_DISABLED
+-DENABLE_USB -DXUD_CORE_CLOCK=700 -DGC2145 #-DTFLM_DISABLED
 SOURCE_DIRS = src
 
 # The USED_MODULES variable lists other module used by the application. 
 USED_MODULES = lib_aisrv lib_i2c lib_xud lib_mipi lib_uart lib_gpio lib_tflite_micro
 
-XCC_FLAGS = $(APP_SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 -DUSB_TILE=tile[0]
+XCC_FLAGS = $(APP_SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 -DUSB_TILE=tile[1]
 XCC_CPP_FLAGS = $(APP_SHARED_FLAGS) -std=c++11 -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
 XCC_ASM_FLAGS = $(APP_SHARED_FLAGS)
 #=============================================================================

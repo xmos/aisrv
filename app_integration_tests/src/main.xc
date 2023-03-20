@@ -111,17 +111,17 @@ int main(void)
         on tile[0]: {
             inference_engine_t ie;
             unsafe { inference_engine_initialize_with_memory_1(&ie); }
-            aiengine(ie, c_usb_to_engine[1], null, null,
+            aiengine(ie, c_usb_to_engine[0], null, null,
                      null, null, c_flash[1]
                 );
         } 
 
         on tile[1]: {
-            inference_engine_t ie;
-            unsafe { inference_engine_initialize_with_memory_0(&ie); }
-            aiengine(ie, c_usb_to_engine[0], null, null,
-                     null, null, c_flash[0]
-                );
+            // inference_engine_t ie;
+            // unsafe { inference_engine_initialize_with_memory_0(&ie); }
+            // aiengine(ie, c_usb_to_engine[0], null, null,
+            //          null, null, c_flash[0]
+            //     );
         }
 
         on tile[0]: {

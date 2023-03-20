@@ -9,7 +9,7 @@
 #include "server_memory.h"
 
 #define TENSOR_ARENA_BYTES_0        (20224000)
-#define TENSOR_ARENA_BYTES_1          (354000)
+#define TENSOR_ARENA_BYTES_1          (300000)
 
 // Because of bug in xgdb we make this array tiny, knowing we own external memory
 // otherwise xgdb spends hours loading this array
@@ -58,17 +58,41 @@ void inference_engine_initialize_with_memory_1(inference_engine_t *ie) {
                                                  data_int, TENSOR_ARENA_BYTES_1,
                                                  nullptr,  0,
                                                  &s1);
-    resolver->AddDequantize();
-    resolver->AddSoftmax();
-    resolver->AddMean();
-    resolver->AddPad();
-    resolver->AddReshape();
-    resolver->AddConcatenation();
-    resolver->AddAdd();
-    resolver->AddLogistic();
-    resolver->AddConv2D();
-    resolver->AddQuantize();
-    resolver->AddDepthwiseConv2D();
+  resolver->AddDequantize();
+  resolver->AddSoftmax();
+  resolver->AddMean();
+  resolver->AddPad();
+  resolver->AddPrelu();
+  resolver->AddMul();
+  resolver->AddMaxPool2D();
+  resolver->AddRelu6();
+  resolver->AddReshape();
+  resolver->AddConcatenation();
+  resolver->AddAdd();
+  resolver->AddMinimum();
+  resolver->AddMaximum();
+  resolver->AddRelu();
+  resolver->AddLogistic();
+  resolver->AddConv2D();
+  resolver->AddQuantize();
+  resolver->AddDepthwiseConv2D();
+  resolver->AddDetectionPostprocess();
+  resolver->AddTransposeConv();
+  tflite::ops::micro::xcore::RegisterXCOps(resolver);
 
 
+}
+
+/* This needs moving to somewhere, preferably an error reporter */
+
+size_t debug_log_index = 0;
+char debug_log_buffer[MAX_DEBUG_LOG_LENGTH * MAX_DEBUG_LOG_ENTRIES] __attribute__((aligned(4)));
+
+extern "C" void DebugLog(const char* s) 
+{ 
+    strcpy(&debug_log_buffer[debug_log_index*MAX_DEBUG_LOG_LENGTH], s);
+    printf("%s", &debug_log_buffer[debug_log_index*MAX_DEBUG_LOG_LENGTH]);
+    debug_log_index++; 
+    if(debug_log_index == MAX_DEBUG_LOG_ENTRIES) 
+        debug_log_index = 0;
 }
