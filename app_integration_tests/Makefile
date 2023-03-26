@@ -32,10 +32,10 @@ APP_SHARED_FLAGS  = -report \
 SOURCE_DIRS = src
 
 # The USED_MODULES variable lists other module used by the application. 
-USED_MODULES = lib_aisrv lib_mipi lib_xud lib_i2c lib_tflite_micro
+USED_MODULES = lib_aisrv lib_xud lib_tflite_micro
 
-XCC_FLAGS = $(APP_SHARED_FLAGS) -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 -DUSB_TILE=tile[1]
-XCC_CPP_FLAGS = $(APP_SHARED_FLAGS) -std=c++11 -DMIPI_INTEGRATION=1 -DI2C_INTEGRATION=1 
+XCC_FLAGS = $(APP_SHARED_FLAGS) -DUSB_TILE=tile[1]
+XCC_CPP_FLAGS = $(APP_SHARED_FLAGS) -std=c++11
 XCC_ASM_FLAGS = $(APP_SHARED_FLAGS)
 #=============================================================================
 # The following part of the Makefile includes the common build infrastructure
