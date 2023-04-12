@@ -9,7 +9,7 @@
 #include "server_memory.h"
 
 #define TENSOR_ARENA_BYTES_0        (20224000)
-#define TENSOR_ARENA_BYTES_1          (300000)
+#define TENSOR_ARENA_BYTES_1          (240000)
 
 // Because of bug in xgdb we make this array tiny, knowing we own external memory
 // otherwise xgdb spends hours loading this array
