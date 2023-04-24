@@ -11,6 +11,4 @@
 
 #define MAX_DEBUG_LOG_LENGTH  256
 
-#define MAX_DEBUG_LOG_ENTRIES       (3)
-
 #endif
