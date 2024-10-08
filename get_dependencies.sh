@@ -1,0 +1,5 @@
+(cd ../; git clone git@github.com:xmos/lib_xud.git -b master)
+(cd ../; git clone git@github.com:xmos/lib_mipi.git -b master)
+(cd ../; git clone git@github.com:xmos/lib_i2c.git -b develop)
+(cd ../; git clone git@github.com:xmos/lib_xassert.git -b develop)
+(cd ../; git clone git@github.com:xmos/lib_logging.git -b develop)
